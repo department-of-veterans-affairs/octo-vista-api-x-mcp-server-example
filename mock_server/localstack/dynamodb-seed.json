@@ -1,0 +1,49 @@
+{
+  "appKey": {"S": "test-standard-key-123"},
+  "appName": {"S": "Test Standard Application"},
+  "active": {"BOOL": true},
+  "permissions": {"L": [
+    {"M": {
+      "stationNo": {"S": "500"},
+      "userDuz": {"S": "10000000219"},
+      "contextName": {"S": "OR CPRS GUI CHART"},
+      "rpcName": {"S": "*"}
+    }},
+    {"M": {
+      "stationNo": {"S": "500"},
+      "userDuz": {"S": "10000000219"},
+      "contextName": {"S": "VPR APPLICATION PROXY"},
+      "rpcName": {"S": "*"}
+    }},
+    {"M": {
+      "stationNo": {"S": "508"},
+      "userDuz": {"S": "10000000220"},
+      "contextName": {"S": "OR CPRS GUI CHART"},
+      "rpcName": {"S": "*"}
+    }},
+    {"M": {
+      "stationNo": {"S": "640"},
+      "userDuz": {"S": "10000000221"},
+      "contextName": {"S": "SDESRPC"},
+      "rpcName": {"S": "*"}
+    }}
+  ]},
+  "stations": {"L": [
+    {"M": {
+      "stationNo": {"S": "500"},
+      "userDuz": {"S": "10000000219"}
+    }},
+    {"M": {
+      "stationNo": {"S": "508"},
+      "userDuz": {"S": "10000000220"}
+    }},
+    {"M": {
+      "stationNo": {"S": "640"},
+      "userDuz": {"S": "10000000221"}
+    }}
+  ]},
+  "configs": {"L": [
+    {"S": "ALLOW_VISTA_API_X_TOKEN"},
+    {"S": "ALLOW_DDR"}
+  ]}
+}

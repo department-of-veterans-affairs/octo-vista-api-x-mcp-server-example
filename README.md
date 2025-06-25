@@ -1,73 +1,69 @@
-# Code Project Template
+# Vista API MCP Server
 
-This repository is a template for code projects at VA.
+MCP (Model Context Protocol) server that provides natural language access to VistA healthcare data through Vista API X.
 
-While this template doesn't contain code -- that's for you to add -- it does have the issue templates and standard folder structure you will need for agile project management at VA. 
+## Quick Start
 
-Take this template, and add your code. Also add documentation for configuration management and deployment of your code, including:
+```bash
+# One command to start everything
+mise run dev-with-mock
+```
 
-- build and deploy instructions
-- information on automated tests, and where to find results 
-- instructions for how to set up local development
+This automatically installs dependencies, starts the mock server, and launches the MCP inspector.
 
-Document this here in your `README.md`, or in individual markdown files in the `docs` folder.
+## Features
 
-After you create your product's code-project repository from this template, please update the Team and Code sections below to link to the appropriate people and code.
+- **20+ VistA Tools**: Patient search, clinical data, administrative functions
+- **Mock Server Included**: Full Vista API X mock for development
+- **LLM Client Ready**: Works with any MCP-compatible client
+- **Type-Safe**: Full type hints and validation
 
-Replace these introductory paragraphs with a description of your product. 
+## Client Setup
 
-For an example that includes code, releases and issues in progress, see our demo Reading Time web application: https://github.com/department-of-veterans-affairs/reading-time-demo
+Connect the Vista API MCP Server to your favorite LLM:
 
+- **[Claude Desktop](docs/CLIENT_SETUP.md#claude-desktop)** - Native MCP support
+- **[Cursor IDE](docs/CLIENT_SETUP.md#cursor)** - AI-powered code editor
+- **[VS Code + Cline](docs/CLIENT_SETUP.md#vs-code-cline-extension)** - Popular IDE with MCP
+- **[Other Clients](docs/CLIENT_SETUP.md#custom-mcp-clients)** - Zed, custom implementations
 
-## Product
+### Quick Setup for Claude Desktop
 
-- Product Name:
-- Product Line Portfolio:
+```bash
+# Automatic setup script
+python scripts/setup_claude_desktop.py
+```
 
-## Product Documentation Repository
-- Name of the related Product Documentation Repository
+Example config files are included:
+- `claude_desktop_config.example.json` - Claude Desktop template
+- `.cursorrules.example` - Cursor IDE template
 
-### Team Contacts
+## Documentation
 
-- Maintained by: @department-of-veterans-affairs/configuration-management
-- Project Manager:
-- Technical Team Lead:
-- Configuration Manager:
+- [Setup Guide](docs/SETUP.md) - Installation and configuration
+- [Client Setup](docs/CLIENT_SETUP.md) - Connect to Claude, Cursor, and other clients
+- [Tools Reference](docs/TOOLS.md) - All available MCP tools
+- [Example Prompts](docs/PROMPTS.md) - Sample queries and workflows
+- [Testing Guide](docs/TESTING.md) - Test data and testing strategies
+- [Development](docs/DEVELOPMENT.md) - Contributing and extending
+- [Architecture](docs/ARCHITECTURE.md) - System design
 
+## Example Usage
 
+Once configured in your LLM client:
 
+```
+You: "Search for patients with last name ANDERSON"
+Assistant: I'll search for patients with the last name Anderson...
+[Uses search_patients tool]
 
-## Code Description
-**Note:** GitHub.com repositories should **NOT** contain sensitive information of any kind
+You: "Show medications for patient 100022"
+Assistant: I'll retrieve the medications for patient 100022...
+[Uses get_medications tool]
+```
 
+## Requirements
 
-### Deployment
-
-
-#### Branching strategy
-
-**UPDATE THIS FOR YOUR PROJECT AND BUILD STRATEGY**
-
-Certain branches are special, and would ordinarily be deployed to various test environments:
-
-- master: our default branch, for production-ready code. Master is always deployable. In our case, however, deployment does not happen automatically.
-- pre-prod: code destined for the pre-production test server. This code might be deployed by hand or automatically, depending on the project and availability of a CI/CD solution.
-- test: code that would probably autotmatically be pushed to a test or staging server. Again, in our case we don't do this -- but test deployment tasks like this are ideally automated with a CI/CD solution like Jenkins.
-
-New code should be produced on a feature branch [following GitHub flow](https://guides.github.com/introduction/flow/). Most often, you'll want to branch from **master**, since that's the latest in production. File a pull request to merge into **test**, which can be deployed to our testing environment.
-
-
-
-### Testing
-
-
-
-
-### Installing
-
-
-
-
-### License
-
-See the [LICENSE](LICENSE.md) file for license rights and limitations.
+- Python 3.12+
+- Docker (for mock server)
+- [mise](https://mise.run) (recommended) or [uv](https://github.com/astral-sh/uv)

@@ -1,0 +1,28 @@
+{
+  "appKey": {"S": "test-limited-key-789"},
+  "appName": {"S": "Test Limited Application"},
+  "active": {"BOOL": true},
+  "permissions": {"L": [
+    {"M": {
+      "stationNo": {"S": "500"},
+      "userDuz": {"S": "10000000219"},
+      "contextName": {"S": "OR CPRS GUI CHART"},
+      "rpcName": {"S": "ORWPT LIST"}
+    }},
+    {"M": {
+      "stationNo": {"S": "500"},
+      "userDuz": {"S": "10000000219"},
+      "contextName": {"S": "OR CPRS GUI CHART"},
+      "rpcName": {"S": "ORWPT ID INFO"}
+    }}
+  ]},
+  "stations": {"L": [
+    {"M": {
+      "stationNo": {"S": "500"},
+      "userDuz": {"S": "10000000219"}
+    }}
+  ]},
+  "configs": {"L": [
+    {"S": "ALLOW_VISTA_API_X_TOKEN"}
+  ]}
+}

@@ -1,0 +1,19 @@
+# Python files
+*.py linguist-language=Python
+
+# Configuration files
+*.toml linguist-language=TOML
+*.json linguist-language=JSON
+*.yml linguist-language=YAML
+*.yaml linguist-language=YAML
+
+# Documentation
+*.md linguist-documentation=true
+
+# Exclude certain files from language detection
+mock_server/* linguist-vendored=true
+scripts/auto_setup.py linguist-generated=true
+
+# Mark GitHub workflows as detectable
+.github/workflows/*.yml linguist-detectable=true
+.github/workflows/*.yaml linguist-detectable=true

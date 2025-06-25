@@ -1,0 +1,1 @@
+"""Tests for Vista API MCP Server"""

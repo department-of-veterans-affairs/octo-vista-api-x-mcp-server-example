@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  localstack:
+    image: localstack/localstack:3.0.2
+    container_name: vista-localstack
+    ports:
+      - "4566:4566"
+      - "4510-4559:4510-4559"
+    environment:
+      - SERVICES=dynamodb
+      - DEBUG=1
+      - DATA_DIR=/var/lib/localstack/data
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - "localstack-data:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./localstack:/etc/localstack/init/ready.d"
+    networks:
+      - vista-network
+
+  vista-mock:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vista-api-x-mock
+    ports:
+      - "8080:8080"
+      - "9990:9990"
+    environment:
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+      - DYNAMODB_TABLE_NAME=AUTH_APPLICATIONS_TABLE_NAME
+      - JWT_PRIVATE_KEY_PATH=/app/keys/private_key.pem
+      - JWT_PUBLIC_KEY_PATH=/app/keys/public_key.pem
+      - JWT_ISSUER=gov.va.vista.api
+      - JWT_AUDIENCE=vista-api-x
+      - JWT_TTL_HOURS=1
+      - JWT_REFRESH_TTL_HOURS=24
+      - LOG_LEVEL=INFO
+      - ENVIRONMENT=development
+    depends_on:
+      - localstack
+    volumes:
+      - ./keys:/app/keys:ro
+      - ./src:/app/src:ro
+    networks:
+      - vista-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9990/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  dynamodb-admin:
+    image: aaronshaf/dynamodb-admin:latest
+    container_name: vista-dynamodb-admin
+    ports:
+      - "8001:8001"
+    environment:
+      - DYNAMO_ENDPOINT=http://localstack:4566
+      - AWS_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+    depends_on:
+      - localstack
+    networks:
+      - vista-network
+
+volumes:
+  localstack-data:
+
+networks:
+  vista-network:
+    driver: bridge

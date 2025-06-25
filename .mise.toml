@@ -1,0 +1,72 @@
+[tools]
+python = "3.12"
+uv = "latest"
+
+[env]
+# Vista API configuration
+VISTA_API_BASE_URL = "http://localhost:8080"
+VISTA_API_KEY = "test-wildcard-key-456"
+VISTA_MCP_DEBUG = "false"
+DEFAULT_STATION = "500"
+DEFAULT_DUZ = "10000000219"
+
+# Hook that runs after tools are installed
+[hooks]
+postinstall = "mise run _setup"
+
+# Hidden helper tasks
+[tasks._setup]
+hide = true
+run = "python scripts/setup.py"
+
+[tasks._start-mock]
+hide = true
+dir = "mock_server"
+env = { COMPOSE_PROJECT_NAME = "vista-mock" }
+run = ["docker-compose up -d", "python ../scripts/check_mock_server.py"]
+
+[tasks.stop-mock]
+description = "Stop the mock server"
+dir = "mock_server"
+env = { COMPOSE_PROJECT_NAME = "vista-mock" }
+run = ["docker-compose down", "echo '✅ Mock server stopped'"]
+
+[tasks.dev-with-mock]
+description = "Start development with mock server (handles all setup)"
+run = [
+    # Auto-setup if needed
+    "python scripts/auto_setup.py",
+    # Start mock server if needed
+    "python scripts/start_mock_if_needed.py",
+    # Run MCP server with dev inspector
+    "uv run mcp dev server.py:server"
+]
+
+[tasks.dev]
+description = "Start development server"
+run = [
+    # Auto-setup if needed
+    "python scripts/auto_setup.py",
+    # Run MCP server
+    "echo '🏃 Starting MCP server...'",
+    "uv run mcp dev server.py:server"
+]
+
+# Utility tasks (optional)
+[tasks.test]
+description = "Run tests"
+run = ["python scripts/auto_setup.py", "uv run pytest"]
+
+[tasks.lint]
+description = "Check code quality (format + lint)"
+run = ["python scripts/auto_setup.py", "uv run black src/", "uv run ruff check src/"]
+
+[tasks.logs]
+description = "View mock server logs"
+dir = "mock_server"
+env = { COMPOSE_PROJECT_NAME = "vista-mock" }
+run = "docker-compose logs -f"
+
+[tasks.setup-claude]
+description = "Set up Claude Desktop configuration"
+run = "python scripts/setup_claude_desktop.py"

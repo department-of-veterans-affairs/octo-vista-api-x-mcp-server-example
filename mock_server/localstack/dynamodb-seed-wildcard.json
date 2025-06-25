@@ -1,0 +1,25 @@
+{
+  "appKey": {"S": "test-wildcard-key-456"},
+  "appName": {"S": "Test Wildcard Application"},
+  "active": {"BOOL": true},
+  "permissions": {"L": [
+    {"M": {
+      "stationNo": {"S": "*"},
+      "userDuz": {"S": "*"},
+      "contextName": {"S": "*"},
+      "rpcName": {"S": "*"}
+    }}
+  ]},
+  "stations": {"L": [
+    {"M": {
+      "stationNo": {"S": "*"},
+      "userDuz": {"S": "*"}
+    }}
+  ]},
+  "configs": {"L": [
+    {"S": "ALLOW_VISTA_API_X_TOKEN"},
+    {"S": "ALLOW_DDR"},
+    {"S": "ALLOW_ALL_STATIONS"},
+    {"S": "ALLOW_ALL_RPCS"}
+  ]}
+}
