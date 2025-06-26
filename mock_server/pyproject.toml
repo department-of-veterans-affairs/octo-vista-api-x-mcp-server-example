@@ -114,3 +114,9 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "tests.*"
 ignore_errors = true
+
+[dependency-groups]
+dev = [
+    "black>=25.1.0",
+    "ruff>=0.12.0",
+]

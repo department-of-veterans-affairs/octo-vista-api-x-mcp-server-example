@@ -63,7 +63,12 @@ class VistaLinkFaultException(Exception):
 class SecurityFaultException(Exception):
     """Security/authorization errors"""
 
-    def __init__(self, message: str, error_code: str = "ACCESS-DENIED", fault_code: str | None = None):
+    def __init__(
+        self,
+        message: str,
+        error_code: str = "ACCESS-DENIED",
+        fault_code: str | None = None,
+    ):
         self.message = message
         self.error_code = error_code
         self.fault_code = fault_code

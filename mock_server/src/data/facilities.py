@@ -2,7 +2,6 @@
 VA Facilities test data - Real VA Medical Centers
 """
 
-
 # Real VA Medical Centers across the US
 VA_FACILITIES: dict[str, dict[str, str]] = {
     "500": {

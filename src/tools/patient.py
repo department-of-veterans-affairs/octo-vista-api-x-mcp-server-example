@@ -244,8 +244,13 @@ def register_patient_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 parameters=[{"string": patient_dfn}],
             )
 
-            # Check result (should be "1" for success)
-            success = result == "1"
+            # Check result (should start with "1" for success)
+            success = str(result).startswith("1")
+            patient_name = ""
+            if success and "^" in str(result):
+                parts = str(result).split("^", 1)
+                if len(parts) > 1:
+                    patient_name = parts[1]
 
             # Calculate duration
             duration_ms = int((time.time() - start_time) * 1000)
@@ -263,6 +268,7 @@ def register_patient_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 return {
                     "success": True,
                     "patient_dfn": patient_dfn,
+                    "patient_name": patient_name,
                     "message": f"Patient {patient_dfn} selected successfully",
                     "metadata": build_metadata(
                         station=station,

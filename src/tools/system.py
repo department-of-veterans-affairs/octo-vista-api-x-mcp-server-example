@@ -67,9 +67,11 @@ def register_system_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 "success": True,
                 "alive": is_alive,
                 "station": station,
-                "message": "Vista connection is active"
-                if is_alive
-                else "Vista connection check failed",
+                "message": (
+                    "Vista connection is active"
+                    if is_alive
+                    else "Vista connection check failed"
+                ),
                 "metadata": build_metadata(
                     station=station,
                     rpc_name="XWB IM HERE",

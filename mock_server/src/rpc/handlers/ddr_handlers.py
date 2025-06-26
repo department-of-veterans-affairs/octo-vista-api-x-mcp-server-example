@@ -20,8 +20,6 @@ class DDRHandlers:
         """
         # Get parameters
         file_number = ""
-        field_number = ""
-        flags = ""
 
         if parameters:
             if len(parameters) > 0:
@@ -32,12 +30,12 @@ class DDRHandlers:
             if len(parameters) > 1:
                 param_value = parameters[1].get_value()
                 if isinstance(param_value, str):
-                    field_number = param_value
+                    pass
 
             if len(parameters) > 2:
                 param_value = parameters[2].get_value()
                 if isinstance(param_value, str):
-                    flags = param_value
+                    pass
 
         # Mock some common file definitions
         if file_number == "2":  # Patient file
@@ -84,7 +82,6 @@ class DDRHandlers:
         # Get parameters
         file_number = ""
         search_value = ""
-        field_number = ""
 
         if parameters:
             if len(parameters) > 0:
@@ -100,7 +97,7 @@ class DDRHandlers:
             if len(parameters) > 2:
                 param_value = parameters[2].get_value()
                 if isinstance(param_value, str):
-                    field_number = param_value
+                    pass
 
         # Mock search results
         results = []
@@ -146,7 +143,6 @@ class DDRHandlers:
         # Get parameters
         file_number = ""
         ien = ""
-        fields = ""
 
         if parameters:
             if len(parameters) > 0:
@@ -162,7 +158,7 @@ class DDRHandlers:
             if len(parameters) > 2:
                 param_value = parameters[2].get_value()
                 if isinstance(param_value, str):
-                    fields = param_value
+                    pass
 
         # Mock data retrieval
         if file_number == "2" and ien == "100022":

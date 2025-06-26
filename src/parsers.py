@@ -89,7 +89,7 @@ def parse_vista_date(date_str: str) -> str | None:
         try:
             dt = datetime.strptime(date_str.split()[0], "%m/%d/%Y")
             return dt.date().isoformat()
-        except:
+        except (ValueError, IndexError):
             pass
 
     # Return original if can't parse
@@ -110,7 +110,7 @@ def calculate_age(birth_date: str) -> int | None:
             if (today.month, today.day) < (birth.month, birth.day):
                 age -= 1
             return age
-    except:
+    except (ValueError, TypeError):
         pass
     return None
 
@@ -193,15 +193,17 @@ def parse_patient_search(result: str) -> list[PatientSearchResult]:
                     name=row[1],
                     gender=row[2] if len(row) > 2 else None,
                     date_of_birth=parse_vista_date(row[3]) if len(row) > 3 else None,
-                    ssn_last_four=row[4][-4:]
-                    if len(row) > 4 and len(row[4]) >= 4
-                    else "****",
+                    ssn_last_four=(
+                        row[4][-4:] if len(row) > 4 and len(row[4]) >= 4 else "****"
+                    ),
                     sensitive=row[5] == "YES" if len(row) > 5 else False,
                     station="",  # Will be filled by caller
                 )
                 patients.append(patient)
             except Exception as e:
-                logger.error(f"Failed to parse patient row: {row}, error: {e}")
+                logger.error(
+                    f"Failed to parse patient row at index {patients.index(patient) if patient in patients else 'unknown'}, error: {e}"
+                )
 
     return patients
 
@@ -237,9 +239,9 @@ def parse_patient_demographics(result: str, dfn: str) -> PatientDemographics | N
         last_name=last_name,
         first_name=first_name,
         middle_name=middle_name,
-        ssn=f"***-**-{first_line[2][-4:]}"
-        if len(first_line[2]) >= 4
-        else "***-**-****",
+        ssn=(
+            f"***-**-{first_line[2][-4:]}" if len(first_line[2]) >= 4 else "***-**-****"
+        ),
         date_of_birth=birth_date or first_line[3],
         age=age
         or (
@@ -313,19 +315,19 @@ def parse_medications(result: str) -> list[Medication]:
                     id=row[0] if row[0] else None,
                     name=row[1],
                     sig=row[2],
-                    start_date=parse_fileman_date(row[3])
-                    if len(row) > 3 and row[3]
-                    else None,
-                    stop_date=parse_fileman_date(row[4])
-                    if len(row) > 4 and row[4]
-                    else None,
+                    start_date=(
+                        parse_fileman_date(row[3]) if len(row) > 3 and row[3] else None
+                    ),
+                    stop_date=(
+                        parse_fileman_date(row[4]) if len(row) > 4 and row[4] else None
+                    ),
                     quantity=row[5] if len(row) > 5 else None,
                     refills=int(row[6]) if len(row) > 6 and row[6].isdigit() else None,
                     status="ACTIVE" if len(row) > 7 and row[7] == "Y" else "INACTIVE",
                 )
                 medications.append(med)
             except Exception as e:
-                logger.error(f"Failed to parse medication row: {row}, error: {e}")
+                logger.error(f"Failed to parse medication row, error: {e}")
 
     return medications
 
@@ -349,15 +351,17 @@ def parse_lab_results(result: str) -> list[LabResult]:
                     value=row[2],
                     units=row[3] if len(row) > 3 else None,
                     reference_range=row[4] if len(row) > 4 else None,
-                    date_time=parse_fileman_date(row[5])
-                    if row[5]
-                    else datetime.now().isoformat(),
+                    date_time=(
+                        parse_fileman_date(row[5])
+                        if row[5]
+                        else datetime.now().isoformat()
+                    ),
                     flag=row[6] if len(row) > 6 else None,
                     status=row[7] if len(row) > 7 else "F",  # F=Final
                 )
                 lab_results.append(lab)
             except Exception as e:
-                logger.error(f"Failed to parse lab result row: {row}, error: {e}")
+                logger.error(f"Failed to parse lab result row, error: {e}")
 
     return lab_results
 
@@ -376,9 +380,11 @@ def parse_vital_signs(result: str) -> list[VitalSign]:
         if len(row) >= 3 and not row[0].startswith("~"):
             try:
                 vital = VitalSign(
-                    date_time=parse_fileman_date(row[0])
-                    if row[0]
-                    else datetime.now().isoformat(),
+                    date_time=(
+                        parse_fileman_date(row[0])
+                        if row[0]
+                        else datetime.now().isoformat()
+                    ),
                     type=row[1],
                     value=row[2],
                     units=row[3] if len(row) > 3 else None,
@@ -386,7 +392,7 @@ def parse_vital_signs(result: str) -> list[VitalSign]:
                 )
                 vital_signs.append(vital)
             except Exception as e:
-                logger.error(f"Failed to parse vital sign row: {row}, error: {e}")
+                logger.error(f"Failed to parse vital sign row, error: {e}")
 
     return vital_signs
 
@@ -413,20 +419,22 @@ def parse_problems(result: str) -> list[Problem]:
 
                 problem = Problem(
                     id=row[0],
-                    snomed_code=row[1].replace("S:", "")
-                    if len(row) > 1 and row[1].startswith("S:")
-                    else None,
+                    snomed_code=(
+                        row[1].replace("S:", "")
+                        if len(row) > 1 and row[1].startswith("S:")
+                        else None
+                    ),
                     description=description,
                     icd_code=icd_code or (row[3] if len(row) > 3 else None),
                     status=row[4] if len(row) > 4 else "ACTIVE",
-                    onset_date=parse_fileman_date(row[5])
-                    if len(row) > 5 and row[5]
-                    else None,
+                    onset_date=(
+                        parse_fileman_date(row[5]) if len(row) > 5 and row[5] else None
+                    ),
                     type=row[6] if len(row) > 6 else None,
                 )
                 problems.append(problem)
             except Exception as e:
-                logger.error(f"Failed to parse problem row: {row}, error: {e}")
+                logger.error(f"Failed to parse problem row, error: {e}")
 
     return problems
 
@@ -452,16 +460,16 @@ def parse_allergies(result: str) -> list[Allergy]:
                     id=row[0] if row[0] else None,
                     agent=row[1],
                     type=row[2] if len(row) > 2 else None,
-                    date_entered=parse_fileman_date(row[3])
-                    if len(row) > 3 and row[3]
-                    else None,
+                    date_entered=(
+                        parse_fileman_date(row[3]) if len(row) > 3 and row[3] else None
+                    ),
                     reactions=reactions,
                     severity=row[5] if len(row) > 5 else None,
                     verified=row[6] == "VERIFIED" if len(row) > 6 else False,
                 )
                 allergies.append(allergy)
             except Exception as e:
-                logger.error(f"Failed to parse allergy row: {row}, error: {e}")
+                logger.error(f"Failed to parse allergy row, error: {e}")
 
     return allergies
 
@@ -477,8 +485,10 @@ def parse_appointments(result: str | dict) -> list[Appointment]:
 
     # Handle JSON response
     if isinstance(result, dict):
-        if "appointments" in result:
-            for appt in result["appointments"]:
+        # Check for both "appointments" and "Appointment" keys
+        appt_data = result.get("appointments") or result.get("Appointment", [])
+        if appt_data:
+            for appt in appt_data:
                 try:
                     appointment = Appointment(
                         appointment_ien=appt.get("appointmentIEN", ""),
@@ -494,7 +504,9 @@ def parse_appointments(result: str | dict) -> list[Appointment]:
                     )
                     appointments.append(appointment)
                 except Exception as e:
-                    logger.error(f"Failed to parse appointment: {appt}, error: {e}")
+                    logger.error(
+                        f"Failed to parse appointment: appointmentIEN=redacted, error: {e}"
+                    )
 
     # Handle delimited response
     elif isinstance(result, str):
@@ -513,7 +525,7 @@ def parse_appointments(result: str | dict) -> list[Appointment]:
                     )
                     appointments.append(appointment)
                 except Exception as e:
-                    logger.error(f"Failed to parse appointment row: {row}, error: {e}")
+                    logger.error(f"Failed to parse appointment row, error: {e}")
 
     return appointments
 

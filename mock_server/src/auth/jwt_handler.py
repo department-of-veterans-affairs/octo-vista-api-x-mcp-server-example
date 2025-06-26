@@ -52,10 +52,10 @@ class JwtHandler:
         # Create user principal
         user_principal = JwtUserPrincipal(
             username=user_data.get("username", subject) if user_data else subject,
-            application=user_data.get("application", "vista-api-x-mock") if user_data else "vista-api-x-mock",
+            application=(user_data.get("application", "vista-api-x-mock") if user_data else "vista-api-x-mock"),
             applicationEntry=user_data.get("applicationEntry", "") if user_data else "",
             authenticated=True,
-            serviceAccount=user_data.get("serviceAccount", False) if user_data else False,
+            serviceAccount=(user_data.get("serviceAccount", False) if user_data else False),
             id=user_data.get("id", "") if user_data else "",
             firstName=user_data.get("firstName", "") if user_data else "",
             lastName=user_data.get("lastName", "") if user_data else "",

@@ -23,7 +23,7 @@ PATIENT_APPOINTMENTS: dict[str, list[dict[str, any]]] = {
             "clinicIEN": "195",
             "clinicName": "PRIMARY CARE CLINIC",
             "clinicStopCode": "323",
-            "provider": "SMITH,JENNIFER A",
+            "provider": {"duz": "10000000221", "name": "SMITH,JENNIFER A"},
             "status": "SCHEDULED",
             "type": "REGULAR",
             "length": "30",
@@ -38,7 +38,7 @@ PATIENT_APPOINTMENTS: dict[str, list[dict[str, any]]] = {
             "clinicIEN": "196",
             "clinicName": "MENTAL HEALTH CLINIC",
             "clinicStopCode": "502",
-            "provider": "WILLIAMS,PATRICIA L",
+            "provider": {"duz": "10000000220", "name": "WILLIAMS,PATRICIA L"},
             "status": "SCHEDULED",
             "type": "REGULAR",
             "length": "60",
@@ -53,7 +53,7 @@ PATIENT_APPOINTMENTS: dict[str, list[dict[str, any]]] = {
             "clinicIEN": "197",
             "clinicName": "DIABETIC CLINIC",
             "clinicStopCode": "407",
-            "provider": "BROWN,SARAH E",
+            "provider": {"duz": "10000000228", "name": "BROWN,SARAH E"},
             "status": "COMPLETED",
             "type": "REGULAR",
             "length": "30",
@@ -68,7 +68,7 @@ PATIENT_APPOINTMENTS: dict[str, list[dict[str, any]]] = {
             "clinicIEN": "198",
             "clinicName": "AUDIOLOGY",
             "clinicStopCode": "403",
-            "provider": "PROVIDER,TEST",
+            "provider": {"duz": "10000000229", "name": "PROVIDER,TEST"},
             "status": "SCHEDULED",
             "type": "REGULAR",
             "length": "60",
@@ -86,7 +86,7 @@ PATIENT_APPOINTMENTS: dict[str, list[dict[str, any]]] = {
             "clinicIEN": "196",
             "clinicName": "MENTAL HEALTH CLINIC",
             "clinicStopCode": "502",
-            "provider": "THOMPSON,MICHELLE K",
+            "provider": {"duz": "10000000222", "name": "THOMPSON,MICHELLE K"},
             "status": "SCHEDULED",
             "type": "REGULAR",
             "length": "50",
@@ -101,7 +101,7 @@ PATIENT_APPOINTMENTS: dict[str, list[dict[str, any]]] = {
             "clinicIEN": "199",
             "clinicName": "WOMEN'S HEALTH CLINIC",
             "clinicStopCode": "322",
-            "provider": "PROVIDER,TEST",
+            "provider": {"duz": "10000000229", "name": "PROVIDER,TEST"},
             "status": "SCHEDULED",
             "type": "REGULAR",
             "length": "30",
@@ -116,7 +116,7 @@ PATIENT_APPOINTMENTS: dict[str, list[dict[str, any]]] = {
             "clinicIEN": "195",
             "clinicName": "PRIMARY CARE CLINIC",
             "clinicStopCode": "323",
-            "provider": "SMITH,JENNIFER A",
+            "provider": {"duz": "10000000221", "name": "SMITH,JENNIFER A"},
             "status": "NO SHOW",
             "type": "REGULAR",
             "length": "30",
@@ -134,7 +134,7 @@ PATIENT_APPOINTMENTS: dict[str, list[dict[str, any]]] = {
             "clinicIEN": "200",
             "clinicName": "ORTHOPEDIC CLINIC",
             "clinicStopCode": "203",
-            "provider": "MARTINEZ,CARLOS E",
+            "provider": {"duz": "10000000230", "name": "MARTINEZ,CARLOS E"},
             "status": "SCHEDULED",
             "type": "REGULAR",
             "length": "45",
@@ -149,7 +149,7 @@ PATIENT_APPOINTMENTS: dict[str, list[dict[str, any]]] = {
             "clinicIEN": "201",
             "clinicName": "PAIN CLINIC",
             "clinicStopCode": "409",
-            "provider": "PROVIDER,TEST",
+            "provider": {"duz": "10000000229", "name": "PROVIDER,TEST"},
             "status": "SCHEDULED",
             "type": "REGULAR",
             "length": "30",
@@ -164,7 +164,7 @@ PATIENT_APPOINTMENTS: dict[str, list[dict[str, any]]] = {
             "clinicIEN": "196",
             "clinicName": "MENTAL HEALTH CLINIC",
             "clinicStopCode": "502",
-            "provider": "WILLIAMS,PATRICIA L",
+            "provider": {"duz": "10000000220", "name": "WILLIAMS,PATRICIA L"},
             "status": "SCHEDULED",
             "type": "REGULAR",
             "length": "60",
@@ -179,7 +179,7 @@ PATIENT_APPOINTMENTS: dict[str, list[dict[str, any]]] = {
             "clinicIEN": "202",
             "clinicName": "REHABILITATION",
             "clinicStopCode": "419",
-            "provider": "PROVIDER,TEST",
+            "provider": {"duz": "10000000229", "name": "PROVIDER,TEST"},
             "status": "SCHEDULED",
             "type": "REGULAR",
             "length": "60",
@@ -197,7 +197,7 @@ PATIENT_APPOINTMENTS: dict[str, list[dict[str, any]]] = {
             "clinicIEN": "203",
             "clinicName": "GERIATRICS",
             "clinicStopCode": "324",
-            "provider": "PROVIDER,TEST",
+            "provider": {"duz": "10000000229", "name": "PROVIDER,TEST"},
             "status": "SCHEDULED",
             "type": "REGULAR",
             "length": "45",
@@ -212,7 +212,7 @@ PATIENT_APPOINTMENTS: dict[str, list[dict[str, any]]] = {
             "clinicIEN": "195",
             "clinicName": "PRIMARY CARE CLINIC",
             "clinicStopCode": "323",
-            "provider": "SMITH,JENNIFER A",
+            "provider": {"duz": "10000000221", "name": "SMITH,JENNIFER A"},
             "status": "COMPLETED",
             "type": "REGULAR",
             "length": "30",
@@ -230,7 +230,7 @@ PATIENT_APPOINTMENTS: dict[str, list[dict[str, any]]] = {
             "clinicIEN": "204",
             "clinicName": "SUBSTANCE ABUSE CLINIC",
             "clinicStopCode": "511",
-            "provider": "PROVIDER,TEST",
+            "provider": {"duz": "10000000229", "name": "PROVIDER,TEST"},
             "status": "SCHEDULED",
             "type": "WALK-IN",
             "length": "30",
@@ -245,7 +245,7 @@ PATIENT_APPOINTMENTS: dict[str, list[dict[str, any]]] = {
             "clinicIEN": "205",
             "clinicName": "SOCIAL WORK SERVICE",
             "clinicStopCode": "125",
-            "provider": "WILSON,JAMES T",
+            "provider": {"duz": "10000000224", "name": "WILSON,JAMES T"},
             "status": "SCHEDULED",
             "type": "REGULAR",
             "length": "60",
@@ -263,7 +263,7 @@ PATIENT_APPOINTMENTS: dict[str, list[dict[str, any]]] = {
             "clinicIEN": "196",
             "clinicName": "MENTAL HEALTH CLINIC",
             "clinicStopCode": "502",
-            "provider": "THOMPSON,MICHELLE K",
+            "provider": {"duz": "10000000222", "name": "THOMPSON,MICHELLE K"},
             "status": "SCHEDULED",
             "type": "REGULAR",
             "length": "50",
@@ -278,7 +278,7 @@ PATIENT_APPOINTMENTS: dict[str, list[dict[str, any]]] = {
             "clinicIEN": "195",
             "clinicName": "PRIMARY CARE CLINIC",
             "clinicStopCode": "323",
-            "provider": "SMITH,JENNIFER A",
+            "provider": {"duz": "10000000221", "name": "SMITH,JENNIFER A"},
             "status": "SCHEDULED",
             "type": "NEW PATIENT",
             "length": "60",
@@ -296,7 +296,7 @@ PATIENT_APPOINTMENTS: dict[str, list[dict[str, any]]] = {
             "clinicIEN": "590",
             "clinicName": "TELEHEALTH CLINIC",
             "clinicStopCode": "590",
-            "provider": "SMITH,JENNIFER A",
+            "provider": {"duz": "10000000221", "name": "SMITH,JENNIFER A"},
             "status": "SCHEDULED",
             "type": "TELEHEALTH",
             "length": "30",
@@ -312,7 +312,7 @@ PATIENT_APPOINTMENTS: dict[str, list[dict[str, any]]] = {
             "clinicIEN": "195",
             "clinicName": "PRIMARY CARE CLINIC",
             "clinicStopCode": "323",
-            "provider": "SMITH,JENNIFER A",
+            "provider": {"duz": "10000000221", "name": "SMITH,JENNIFER A"},
             "status": "SCHEDULED",
             "type": "REGULAR",
             "length": "30",
@@ -373,15 +373,22 @@ def get_appointments_for_patient(dfn: str) -> list[dict[str, any]]:
 
 def get_appointments_for_clinic(clinic_ien: str, start_date: str, end_date: str) -> list[dict[str, any]]:
     """Get appointments for a clinic within date range"""
+    from src.data.test_patients import TEST_PATIENTS
+
     appointments = []
 
     # In a real system, this would filter by date range
     for patient_dfn, patient_appts in PATIENT_APPOINTMENTS.items():
         for appt in patient_appts:
             if appt["clinicIEN"] == clinic_ien:
-                # Add patient identifier to appointment
+                # Add patient identifier and name to appointment
                 appt_copy = appt.copy()
-                appt_copy["patientDFN"] = patient_dfn
+                appt_copy["patientIEN"] = patient_dfn  # Use patientIEN for consistency
+
+                # Get patient name from test patients
+                patient = TEST_PATIENTS.get(patient_dfn, {})
+                appt_copy["patientName"] = patient.get("name", "UNKNOWN,PATIENT")
+
                 appointments.append(appt_copy)
 
     return appointments
@@ -390,5 +397,11 @@ def get_appointments_for_clinic(clinic_ien: str, start_date: str, end_date: str)
 def get_clinic_info(clinic_ien: str) -> dict[str, any]:
     """Get clinic information"""
     return CLINIC_SCHEDULES.get(
-        clinic_ien, {"name": "UNKNOWN CLINIC", "stopCode": "000", "location": "UNKNOWN", "phone": "(000) 000-0000"}
+        clinic_ien,
+        {
+            "name": "UNKNOWN CLINIC",
+            "stopCode": "000",
+            "location": "UNKNOWN",
+            "phone": "(000) 000-0000",
+        },
     )

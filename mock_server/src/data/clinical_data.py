@@ -2,7 +2,6 @@
 Comprehensive clinical data for test patients
 """
 
-
 # Problems/Diagnoses by patient
 PATIENT_PROBLEMS: dict[str, list[dict[str, str]]] = {
     # Vietnam Veteran with PTSD
@@ -517,9 +516,19 @@ PATIENT_LABS: dict[str, list[dict[str, any]]] = {
             "date": "20240105",
             "status": "FINAL",
             "components": [
-                {"name": "WBC", "value": "6.5", "units": "K/uL", "refRange": "4.5-11.0"},
+                {
+                    "name": "WBC",
+                    "value": "6.5",
+                    "units": "K/uL",
+                    "refRange": "4.5-11.0",
+                },
                 {"name": "RBC", "value": "4.2", "units": "M/uL", "refRange": "4.0-5.2"},
-                {"name": "HGB", "value": "13.5", "units": "g/dL", "refRange": "12.0-16.0"},
+                {
+                    "name": "HGB",
+                    "value": "13.5",
+                    "units": "g/dL",
+                    "refRange": "12.0-16.0",
+                },
                 {"name": "HCT", "value": "40.5", "units": "%", "refRange": "36.0-46.0"},
                 {"name": "PLT", "value": "225", "units": "K/uL", "refRange": "150-400"},
             ],
@@ -537,7 +546,13 @@ PATIENT_ALLERGIES: dict[str, list[dict[str, str]]] = {
             "type": "DRUG",
             "verifiedDate": "19850315",
         },
-        {"allergen": "SULFA DRUGS", "reaction": "RASH", "severity": "MILD", "type": "DRUG", "verifiedDate": "19900822"},
+        {
+            "allergen": "SULFA DRUGS",
+            "reaction": "RASH",
+            "severity": "MILD",
+            "type": "DRUG",
+            "verifiedDate": "19900822",
+        },
     ],
     "100023": [
         {
@@ -556,7 +571,13 @@ PATIENT_ALLERGIES: dict[str, list[dict[str, str]]] = {
         },
     ],
     "100024": [
-        {"allergen": "NO KNOWN ALLERGIES", "reaction": "", "severity": "", "type": "NKA", "verifiedDate": "20080615"}
+        {
+            "allergen": "NO KNOWN ALLERGIES",
+            "reaction": "",
+            "severity": "",
+            "type": "NKA",
+            "verifiedDate": "20080615",
+        }
     ],
     "100025": [
         {

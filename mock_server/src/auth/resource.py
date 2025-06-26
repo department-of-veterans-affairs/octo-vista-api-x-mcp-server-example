@@ -5,7 +5,12 @@ Authentication resource endpoints matching Vista API X
 from fastapi import APIRouter, HTTPException, Request
 
 from src.auth.jwt_handler import jwt_handler
-from src.auth.models import AuthenticationToken, Credentials, TokenType, VistaApiResponse
+from src.auth.models import (
+    AuthenticationToken,
+    Credentials,
+    TokenType,
+    VistaApiResponse,
+)
 from src.database.dynamodb_client import get_dynamodb_client
 from src.exceptions.handlers import create_error_response
 
@@ -75,7 +80,13 @@ async def generate_token(credentials: Credentials, request: Request) -> VistaApi
         for station in app_data.stations:
             vista_id = f"{station.stationNo}:{station.userDuz}"
             if vista_id not in seen_ids:
-                vista_ids.append({"siteId": station.stationNo, "duz": station.userDuz, "siteName": ""})
+                vista_ids.append(
+                    {
+                        "siteId": station.stationNo,
+                        "duz": station.userDuz,
+                        "siteName": "",
+                    }
+                )
                 seen_ids.add(vista_id)
 
         # Generate JWT token
@@ -86,7 +97,11 @@ async def generate_token(credentials: Credentials, request: Request) -> VistaApi
             flags=app_data.configs,
             token_type=TokenType.STANDARD,
             application_key=app_data.appKey,
-            user_data={"username": app_data.appName, "application": "vista-api-x-mock", "serviceAccount": False},
+            user_data={
+                "username": app_data.appName,
+                "application": "vista-api-x-mock",
+                "serviceAccount": False,
+            },
         )
 
         # Return Vista API response format

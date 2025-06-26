@@ -2,7 +2,6 @@
 VA Providers test data - Realistic VA staff profiles
 """
 
-
 # Test providers with realistic VA roles
 VA_PROVIDERS: dict[str, dict[str, str]] = {
     "10000000219": {

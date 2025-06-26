@@ -33,12 +33,17 @@ RPC_HANDLERS = {
     "ORWPT LIST": PatientHandlers.handle_orwpt_list,
     "ORWPT ID INFO": PatientHandlers.handle_orwpt_id_info,
     "ORWPT SELECT": PatientHandlers.handle_orwpt_select,
+    "VPR SELECT PATIENT": PatientHandlers.handle_orwpt_list,  # Use same handler as ORWPT LIST
     "VPR GET PATIENT DATA JSON": PatientHandlers.handle_vpr_get_patient_data_json,
+    "VPR GET PATIENT DATA": PatientHandlers.handle_vpr_get_patient_data_json,  # Add non-JSON variant
+    "ORWPT16 ID INFO": PatientHandlers.handle_orwpt_id_info,  # Alias for ID INFO
     # Clinical operations
     "ORWPS ACTIVE": ClinicalHandlers.handle_orwps_active,
     "ORWLRR INTERIM": ClinicalHandlers.handle_orwlrr_interim,
     "ORQQVI VITALS": ClinicalHandlers.handle_orqqvi_vitals,
+    "GMV V/M VITALS": ClinicalHandlers.handle_orqqvi_vitals,  # Alias for vitals
     "ORQQPL PROBLEM LIST": ClinicalHandlers.handle_orqqpl_problem_list,
+    "ORQQPL LIST": ClinicalHandlers.handle_orqqpl_problem_list,  # Alias without PROBLEM
     "ORQQAL LIST": ClinicalHandlers.handle_orqqal_list,
     # System operations
     "XWB IM HERE": SystemHandlers.handle_xwb_im_here,
@@ -166,7 +171,7 @@ async def execute_rpc(rpc_request: RpcRequestX) -> Any:
                     import json
 
                     return json.loads(result)
-                except:
+                except (ValueError, TypeError):
                     # If parsing fails, return as string
                     return result
             else:
@@ -182,7 +187,9 @@ async def execute_rpc(rpc_request: RpcRequestX) -> Any:
 
     except Exception as e:
         raise RpcFaultException(
-            message=f"RPC execution error: {e!s}", rpc_name=rpc_request.rpc, fault_code="RPC_ERROR"
+            message=f"RPC execution error: {e!s}",
+            rpc_name=rpc_request.rpc,
+            fault_code="RPC_ERROR",
         )
 
 

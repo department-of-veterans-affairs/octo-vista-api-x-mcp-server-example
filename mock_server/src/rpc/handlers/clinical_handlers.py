@@ -2,7 +2,6 @@
 Clinical RPC handlers for medications, labs, vitals, problems, and allergies
 """
 
-
 from src.data.clinical_data import (
     PATIENT_ALLERGIES,
     PATIENT_LABS,

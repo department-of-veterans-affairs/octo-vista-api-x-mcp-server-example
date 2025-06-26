@@ -191,7 +191,7 @@ class VistaAPIClient(BaseVistaClient):
                     message=error_data.get("message", str(e)),
                     status_code=e.response.status_code,
                 )
-            except:
+            except Exception:
                 raise VistaAPIError(
                     error_type="HTTPError",
                     error_code=str(e.response.status_code),

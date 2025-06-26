@@ -2,7 +2,6 @@
 Authentication middleware matching Vista API X filter
 """
 
-
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
@@ -45,7 +44,9 @@ class VistaApiXAuthenticationFilter(BaseHTTPMiddleware):
             if not auth_header.startswith("Bearer "):
                 # Missing or invalid authorization
                 return self._create_auth_error_response(
-                    request, "JWT-ACCESS-DENIED-0001", "Missing or invalid authorization header"
+                    request,
+                    "JWT-ACCESS-DENIED-0001",
+                    "Missing or invalid authorization header",
                 )
 
             # Extract token
@@ -147,9 +148,8 @@ class SecurityContext:
             auth_rpc = auth.get("rpc", "")
 
             # Check wildcards
-            if auth_context == "*" or auth_context == context:
-                if auth_rpc == "*" or auth_rpc == rpc:
-                    return True
+            if (auth_context == "*" or auth_context == context) and (auth_rpc == "*" or auth_rpc == rpc):
+                return True
 
         return False
 

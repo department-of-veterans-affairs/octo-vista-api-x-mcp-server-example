@@ -35,7 +35,7 @@ run = ["docker-compose down", "echo '✅ Mock server stopped'"]
 description = "Start development with mock server (handles all setup)"
 run = [
     # Auto-setup if needed
-    "python scripts/auto_setup.py",
+    "python scripts/silent_setup.py",
     # Start mock server if needed
     "python scripts/start_mock_if_needed.py",
     # Run MCP server with dev inspector
@@ -46,7 +46,7 @@ run = [
 description = "Start development server"
 run = [
     # Auto-setup if needed
-    "python scripts/auto_setup.py",
+    "python scripts/silent_setup.py",
     # Run MCP server
     "echo '🏃 Starting MCP server...'",
     "uv run mcp dev server.py:server"
@@ -55,11 +55,11 @@ run = [
 # Utility tasks (optional)
 [tasks.test]
 description = "Run tests"
-run = ["python scripts/auto_setup.py", "uv run pytest"]
+run = "uv run pytest"
 
 [tasks.lint]
 description = "Check code quality (format + lint)"
-run = ["python scripts/auto_setup.py", "uv run black src/", "uv run ruff check src/"]
+run = ["uv run black src/", "uv run ruff check src/"]
 
 [tasks.logs]
 description = "View mock server logs"
@@ -76,7 +76,7 @@ description = "Start SSE server for development"
 env = { VISTA_MCP_TRANSPORT = "sse" }
 run = [
     # Auto-setup if needed
-    "python scripts/auto_setup.py",
+    "python scripts/silent_setup.py",
     # Run SSE server
     "echo '🌐 Starting SSE server...'",
     "echo '📍 SSE endpoint: http://localhost:8000/sse'",
@@ -93,7 +93,7 @@ description = "Start SSE server with mock Vista API"
 env = { VISTA_MCP_TRANSPORT = "sse" }
 run = [
     # Auto-setup if needed
-    "python scripts/auto_setup.py",
+    "python scripts/silent_setup.py",
     # Start mock server if needed
     "python scripts/start_mock_if_needed.py",
     # Run SSE server

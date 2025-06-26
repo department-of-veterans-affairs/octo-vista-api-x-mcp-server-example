@@ -85,7 +85,13 @@ class SsoiTokenParser(TokenParser):
                 authorities.append({"context": perm.contextName, "rpc": perm.rpcName})
 
             for station in app_data.stations:
-                vista_ids.append({"siteId": station.stationNo, "duz": station.userDuz, "siteName": ""})
+                vista_ids.append(
+                    {
+                        "siteId": station.stationNo,
+                        "duz": station.userDuz,
+                        "siteName": "",
+                    }
+                )
 
             # Update user data with permissions
             user_data["authorities"] = authorities

@@ -4,6 +4,7 @@ Administrative RPC handlers for appointments and user management
 
 from typing import Any
 
+from src.data.appointments import get_appointments_for_clinic
 from src.rpc.models import Parameter
 
 
@@ -11,7 +12,9 @@ class AdminHandlers:
     """Handlers for administrative RPCs"""
 
     @staticmethod
-    def handle_sdes_get_appts_by_clin_ien_2(parameters: list[Parameter]) -> dict[str, Any]:
+    def handle_sdes_get_appts_by_clin_ien_2(
+        parameters: list[Parameter],
+    ) -> dict[str, Any]:
         """
         Handle SDES GET APPTS BY CLIN IEN 2 - Get appointments by clinic
         Returns JSON object with appointment data
@@ -37,52 +40,16 @@ class AdminHandlers:
                 if isinstance(param_value, str):
                     end_date = param_value
 
-        # Mock appointments data
-        appointments = []
+        # Get appointments from test data
+        appointments = get_appointments_for_clinic(clinic_ien, start_date, end_date)
 
-        if clinic_ien == "195":  # Primary Care Clinic
-            appointments = [
-                {
-                    "appointmentIEN": "123456",
-                    "patientIEN": "100022",
-                    "patientName": "ANDERSON,JAMES ROBERT",
-                    "dateTime": "2025-06-25T09:00:00",
-                    "clinicIEN": "195",
-                    "clinicName": "PRIMARY CARE",
-                    "status": "SCHEDULED",
-                    "provider": {"duz": "10000000219", "name": "PROVIDER,TEST"},
-                },
-                {
-                    "appointmentIEN": "123457",
-                    "patientIEN": "100028",
-                    "patientName": "WILSON,GEORGE HENRY",
-                    "dateTime": "2025-06-25T10:30:00",
-                    "clinicIEN": "195",
-                    "clinicName": "PRIMARY CARE",
-                    "status": "SCHEDULED",
-                    "telehealth": True,
-                    "provider": {"duz": "10000000219", "name": "PROVIDER,TEST"},
-                },
-            ]
-        elif clinic_ien == "196":  # Mental Health Clinic
-            appointments = [
-                {
-                    "appointmentIEN": "123458",
-                    "patientIEN": "100023",
-                    "patientName": "MARTINEZ,MARIA ELENA",
-                    "dateTime": "2025-06-25T14:00:00",
-                    "clinicIEN": "196",
-                    "clinicName": "MENTAL HEALTH",
-                    "status": "SCHEDULED",
-                    "provider": {"duz": "10000000220", "name": "WILLIAMS,PATRICIA L"},
-                }
-            ]
-
-        # Return in Vista JSON format
-        return {"Appointment": appointments}
+        # The parser expects lowercase "appointments" key
+        return {"appointments": appointments}
 
     @staticmethod
-    def handle_sdes_get_user_profile_by_duz(parameters: list[Parameter]) -> dict[str, Any]:
+    def handle_sdes_get_user_profile_by_duz(
+        parameters: list[Parameter],
+    ) -> dict[str, Any]:
         """
         Handle SDES GET USER PROFILE BY DUZ - Get user profile details
         Returns JSON object with user profile

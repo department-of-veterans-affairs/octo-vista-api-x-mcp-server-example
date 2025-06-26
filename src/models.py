@@ -83,7 +83,7 @@ class RpcParameter(BaseModel):
     string: str | None = None
     array: list[str] | None = None
     ref: str | None = None
-    namedArray: dict[str, str] | None = None
+    named_array: dict[str, str] | None = None
 
 
 # Patient Models
@@ -138,6 +138,7 @@ class Medication(BaseVistaModel):
     pharmacy: str | None = None
 
     @field_validator("status")
+    @classmethod
     def validate_status(cls, v):
         """Ensure status is uppercase"""
         return v.upper() if v else "ACTIVE"

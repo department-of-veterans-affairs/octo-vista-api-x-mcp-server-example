@@ -2,7 +2,6 @@
 RPC authorization matching Vista API X implementation
 """
 
-
 from src.exceptions.handlers import SecurityFaultException
 from src.middleware.auth_filter import SecurityContext
 
@@ -97,7 +96,4 @@ class RpcAuthorization:
 
     def has_wildcard_access(self) -> bool:
         """Check if user has wildcard (*/*) access"""
-        for auth in self.context.authorities:
-            if auth.get("context") == "*" and auth.get("rpc") == "*":
-                return True
-        return False
+        return any(auth.get("context") == "*" and auth.get("rpc") == "*" for auth in self.context.authorities)

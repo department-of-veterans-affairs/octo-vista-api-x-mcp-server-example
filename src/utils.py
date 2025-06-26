@@ -64,7 +64,6 @@ def translate_vista_error(error: Exception | dict[str, Any]) -> str:
     """
     if isinstance(error, dict):
         error_type = error.get("errorType", "Unknown")
-        error_code = error.get("errorCode", "")
         message = error.get("message", "An error occurred")
 
         # Common error translations
@@ -239,7 +238,7 @@ def create_rpc_parameter(
     elif isinstance(value, list):
         return {"array": value}
     elif isinstance(value, dict):
-        return {"namedArray": value}
+        return {"named_array": value}
     else:
         return {"string": str(value)}
 

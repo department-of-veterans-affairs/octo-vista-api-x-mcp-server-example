@@ -2,7 +2,6 @@
 Integration tests for Vista API X Mock Server
 """
 
-
 import httpx
 import pytest
 

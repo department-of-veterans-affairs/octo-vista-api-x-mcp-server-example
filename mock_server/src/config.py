@@ -46,7 +46,11 @@ class Settings(BaseSettings):
     error_injection_rate: float = 0.0
 
     # Test API Keys
-    test_api_keys: list[str] = ["test-standard-key-123", "test-wildcard-key-456", "test-limited-key-789"]
+    test_api_keys: list[str] = [
+        "test-standard-key-123",
+        "test-wildcard-key-456",
+        "test-limited-key-789",
+    ]
 
     # VistaLink Simulation
     vistalink_retry_attempts: int = 3

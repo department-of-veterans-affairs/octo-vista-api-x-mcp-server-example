@@ -75,7 +75,11 @@ app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=li
 
 # Create Vista API X sub-application
 vista_app = FastAPI(
-    title="Vista API X", version=settings.app_version, docs_url="/docs", redoc_url="/redoc", openapi_url="/openapi.json"
+    title="Vista API X",
+    version=settings.app_version,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
 )
 
 # Add CORS middleware
@@ -108,7 +112,11 @@ async def vista_api_root():
             "POST /auth/refresh - Refresh JWT token",
             "POST /vista-sites/{station_number}/users/{caller_duz}/rpc/invoke - Execute RPC",
         ],
-        "documentation": {"openapi": "/openapi.json", "docs": "/docs", "redoc": "/redoc"},
+        "documentation": {
+            "openapi": "/openapi.json",
+            "docs": "/docs",
+            "redoc": "/redoc",
+        },
     }
 
 
@@ -160,13 +168,20 @@ async def run_servers():
 
     # Main app config
     main_config = uvicorn.Config(
-        "src.main:app", host="0.0.0.0", port=settings.server_port, log_level=settings.log_level.lower(), access_log=True
+        "src.main:app",
+        host="0.0.0.0",
+        port=settings.server_port,
+        log_level=settings.log_level.lower(),
+        access_log=True,
     )
     main_server = uvicorn.Server(main_config)
 
     # Health check app config
     health_config = uvicorn.Config(
-        "src.main:health_app", host="0.0.0.0", port=settings.health_check_port, log_level="warning"
+        "src.main:health_app",
+        host="0.0.0.0",
+        port=settings.health_check_port,
+        log_level="warning",
     )
     health_server = uvicorn.Server(health_config)
 

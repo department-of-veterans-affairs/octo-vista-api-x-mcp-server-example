@@ -42,7 +42,7 @@ class PatientHandlers:
     def handle_orwpt_id_info(parameters: list[Parameter]) -> str:
         """
         Handle ORWPT ID INFO - Get patient demographics
-        Returns formatted text
+        Returns Vista-formatted delimited string
         """
         # Get DFN from first parameter
         dfn = ""
@@ -55,34 +55,35 @@ class PatientHandlers:
         patient = get_patient_by_dfn(dfn)
 
         if not patient or patient.get("name") == "TEST,PATIENT":
-            return "Patient not found"
+            return ""
 
-        # Format patient information
-        lines = [
-            f"NAME: {patient['name']}",
-            f"DOB: {patient['dob']}",
-            f"SSN: {patient['ssn']}",
-            f"AGE: {patient['age']}",
-            f"GENDER: {patient['gender']}",
-            f"ADDRESS: {patient['address']}",
-            f"PHONE: {patient['phone']}",
-            f"CELL: {patient.get('cellPhone', '')}",
-            f"EMAIL: {patient.get('email', '')}",
-            f"EMERGENCY CONTACT: {patient['emergencyContact']['name']} ({patient['emergencyContact']['relationship']}) {patient['emergencyContact']['phone']}",
-        ]
+        # Format as Vista delimited string
+        # First line: DFN^NAME^SSN^DOB^AGE^SEX^DIED^SERVICE_CONNECTED^SENSITIVE^TYPE
+        first_line = f"{dfn}^{patient['name']}^{patient['ssn'].replace('***-**-', '')}^{patient['dob']}^{patient['age']}^{patient['gender']}^^^NO^"
 
-        # Add veteran status if available
-        if "veteranStatus" in patient:
-            status = patient["veteranStatus"]
-            lines.append(f"SERVICE CONNECTED: {status.get('serviceConnected', False)}")
-            if status.get("serviceConnected"):
-                lines.append(f"SC PERCENTAGE: {status.get('serviceConnectedPercent', 0)}%")
+        # Additional lines for address, phone, etc.
+        lines = [first_line]
 
-        # Add eligibility info
-        if "eligibility" in patient:
-            elig = patient["eligibility"]
-            lines.append(f"PRIORITY GROUP: {elig.get('priorityGroup', 'UNKNOWN')}")
-            lines.append(f"ENROLLMENT DATE: {elig.get('enrollmentDate', '')}")
+        # Add address lines
+        if patient.get("address"):
+            lines.append(f"ADDRESS: {patient['address']}")
+
+        # Add phone
+        if patient.get("phone"):
+            lines.append(f"PHONE: {patient['phone']}")
+
+        # Add cell phone
+        if patient.get("cellPhone"):
+            lines.append(f"CELL: {patient['cellPhone']}")
+
+        # Add email
+        if patient.get("email"):
+            lines.append(f"EMAIL: {patient['email']}")
+
+        # Add emergency contact
+        if patient.get("emergencyContact"):
+            ec = patient["emergencyContact"]
+            lines.append(f"EMERGENCY CONTACT: {ec['name']} ({ec['relationship']}) {ec['phone']}")
 
         return "\n".join(lines)
 
@@ -94,8 +95,6 @@ class PatientHandlers:
         """
         # Parse parameters
         patient_id = ""
-        start_date = ""
-        end_date = ""
         domains = []
 
         # VPR uses different parameter format
@@ -106,12 +105,9 @@ class PatientHandlers:
                     if isinstance(param_value, str):
                         # Remove semicolon prefix if present
                         patient_id = param_value.lstrip(";")
-                elif i == 1:  # Start date
+                elif i == 1 or i == 2:  # Start date
                     if isinstance(param_value, str):
-                        start_date = param_value
-                elif i == 2:  # End date
-                    if isinstance(param_value, str):
-                        end_date = param_value
+                        pass
                 elif i == 3:  # Domain list
                     if isinstance(param_value, str) and param_value:
                         # Domains are semicolon-separated
@@ -221,7 +217,11 @@ class PatientHandlers:
                     )
                 elif domain == "allergy":
                     vpr_item.update(
-                        {"agent": item["allergen"], "reaction": item["reaction"], "severity": item["severity"]}
+                        {
+                            "agent": item["allergen"],
+                            "reaction": item["reaction"],
+                            "severity": item["severity"],
+                        }
                     )
                 elif domain == "vital":
                     vpr_item.update(
