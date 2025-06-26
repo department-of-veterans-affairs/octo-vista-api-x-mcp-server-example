@@ -17,7 +17,7 @@ def check_mock_server(url="http://localhost:8080/health", max_attempts=10):
             if response.status_code == 200:
                 print("✅ Mock server is running")
                 return True
-        except:
+        except Exception:
             if attempt < max_attempts - 1:
                 print(
                     f"⏳ Waiting for mock server... (attempt {attempt + 1}/{max_attempts})"

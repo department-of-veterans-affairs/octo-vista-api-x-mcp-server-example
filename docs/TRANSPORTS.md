@@ -178,10 +178,10 @@ mise run dev-with-mock
 # MCP inspector opens automatically
 ```
 
-### Test HTTP Mode
+### Test SSE Mode
 ```bash
 # In one terminal
-mise run dev-http-with-mock
+mise run dev-sse-with-mock
 
 # In another terminal
 curl http://localhost:8000/health

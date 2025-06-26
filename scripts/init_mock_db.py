@@ -25,7 +25,7 @@ def check_table_exists():
             capture_output=True,
         )
         return result.returncode == 0
-    except:
+    except Exception:
         return False
 
 

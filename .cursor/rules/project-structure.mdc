@@ -1,0 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Project Structure Guide
+
+The main entry point for the server is [server.py](mdc:server.py). Core source code is located in the [src/](mdc:src) directory, which contains modules for API clients, models, parsers, prompts, resources, and tools. The [mock_server/](mdc:mock_server) directory provides a mock implementation for testing, with its own source, configuration, and scripts. Documentation is available in the [docs/](mdc:docs) directory. Utility scripts are found in the [scripts/](mdc:scripts) directory. The project uses [pyproject.toml](mdc:pyproject.toml) for dependency and build configuration.

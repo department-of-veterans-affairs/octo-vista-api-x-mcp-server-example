@@ -54,7 +54,7 @@ def main():
     """Run minimal setup only if needed"""
     project_root = Path(__file__).parent.parent
     os.chdir(project_root)
-    
+
     # Only run full setup if something major is missing
     if not check_venv() or not check_dependencies():
         # Need full setup
@@ -64,22 +64,34 @@ def main():
     else:
         # Just ensure .env exists silently
         setup_env_file()
-        
+
         # Ensure keys exist for mock server
         if not check_keys():
             mock_keys_dir = project_root / "mock_server" / "keys"
             mock_keys_dir.mkdir(parents=True, exist_ok=True)
             # Generate keys silently
-            subprocess.run([
-                "openssl", "genrsa", "-out", 
-                str(mock_keys_dir / "private_key.pem"), "2048"
-            ], capture_output=True)
-            subprocess.run([
-                "openssl", "rsa", "-in", 
-                str(mock_keys_dir / "private_key.pem"),
-                "-pubout", "-out", 
-                str(mock_keys_dir / "public_key.pem")
-            ], capture_output=True)
+            subprocess.run(
+                [
+                    "openssl",
+                    "genrsa",
+                    "-out",
+                    str(mock_keys_dir / "private_key.pem"),
+                    "2048",
+                ],
+                capture_output=True,
+            )
+            subprocess.run(
+                [
+                    "openssl",
+                    "rsa",
+                    "-in",
+                    str(mock_keys_dir / "private_key.pem"),
+                    "-pubout",
+                    "-out",
+                    str(mock_keys_dir / "public_key.pem"),
+                ],
+                capture_output=True,
+            )
 
 
 if __name__ == "__main__":

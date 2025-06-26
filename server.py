@@ -44,7 +44,10 @@ def initialize_server():
     # Create Vista client
     try:
         base_url = os.getenv("VISTA_API_BASE_URL", "http://localhost:8080")
-        api_key = os.getenv("VISTA_API_KEY", "test-wildcard-key-456")
+        api_key = os.getenv("VISTA_API_KEY")
+        
+        if not api_key:
+            raise ValueError("VISTA_API_KEY environment variable is required")
 
         vista_client = VistaAPIClient(base_url=base_url, api_key=api_key, timeout=30.0)
         logger.info(f"Connected to Vista API at: {base_url}")

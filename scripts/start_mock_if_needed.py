@@ -15,7 +15,7 @@ def check_mock_server():
             timeout=5,
         )
         return result.returncode == 0
-    except:
+    except Exception:
         return False
 
 

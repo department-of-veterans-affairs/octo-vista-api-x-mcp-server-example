@@ -180,6 +180,21 @@ async def test_get_new_data():
 
 ### Formatting and Linting
 
+#### Automatic Formatting (VS Code/Cursor)
+
+The project includes VS Code/Cursor settings for automatic formatting on save:
+- **Black**: Python code formatting
+- **Ruff**: Linting with auto-fix
+- **Import sorting**: Automatic organization of imports
+- **EditorConfig**: Consistent file formatting across editors
+
+To enable auto-formatting:
+1. Open the project in VS Code or Cursor
+2. Install recommended extensions when prompted
+3. Files will automatically format when saved
+
+#### Manual Formatting
+
 ```bash
 # Format code
 mise run lint
