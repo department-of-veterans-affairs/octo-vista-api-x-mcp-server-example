@@ -2,10 +2,11 @@
 
 import logging
 import time
-from typing import Any, Dict, Optional
+from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from ..api_clients.base import BaseVistaClient, VistaAPIError
 from ..models import LabResultsResponse, MedicationsResponse, VitalSignsResponse
 from ..parsers import (
     parse_allergies,
@@ -22,42 +23,41 @@ from ..utils import (
     translate_vista_error,
     validate_dfn,
 )
-from ..api_clients.base import BaseVistaClient, VistaAPIError
 
 logger = logging.getLogger(__name__)
 
 
 def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
     """Register clinical data tools with the MCP server"""
-    
+
     @mcp.tool()
     async def get_medications(
         patient_dfn: str,
-        station: Optional[str] = None,
+        station: str | None = None,
         active_only: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Get patient medications
-        
+
         Args:
             patient_dfn: Patient's DFN
             station: Vista station number (default: configured default)
             active_only: Return only active medications (default: True)
-            
+
         Returns:
             Structured list of medications with dosing information
         """
         start_time = time.time()
         station = station or get_default_station()
         caller_duz = get_default_duz()
-        
+
         # Validate DFN
         if not validate_dfn(patient_dfn):
             return MedicationsResponse.error_response(
                 error="Invalid patient DFN format. DFN must be numeric.",
                 metadata=build_metadata(station=station),
             ).model_dump()
-        
+
         try:
             # Invoke RPC
             result = await vista_client.invoke_rpc(
@@ -66,19 +66,19 @@ def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 rpc_name="ORWPS ACTIVE",
                 parameters=[{"string": patient_dfn}],
             )
-            
+
             # Parse medications
             all_medications = parse_medications(result)
-            
+
             # Filter if active_only
             if active_only:
                 medications = [m for m in all_medications if m.status == "ACTIVE"]
             else:
                 medications = all_medications
-            
+
             # Calculate duration
             duration_ms = int((time.time() - start_time) * 1000)
-            
+
             # Log successful call
             log_rpc_call(
                 rpc_name="ORWPS ACTIVE",
@@ -87,7 +87,7 @@ def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 duration_ms=duration_ms,
                 success=True,
             )
-            
+
             # Build response
             response = MedicationsResponse(
                 success=True,
@@ -102,9 +102,9 @@ def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                     duration_ms=duration_ms,
                 ),
             )
-            
+
             return response.model_dump()
-            
+
         except VistaAPIError as e:
             log_rpc_call(
                 rpc_name="ORWPS ACTIVE",
@@ -117,44 +117,44 @@ def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 error=translate_vista_error(e.to_dict()),
                 metadata=build_metadata(station=station, rpc_name="ORWPS ACTIVE"),
             ).model_dump()
-            
+
         except Exception as e:
             logger.exception("Unexpected error in get_medications")
             return MedicationsResponse.error_response(
                 error=f"Unexpected error: {str(e)}",
                 metadata=build_metadata(station=station, rpc_name="ORWPS ACTIVE"),
             ).model_dump()
-    
+
     @mcp.tool()
     async def get_lab_results(
         patient_dfn: str,
-        station: Optional[str] = None,
+        station: str | None = None,
         days_back: int = 30,
         max_results: int = 50,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Get patient laboratory results
-        
+
         Args:
             patient_dfn: Patient's DFN
             station: Vista station number (default: configured default)
             days_back: Number of days to look back (default: 30)
             max_results: Maximum number of results (default: 50)
-            
+
         Returns:
             Structured list of lab results with values and reference ranges
         """
         start_time = time.time()
         station = station or get_default_station()
         caller_duz = get_default_duz()
-        
+
         # Validate DFN
         if not validate_dfn(patient_dfn):
             return LabResultsResponse.error_response(
                 error="Invalid patient DFN format. DFN must be numeric.",
                 metadata=build_metadata(station=station),
             ).model_dump()
-        
+
         try:
             # Build parameters
             parameters = [
@@ -166,7 +166,7 @@ def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 {"string": ""},  # Format
                 {"string": str(days_back)},
             ]
-            
+
             # Invoke RPC
             result = await vista_client.invoke_rpc(
                 station=station,
@@ -174,13 +174,13 @@ def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 rpc_name="ORWLRR INTERIM",
                 parameters=parameters,
             )
-            
+
             # Parse lab results
             lab_results = parse_lab_results(result)
-            
+
             # Calculate duration
             duration_ms = int((time.time() - start_time) * 1000)
-            
+
             # Log successful call
             log_rpc_call(
                 rpc_name="ORWLRR INTERIM",
@@ -189,7 +189,7 @@ def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 duration_ms=duration_ms,
                 success=True,
             )
-            
+
             # Build response
             response = LabResultsResponse(
                 success=True,
@@ -204,9 +204,9 @@ def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                     duration_ms=duration_ms,
                 ),
             )
-            
+
             return response.model_dump()
-            
+
         except VistaAPIError as e:
             log_rpc_call(
                 rpc_name="ORWLRR INTERIM",
@@ -219,40 +219,40 @@ def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 error=translate_vista_error(e.to_dict()),
                 metadata=build_metadata(station=station, rpc_name="ORWLRR INTERIM"),
             ).model_dump()
-            
+
         except Exception as e:
             logger.exception("Unexpected error in get_lab_results")
             return LabResultsResponse.error_response(
                 error=f"Unexpected error: {str(e)}",
                 metadata=build_metadata(station=station, rpc_name="ORWLRR INTERIM"),
             ).model_dump()
-    
+
     @mcp.tool()
     async def get_vital_signs(
         patient_dfn: str,
-        station: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        station: str | None = None,
+    ) -> dict[str, Any]:
         """
         Get patient vital signs
-        
+
         Args:
             patient_dfn: Patient's DFN
             station: Vista station number (default: configured default)
-            
+
         Returns:
             Structured list of vital sign measurements
         """
         start_time = time.time()
         station = station or get_default_station()
         caller_duz = get_default_duz()
-        
+
         # Validate DFN
         if not validate_dfn(patient_dfn):
             return VitalSignsResponse.error_response(
                 error="Invalid patient DFN format. DFN must be numeric.",
                 metadata=build_metadata(station=station),
             ).model_dump()
-        
+
         try:
             # Invoke RPC
             result = await vista_client.invoke_rpc(
@@ -261,13 +261,13 @@ def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 rpc_name="ORQQVI VITALS",
                 parameters=[{"string": patient_dfn}],
             )
-            
+
             # Parse vital signs
             vital_signs = parse_vital_signs(result)
-            
+
             # Calculate duration
             duration_ms = int((time.time() - start_time) * 1000)
-            
+
             # Log successful call
             log_rpc_call(
                 rpc_name="ORQQVI VITALS",
@@ -276,7 +276,7 @@ def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 duration_ms=duration_ms,
                 success=True,
             )
-            
+
             # Build response
             response = VitalSignsResponse(
                 success=True,
@@ -290,9 +290,9 @@ def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                     duration_ms=duration_ms,
                 ),
             )
-            
+
             return response.model_dump()
-            
+
         except VistaAPIError as e:
             log_rpc_call(
                 rpc_name="ORQQVI VITALS",
@@ -305,35 +305,35 @@ def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 error=translate_vista_error(e.to_dict()),
                 metadata=build_metadata(station=station, rpc_name="ORQQVI VITALS"),
             ).model_dump()
-            
+
         except Exception as e:
             logger.exception("Unexpected error in get_vital_signs")
             return VitalSignsResponse.error_response(
                 error=f"Unexpected error: {str(e)}",
                 metadata=build_metadata(station=station, rpc_name="ORQQVI VITALS"),
             ).model_dump()
-    
+
     @mcp.tool()
     async def get_problems(
         patient_dfn: str,
-        station: Optional[str] = None,
+        station: str | None = None,
         active_only: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Get patient problem list
-        
+
         Args:
             patient_dfn: Patient's DFN
             station: Vista station number (default: configured default)
             active_only: Return only active problems (default: True)
-            
+
         Returns:
             Structured list of medical problems/diagnoses
         """
         start_time = time.time()
         station = station or get_default_station()
         caller_duz = get_default_duz()
-        
+
         # Validate DFN
         if not validate_dfn(patient_dfn):
             return {
@@ -341,7 +341,7 @@ def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 "error": "Invalid patient DFN format. DFN must be numeric.",
                 "metadata": build_metadata(station=station),
             }
-        
+
         try:
             # Invoke RPC
             result = await vista_client.invoke_rpc(
@@ -350,19 +350,21 @@ def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 rpc_name="ORQQPL PROBLEM LIST",
                 parameters=[{"string": patient_dfn}],
             )
-            
+
             # Parse problems
             all_problems = parse_problems(result)
-            
+
             # Filter if active_only
             if active_only:
-                problems = [p for p in all_problems if p.status == "ACTIVE" or p.status == "A"]
+                problems = [
+                    p for p in all_problems if p.status == "ACTIVE" or p.status == "A"
+                ]
             else:
                 problems = all_problems
-            
+
             # Calculate duration
             duration_ms = int((time.time() - start_time) * 1000)
-            
+
             # Log successful call
             log_rpc_call(
                 rpc_name="ORQQPL PROBLEM LIST",
@@ -371,7 +373,7 @@ def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 duration_ms=duration_ms,
                 success=True,
             )
-            
+
             return {
                 "success": True,
                 "patient_dfn": patient_dfn,
@@ -385,7 +387,7 @@ def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                     duration_ms=duration_ms,
                 ),
             }
-            
+
         except VistaAPIError as e:
             log_rpc_call(
                 rpc_name="ORQQPL PROBLEM LIST",
@@ -397,36 +399,40 @@ def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
             return {
                 "success": False,
                 "error": translate_vista_error(e.to_dict()),
-                "metadata": build_metadata(station=station, rpc_name="ORQQPL PROBLEM LIST"),
+                "metadata": build_metadata(
+                    station=station, rpc_name="ORQQPL PROBLEM LIST"
+                ),
             }
-            
+
         except Exception as e:
             logger.exception("Unexpected error in get_problems")
             return {
                 "success": False,
                 "error": f"Unexpected error: {str(e)}",
-                "metadata": build_metadata(station=station, rpc_name="ORQQPL PROBLEM LIST"),
+                "metadata": build_metadata(
+                    station=station, rpc_name="ORQQPL PROBLEM LIST"
+                ),
             }
-    
+
     @mcp.tool()
     async def get_allergies(
         patient_dfn: str,
-        station: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        station: str | None = None,
+    ) -> dict[str, Any]:
         """
         Get patient allergies and adverse reactions
-        
+
         Args:
             patient_dfn: Patient's DFN
             station: Vista station number (default: configured default)
-            
+
         Returns:
             Structured list of allergies with reactions and severity
         """
         start_time = time.time()
         station = station or get_default_station()
         caller_duz = get_default_duz()
-        
+
         # Validate DFN
         if not validate_dfn(patient_dfn):
             return {
@@ -434,7 +440,7 @@ def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 "error": "Invalid patient DFN format. DFN must be numeric.",
                 "metadata": build_metadata(station=station),
             }
-        
+
         try:
             # Invoke RPC
             result = await vista_client.invoke_rpc(
@@ -443,13 +449,13 @@ def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 rpc_name="ORQQAL LIST",
                 parameters=[{"string": patient_dfn}],
             )
-            
+
             # Parse allergies
             allergies = parse_allergies(result)
-            
+
             # Calculate duration
             duration_ms = int((time.time() - start_time) * 1000)
-            
+
             # Log successful call
             log_rpc_call(
                 rpc_name="ORQQAL LIST",
@@ -458,10 +464,10 @@ def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 duration_ms=duration_ms,
                 success=True,
             )
-            
+
             # Determine NKA status
             nka = len(allergies) == 0
-            
+
             return {
                 "success": True,
                 "patient_dfn": patient_dfn,
@@ -475,7 +481,7 @@ def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                     duration_ms=duration_ms,
                 ),
             }
-            
+
         except VistaAPIError as e:
             log_rpc_call(
                 rpc_name="ORQQAL LIST",
@@ -489,7 +495,7 @@ def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 "error": translate_vista_error(e.to_dict()),
                 "metadata": build_metadata(station=station, rpc_name="ORQQAL LIST"),
             }
-            
+
         except Exception as e:
             logger.exception("Unexpected error in get_allergies")
             return {

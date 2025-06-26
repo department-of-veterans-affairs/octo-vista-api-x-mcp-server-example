@@ -3,13 +3,11 @@ Vista API X Mock Server - Main Application
 """
 
 import asyncio
-import logging
 from contextlib import asynccontextmanager
 
 import structlog
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 
 from src.auth.resource import auth_router
 from src.config import settings
@@ -30,7 +28,6 @@ from src.exceptions.handlers import (
 from src.middleware.auth_filter import VistaApiXAuthenticationFilter
 from src.rpc.resource import rpc_router
 
-
 # Configure structured logging
 structlog.configure(
     processors=[
@@ -41,7 +38,7 @@ structlog.configure(
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
-        structlog.processors.JSONRenderer()
+        structlog.processors.JSONRenderer(),
     ],
     context_class=dict,
     logger_factory=structlog.stdlib.LoggerFactory(),
@@ -56,7 +53,7 @@ async def lifespan(app: FastAPI):
     """Application lifespan events"""
     # Startup
     logger.info("Starting Vista API X Mock Server", version=settings.app_version)
-    
+
     # Initialize DynamoDB
     if settings.environment == "development":
         logger.info("Seeding test data in DynamoDB")
@@ -66,27 +63,19 @@ async def lifespan(app: FastAPI):
             logger.info("Test data seeded successfully")
         except Exception as e:
             logger.error("Failed to seed test data", error=str(e))
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down Vista API X Mock Server")
 
 
 # Create main application
-app = FastAPI(
-    title=settings.app_name,
-    version=settings.app_version,
-    lifespan=lifespan
-)
+app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
 
 # Create Vista API X sub-application
 vista_app = FastAPI(
-    title="Vista API X",
-    version=settings.app_version,
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json"
+    title="Vista API X", version=settings.app_version, docs_url="/docs", redoc_url="/redoc", openapi_url="/openapi.json"
 )
 
 # Add CORS middleware
@@ -105,6 +94,7 @@ vista_app.add_middleware(VistaApiXAuthenticationFilter)
 vista_app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
 vista_app.include_router(rpc_router, prefix="/vista-sites", tags=["RPC"])
 
+
 # Add root endpoint for vista-api-x
 @vista_app.get("/")
 async def vista_api_root():
@@ -115,15 +105,12 @@ async def vista_api_root():
         "status": "healthy",
         "endpoints": [
             "POST /auth/token - Get JWT token",
-            "POST /auth/refresh - Refresh JWT token", 
-            "POST /vista-sites/{station_number}/users/{caller_duz}/rpc/invoke - Execute RPC"
+            "POST /auth/refresh - Refresh JWT token",
+            "POST /vista-sites/{station_number}/users/{caller_duz}/rpc/invoke - Execute RPC",
         ],
-        "documentation": {
-            "openapi": "/openapi.json",
-            "docs": "/docs",
-            "redoc": "/redoc"
-        }
+        "documentation": {"openapi": "/openapi.json", "docs": "/docs", "redoc": "/redoc"},
     }
+
 
 # Register exception handlers
 vista_app.add_exception_handler(VistaLinkFaultException, vistalink_fault_handler)
@@ -147,20 +134,19 @@ async def health():
         # Try a simple operation
         await db_client.get_application_by_key("health-check")
     except Exception as e:
-        db_status = f"unhealthy: {str(e)}"
-    
+        db_status = f"unhealthy: {e!s}"
+
     return {
         "status": "healthy",
         "version": settings.app_version,
         "environment": settings.environment,
-        "dependencies": {
-            "dynamodb": db_status
-        }
+        "dependencies": {"dynamodb": db_status},
     }
 
 
 # Health check server on separate port
 health_app = FastAPI()
+
 
 @health_app.get("/health")
 async def health_check():
@@ -171,31 +157,22 @@ async def health_check():
 async def run_servers():
     """Run both main and health check servers concurrently"""
     import uvicorn
-    
+
     # Main app config
     main_config = uvicorn.Config(
-        "src.main:app",
-        host="0.0.0.0",
-        port=settings.server_port,
-        log_level=settings.log_level.lower(),
-        access_log=True
+        "src.main:app", host="0.0.0.0", port=settings.server_port, log_level=settings.log_level.lower(), access_log=True
     )
     main_server = uvicorn.Server(main_config)
-    
+
     # Health check app config
     health_config = uvicorn.Config(
-        "src.main:health_app",
-        host="0.0.0.0",
-        port=settings.health_check_port,
-        log_level="warning"
+        "src.main:health_app", host="0.0.0.0", port=settings.health_check_port, log_level="warning"
     )
     health_server = uvicorn.Server(health_config)
-    
+
     # Run both servers concurrently
-    await asyncio.gather(
-        main_server.serve(),
-        health_server.serve()
-    )
+    await asyncio.gather(main_server.serve(), health_server.serve())
+
 
 def run():
     """Run the application"""

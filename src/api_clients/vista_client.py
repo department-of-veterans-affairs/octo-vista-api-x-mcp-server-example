@@ -1,8 +1,8 @@
 """Vista API X client wrapper with authentication and caching"""
 
 import logging
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import datetime
+from typing import Any
 
 import httpx
 from cachetools import TTLCache
@@ -25,7 +25,7 @@ class VistaAPIClient(BaseVistaClient):
     ):
         """
         Initialize Vista API client
-        
+
         Args:
             base_url: Vista API X base URL
             api_key: API key for authentication
@@ -36,28 +36,28 @@ class VistaAPIClient(BaseVistaClient):
         super().__init__(timeout)
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
-        
+
         # Initialize HTTP client
         self.client = httpx.AsyncClient(timeout=timeout)
-        
+
         # Initialize caches
         self.token_cache = TTLCache(maxsize=10, ttl=token_cache_ttl)
         self.response_cache = TTLCache(maxsize=1000, ttl=response_cache_ttl)
-        
-        self._token: Optional[str] = None
-        self._token_expiry: Optional[datetime] = None
+
+        self._token: str | None = None
+        self._token_expiry: datetime | None = None
 
     async def _get_jwt_token(self) -> str:
         """Get or refresh JWT token"""
         cache_key = f"token_{self.api_key}"
-        
+
         # Check cache first
         if cache_key in self.token_cache:
             logger.debug("Using cached JWT token")
             return self.token_cache[cache_key]
-        
+
         logger.info("Obtaining new JWT token")
-        
+
         try:
             response = await self.client.post(
                 f"{self.base_url}/auth/token",
@@ -65,18 +65,20 @@ class VistaAPIClient(BaseVistaClient):
                 headers={"Content-Type": "application/json"},
             )
             response.raise_for_status()
-            
+
             data = response.json()
             token = data["data"]["token"]
-            
+
             # Cache the token
             self.token_cache[cache_key] = token
             logger.info("JWT token obtained and cached")
-            
+
             return token
-            
+
         except httpx.HTTPStatusError as e:
-            logger.error(f"Failed to obtain JWT token: {e.response.status_code} - {e.response.text}")
+            logger.error(
+                f"Failed to obtain JWT token: {e.response.status_code} - {e.response.text}"
+            )
             raise
         except Exception as e:
             logger.error(f"Error obtaining JWT token: {str(e)}")
@@ -88,13 +90,13 @@ class VistaAPIClient(BaseVistaClient):
         caller_duz: str,
         rpc_name: str,
         context: str = "OR CPRS GUI CHART",
-        parameters: Optional[List[Dict[str, Any]]] = None,
+        parameters: list[dict[str, Any]] | None = None,
         json_result: bool = False,
         use_cache: bool = True,
     ) -> Any:
         """
         Invoke a Vista RPC
-        
+
         Args:
             station: Vista station number
             caller_duz: DUZ of the calling user
@@ -103,47 +105,47 @@ class VistaAPIClient(BaseVistaClient):
             parameters: RPC parameters
             json_result: Whether to request JSON response
             use_cache: Whether to use response cache
-            
+
         Returns:
             RPC response (string or dict depending on RPC and json_result)
         """
         # Create cache key
         cache_key = f"{station}:{caller_duz}:{rpc_name}:{hash(str(parameters))}"
-        
+
         # Check cache if enabled
         if use_cache and cache_key in self.response_cache:
             logger.debug(f"Using cached response for {rpc_name}")
             return self.response_cache[cache_key]
-        
+
         # Get JWT token
         token = await self._get_jwt_token()
-        
+
         # Build request payload
         payload = {
             "rpc": rpc_name,
             "context": context,
         }
-        
+
         if json_result:
             payload["jsonResult"] = True
-            
+
         if parameters:
             payload["parameters"] = parameters
-        
+
         # Build URL
         url = f"{self.base_url}/vista-sites/{station}/users/{caller_duz}/rpc/invoke"
-        
+
         # Build headers
         headers = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         }
-        
+
         logger.debug(f"Invoking RPC: {rpc_name} at station {station}")
-        
+
         try:
             response = await self.client.post(url, json=payload, headers=headers)
-            
+
             # Handle token expiration
             if response.status_code == 401:
                 logger.info("JWT token expired, refreshing...")
@@ -154,12 +156,12 @@ class VistaAPIClient(BaseVistaClient):
                 headers["Authorization"] = f"Bearer {token}"
                 # Retry request
                 response = await self.client.post(url, json=payload, headers=headers)
-            
+
             response.raise_for_status()
-            
+
             # Extract result
             data = response.json()
-            
+
             # Vista API X returns the result in different formats
             if "payload" in data:
                 result = data["payload"]
@@ -168,16 +170,18 @@ class VistaAPIClient(BaseVistaClient):
                     result = result["result"]
             else:
                 result = data
-            
+
             # Cache successful response
             if use_cache:
                 self.response_cache[cache_key] = result
-                
+
             logger.debug(f"RPC {rpc_name} completed successfully")
             return result
-            
+
         except httpx.HTTPStatusError as e:
-            logger.error(f"RPC invocation failed: {e.response.status_code} - {e.response.text}")
+            logger.error(
+                f"RPC invocation failed: {e.response.status_code} - {e.response.text}"
+            )
             # Parse error response
             try:
                 error_data = e.response.json()

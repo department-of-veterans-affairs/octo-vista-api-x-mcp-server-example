@@ -2,13 +2,12 @@
 JWT handling with RSA signing matching Vista API X
 """
 
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import jwt
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
 
 from src.auth.models import JwtPayload, JwtUserPrincipal
 from src.config import settings
@@ -16,47 +15,40 @@ from src.config import settings
 
 class JwtHandler:
     """Handle JWT operations with RSA signing"""
-    
+
     def __init__(self):
         self._private_key = None
         self._public_key = None
         self._load_keys()
-    
+
     def _load_keys(self):
         """Load RSA keys from files"""
         # Load private key
-        with open(settings.jwt_private_key_path, 'rb') as f:
-            self._private_key = serialization.load_pem_private_key(
-                f.read(),
-                password=None,
-                backend=default_backend()
-            )
-        
+        with open(settings.jwt_private_key_path, "rb") as f:
+            self._private_key = serialization.load_pem_private_key(f.read(), password=None, backend=default_backend())
+
         # Load public key
-        with open(settings.jwt_public_key_path, 'rb') as f:
-            self._public_key = serialization.load_pem_public_key(
-                f.read(),
-                backend=default_backend()
-            )
-    
+        with open(settings.jwt_public_key_path, "rb") as f:
+            self._public_key = serialization.load_pem_public_key(f.read(), backend=default_backend())
+
     def generate_token(
         self,
         subject: str,
-        authorities: List[Dict[str, str]],
-        vista_ids: List[Dict[str, str]],
-        flags: List[str],
+        authorities: list[dict[str, str]],
+        vista_ids: list[dict[str, str]],
+        flags: list[str],
         token_type: str = "STANDARD",
-        ttl_hours: Optional[int] = None,
-        refresh_ttl_hours: Optional[int] = None,
-        application_key: Optional[str] = None,
-        user_data: Optional[Dict[str, Any]] = None
+        ttl_hours: int | None = None,
+        refresh_ttl_hours: int | None = None,
+        application_key: str | None = None,
+        user_data: dict[str, Any] | None = None,
     ) -> str:
         """Generate JWT token with Vista API X structure"""
-        
-        now = datetime.now(timezone.utc)
+
+        now = datetime.now(UTC)
         ttl_hours = ttl_hours or settings.jwt_ttl_hours
         refresh_ttl_hours = refresh_ttl_hours or settings.jwt_refresh_ttl_hours
-        
+
         # Create user principal
         user_principal = JwtUserPrincipal(
             username=user_data.get("username", subject) if user_data else subject,
@@ -74,9 +66,9 @@ class JwtHandler:
             adSamAccountName=user_data.get("adSamAccountName", "") if user_data else "",
             vistaIds=vista_ids,
             authorities=authorities,
-            attributes=user_data.get("attributes", {}) if user_data else {}
+            attributes=user_data.get("attributes", {}) if user_data else {},
         )
-        
+
         # Create JWT payload
         payload = JwtPayload(
             sub=subject,
@@ -93,33 +85,29 @@ class JwtHandler:
             idType=token_type,
             user=user_principal,
             flags=flags,
-            vamf_auth_roles=[]
+            vamf_auth_roles=[],
         )
-        
+
         # Convert to dict for JWT encoding
         payload_dict = payload.model_dump(by_alias=True, exclude_none=True)
-        
+
         # Encode JWT with RSA private key
-        token = jwt.encode(
-            payload_dict,
-            self._private_key,
-            algorithm=settings.jwt_algorithm
-        )
-        
+        token = jwt.encode(payload_dict, self._private_key, algorithm=settings.jwt_algorithm)
+
         return token
-    
-    def decode_token(self, token: str, verify_exp: bool = True) -> Dict[str, Any]:
+
+    def decode_token(self, token: str, verify_exp: bool = True) -> dict[str, Any]:
         """Decode and verify JWT token"""
-        
+
         try:
             # Add clock skew tolerance
             options = {
                 "verify_exp": verify_exp,
                 "verify_aud": True,
                 "verify_iss": True,
-                "require": ["exp", "iat", "sub", "iss", "aud"]
+                "require": ["exp", "iat", "sub", "iss", "aud"],
             }
-            
+
             # Decode with public key
             payload = jwt.decode(
                 token,
@@ -128,11 +116,11 @@ class JwtHandler:
                 audience=settings.jwt_audience,
                 issuer=settings.jwt_issuer,
                 options=options,
-                leeway=timedelta(seconds=settings.jwt_clock_skew_seconds)
+                leeway=timedelta(seconds=settings.jwt_clock_skew_seconds),
             )
-            
+
             return payload
-            
+
         except jwt.ExpiredSignatureError:
             raise ValueError("Token has expired")
         except jwt.InvalidAudienceError:
@@ -140,43 +128,39 @@ class JwtHandler:
         except jwt.InvalidIssuerError:
             raise ValueError("Invalid token issuer")
         except jwt.InvalidTokenError as e:
-            raise ValueError(f"Invalid token: {str(e)}")
-    
+            raise ValueError(f"Invalid token: {e!s}")
+
     def refresh_token(self, token: str) -> str:
         """Refresh an existing token"""
-        
+
         # Decode without exp verification
         payload = self.decode_token(token, verify_exp=False)
-        
+
         # Check if token is expired beyond refresh window
-        now = datetime.now(timezone.utc)
-        exp = datetime.fromtimestamp(payload["exp"], timezone.utc)
+        now = datetime.now(UTC)
+        exp = datetime.fromtimestamp(payload["exp"], UTC)
         refresh_window = timedelta(hours=payload.get("refresh_ttl", settings.jwt_refresh_ttl_hours))
-        
+
         if now > exp + refresh_window:
             raise ValueError("Token is beyond refresh window")
-        
+
         # Update token with new expiration
         payload["exp"] = int((now + timedelta(hours=payload.get("ttl", settings.jwt_ttl_hours))).timestamp())
         payload["iat"] = int(now.timestamp())
         payload["nbf"] = int(now.timestamp())
         payload["refresh_count"] = payload.get("refresh_count", 0) + 1
-        
+
         # Re-encode token
-        token = jwt.encode(
-            payload,
-            self._private_key,
-            algorithm=settings.jwt_algorithm
-        )
-        
+        token = jwt.encode(payload, self._private_key, algorithm=settings.jwt_algorithm)
+
         return token
-    
+
     def _generate_jti(self) -> str:
         """Generate unique JWT ID"""
         import hashlib
-        import time
         import random
-        
+        import time
+
         data = f"{time.time()}{random.random()}"
         return hashlib.sha256(data.encode()).hexdigest()[:16]
 

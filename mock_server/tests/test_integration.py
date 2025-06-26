@@ -2,9 +2,9 @@
 Integration tests for Vista API X Mock Server
 """
 
-import pytest
+
 import httpx
-from datetime import datetime, timedelta
+import pytest
 
 # Test configuration
 BASE_URL = "http://localhost:8080/vista-api-x"
@@ -23,10 +23,7 @@ async def client():
 @pytest.fixture
 async def auth_token(client):
     """Get authentication token"""
-    response = await client.post(
-        "/auth/token",
-        json={"key": TEST_API_KEY}
-    )
+    response = await client.post("/auth/token", json={"key": TEST_API_KEY})
     assert response.status_code == 200
     data = response.json()
     return data["data"]["token"]
@@ -35,11 +32,8 @@ async def auth_token(client):
 @pytest.mark.asyncio
 async def test_auth_token_generation(client):
     """Test JWT token generation"""
-    response = await client.post(
-        "/auth/token",
-        json={"key": TEST_API_KEY}
-    )
-    
+    response = await client.post("/auth/token", json={"key": TEST_API_KEY})
+
     assert response.status_code == 200
     data = response.json()
     assert "data" in data
@@ -50,11 +44,8 @@ async def test_auth_token_generation(client):
 @pytest.mark.asyncio
 async def test_auth_token_invalid_key(client):
     """Test invalid API key"""
-    response = await client.post(
-        "/auth/token",
-        json={"key": "invalid-key"}
-    )
-    
+    response = await client.post("/auth/token", json={"key": "invalid-key"})
+
     assert response.status_code == 401
     data = response.json()
     assert data["success"] is False
@@ -64,11 +55,8 @@ async def test_auth_token_invalid_key(client):
 @pytest.mark.asyncio
 async def test_token_refresh(client, auth_token):
     """Test token refresh"""
-    response = await client.post(
-        "/auth/refresh",
-        headers={"Authorization": f"Bearer {auth_token}"}
-    )
-    
+    response = await client.post("/auth/refresh", headers={"Authorization": f"Bearer {auth_token}"})
+
     assert response.status_code == 200
     data = response.json()
     assert "data" in data
@@ -82,18 +70,14 @@ async def test_rpc_patient_list(client, auth_token):
     response = await client.post(
         f"/vista-sites/{TEST_STATION}/users/{TEST_DUZ}/rpc/invoke",
         headers={"Authorization": f"Bearer {auth_token}"},
-        json={
-            "context": "OR CPRS GUI CHART",
-            "rpc": "ORWPT LIST",
-            "parameters": [{"string": "^A"}]
-        }
+        json={"context": "OR CPRS GUI CHART", "rpc": "ORWPT LIST", "parameters": [{"string": "^A"}]},
     )
-    
+
     assert response.status_code == 200
     data = response.json()
     assert "payload" in data
     assert "result" in data["payload"]
-    
+
     # Check result format (delimited string)
     result = data["payload"]["result"]
     assert "^" in result  # Should contain delimited data
@@ -111,17 +95,17 @@ async def test_rpc_vpr_patient_data(client, auth_token):
             "jsonResult": True,
             "parameters": [
                 {"string": "100022"},  # Patient DFN
-                {"string": ""},         # Start date
-                {"string": ""},         # End date
-                {"string": "patient;vital;med"}  # Domains
-            ]
-        }
+                {"string": ""},  # Start date
+                {"string": ""},  # End date
+                {"string": "patient;vital;med"},  # Domains
+            ],
+        },
     )
-    
+
     assert response.status_code == 200
     data = response.json()
     assert "payload" in data
-    
+
     # Should return JSON object directly
     payload = data["payload"]
     assert "data" in payload
@@ -134,13 +118,9 @@ async def test_rpc_unauthorized_station(client, auth_token):
     response = await client.post(
         "/vista-sites/999/users/99999/rpc/invoke",
         headers={"Authorization": f"Bearer {auth_token}"},
-        json={
-            "context": "OR CPRS GUI CHART",
-            "rpc": "ORWPT LIST",
-            "parameters": []
-        }
+        json={"context": "OR CPRS GUI CHART", "rpc": "ORWPT LIST", "parameters": []},
     )
-    
+
     assert response.status_code == 403
     data = response.json()
     assert data["success"] is False
@@ -152,13 +132,9 @@ async def test_rpc_missing_auth(client):
     """Test RPC without authentication"""
     response = await client.post(
         f"/vista-sites/{TEST_STATION}/users/{TEST_DUZ}/rpc/invoke",
-        json={
-            "context": "OR CPRS GUI CHART",
-            "rpc": "ORWPT LIST",
-            "parameters": []
-        }
+        json={"context": "OR CPRS GUI CHART", "rpc": "ORWPT LIST", "parameters": []},
     )
-    
+
     assert response.status_code == 401
     data = response.json()
     assert data["success"] is False
@@ -169,7 +145,7 @@ async def test_rpc_missing_auth(client):
 async def test_health_check(client):
     """Test health check endpoint"""
     response = await client.get("/health")
-    
+
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "healthy"
@@ -182,7 +158,7 @@ async def test_root_endpoint():
     """Test root endpoint"""
     async with httpx.AsyncClient(base_url="http://localhost:8080") as client:
         response = await client.get("/")
-        
+
         assert response.status_code == 200
         data = response.json()
         assert "service" in data

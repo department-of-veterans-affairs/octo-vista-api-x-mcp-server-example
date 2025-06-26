@@ -2,7 +2,7 @@
 Exception handlers matching Vista API X's 5 exception mappers
 """
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -14,22 +14,22 @@ def create_error_response(
     message: str,
     path: str,
     status_code: int,
-    error_type: Optional[str] = None,
-    fault_actor: Optional[str] = None,
-    fault_code: Optional[str] = None,
-    fault_string: Optional[str] = None
-) -> Dict[str, Any]:
+    error_type: str | None = None,
+    fault_actor: str | None = None,
+    fault_code: str | None = None,
+    fault_string: str | None = None,
+) -> dict[str, Any]:
     """Create error response matching Vista API X format"""
-    
+
     response = {
         "success": False,
         "errorCode": error_code,
         "responseStatus": status_code,
         "title": title,
         "message": message,
-        "path": path
+        "path": path,
     }
-    
+
     # Add optional fault details
     if error_type:
         response["errorType"] = error_type
@@ -39,18 +39,19 @@ def create_error_response(
         response["faultCode"] = fault_code
     if fault_string:
         response["faultString"] = fault_string
-    
+
     return response
 
 
 class VistaLinkFaultException(Exception):
     """VistaLink connection/execution errors"""
+
     def __init__(
         self,
         message: str,
         fault_code: str = "VISTA_LINK_ERROR",
         fault_actor: str = "VistaLinkConnector",
-        fault_string: Optional[str] = None
+        fault_string: str | None = None,
     ):
         self.message = message
         self.fault_code = fault_code
@@ -61,12 +62,8 @@ class VistaLinkFaultException(Exception):
 
 class SecurityFaultException(Exception):
     """Security/authorization errors"""
-    def __init__(
-        self,
-        message: str,
-        error_code: str = "ACCESS-DENIED",
-        fault_code: Optional[str] = None
-    ):
+
+    def __init__(self, message: str, error_code: str = "ACCESS-DENIED", fault_code: str | None = None):
         self.message = message
         self.error_code = error_code
         self.fault_code = fault_code
@@ -75,12 +72,8 @@ class SecurityFaultException(Exception):
 
 class RpcFaultException(Exception):
     """RPC execution errors"""
-    def __init__(
-        self,
-        message: str,
-        rpc_name: str,
-        fault_code: str = "RPC_ERROR"
-    ):
+
+    def __init__(self, message: str, rpc_name: str, fault_code: str = "RPC_ERROR"):
         self.message = message
         self.rpc_name = rpc_name
         self.fault_code = fault_code
@@ -89,11 +82,8 @@ class RpcFaultException(Exception):
 
 class JwtException(Exception):
     """JWT validation errors"""
-    def __init__(
-        self,
-        message: str,
-        error_code: str = "JWT-INVALID"
-    ):
+
+    def __init__(self, message: str, error_code: str = "JWT-INVALID"):
         self.message = message
         self.error_code = error_code
         super().__init__(self.message)
@@ -101,17 +91,15 @@ class JwtException(Exception):
 
 class FoundationsException(Exception):
     """General application errors"""
-    def __init__(
-        self,
-        message: str,
-        error_code: str = "GENERAL-ERROR"
-    ):
+
+    def __init__(self, message: str, error_code: str = "GENERAL-ERROR"):
         self.message = message
         self.error_code = error_code
         super().__init__(self.message)
 
 
 # Exception handlers for FastAPI
+
 
 async def vistalink_fault_handler(request: Request, exc: VistaLinkFaultException) -> JSONResponse:
     """Handle VistaLink faults"""
@@ -126,8 +114,8 @@ async def vistalink_fault_handler(request: Request, exc: VistaLinkFaultException
             error_type="VistaLinkFault",
             fault_actor=exc.fault_actor,
             fault_code=exc.fault_code,
-            fault_string=exc.fault_string
-        )
+            fault_string=exc.fault_string,
+        ),
     )
 
 
@@ -143,8 +131,8 @@ async def security_fault_handler(request: Request, exc: SecurityFaultException) 
             path=str(request.url.path),
             status_code=status_code,
             error_type="SecurityFault",
-            fault_code=exc.fault_code
-        )
+            fault_code=exc.fault_code,
+        ),
     )
 
 
@@ -161,8 +149,8 @@ async def rpc_fault_handler(request: Request, exc: RpcFaultException) -> JSONRes
             error_type="RpcFault",
             fault_actor="RpcInvoker",
             fault_code=exc.fault_code,
-            fault_string=f"RPC {exc.rpc_name} failed: {exc.message}"
-        )
+            fault_string=f"RPC {exc.rpc_name} failed: {exc.message}",
+        ),
     )
 
 
@@ -176,8 +164,8 @@ async def jwt_exception_handler(request: Request, exc: JwtException) -> JSONResp
             message=exc.message,
             path=str(request.url.path),
             status_code=401,
-            error_type="JwtException"
-        )
+            error_type="JwtException",
+        ),
     )
 
 
@@ -191,8 +179,8 @@ async def foundations_exception_handler(request: Request, exc: FoundationsExcept
             message=exc.message,
             path=str(request.url.path),
             status_code=500,
-            error_type="FoundationsException"
-        )
+            error_type="FoundationsException",
+        ),
     )
 
 
@@ -200,11 +188,8 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
     """Handle FastAPI HTTP exceptions in Vista API X format"""
     # If detail is already in our format, use it directly
     if isinstance(exc.detail, dict) and "errorCode" in exc.detail:
-        return JSONResponse(
-            status_code=exc.status_code,
-            content=exc.detail
-        )
-    
+        return JSONResponse(status_code=exc.status_code, content=exc.detail)
+
     # Otherwise, format it
     return JSONResponse(
         status_code=exc.status_code,
@@ -213,6 +198,6 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
             title=exc.detail if isinstance(exc.detail, str) else "Error",
             message=str(exc.detail),
             path=str(request.url.path),
-            status_code=exc.status_code
-        )
+            status_code=exc.status_code,
+        ),
     )

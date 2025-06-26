@@ -40,37 +40,33 @@ server = mcp
 def initialize_server():
     """Initialize the server components"""
     logger.info("Initializing Vista API MCP Server...")
-    
+
     # Create Vista client
     try:
         base_url = os.getenv("VISTA_API_BASE_URL", "http://localhost:8080")
         api_key = os.getenv("VISTA_API_KEY", "test-wildcard-key-456")
-        
-        vista_client = VistaAPIClient(
-            base_url=base_url,
-            api_key=api_key,
-            timeout=30.0
-        )
+
+        vista_client = VistaAPIClient(base_url=base_url, api_key=api_key, timeout=30.0)
         logger.info(f"Connected to Vista API at: {base_url}")
     except Exception as e:
         logger.error(f"Failed to create Vista client: {e}")
         raise
-    
+
     # Register all tools
     logger.info("Registering tools...")
     register_patient_tools(mcp, vista_client)
     register_clinical_tools(mcp, vista_client)
     register_admin_tools(mcp, vista_client)
     register_system_tools(mcp, vista_client)
-    
+
     # Register resources
     logger.info("Registering resources...")
     register_resources(mcp)
-    
+
     # Register prompts
     logger.info("Registering prompts...")
     register_prompts(mcp)
-    
+
     logger.info("Vista API MCP Server initialized successfully")
 
 

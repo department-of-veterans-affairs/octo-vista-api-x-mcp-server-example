@@ -88,8 +88,9 @@ pwd
 # Example output: /Users/username/projects/octo-vista-api-x-mcp-server
 ```
 
-### 5. Complete Example (macOS)
+### 5. Complete Examples
 
+#### stdio Transport (Local)
 ```json
 {
   "mcpServers": {
@@ -108,6 +109,30 @@ pwd
         "DEFAULT_STATION": "500",
         "DEFAULT_DUZ": "10000000219"
       }
+    }
+  }
+}
+```
+
+#### SSE Transport (Remote Access)
+
+For local development:
+```json
+{
+  "mcpServers": {
+    "vista-api": {
+      "url": "http://localhost:8000/sse"
+    }
+  }
+}
+```
+
+For production (with your deployed server):
+```json
+{
+  "mcpServers": {
+    "vista-api": {
+      "url": "https://your-mcp-server.com/sse"
     }
   }
 }

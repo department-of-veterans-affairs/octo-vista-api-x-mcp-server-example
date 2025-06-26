@@ -70,3 +70,39 @@ run = "docker-compose logs -f"
 [tasks.setup-claude]
 description = "Set up Claude Desktop configuration"
 run = "python scripts/setup_claude_desktop.py"
+
+[tasks.dev-sse]
+description = "Start SSE server for development"
+env = { VISTA_MCP_TRANSPORT = "sse" }
+run = [
+    # Auto-setup if needed
+    "python scripts/auto_setup.py",
+    # Run SSE server
+    "echo '🌐 Starting SSE server...'",
+    "echo '📍 SSE endpoint: http://localhost:8000/sse'",
+    "echo '📝 Message endpoint: http://localhost:8000/messages/'",
+    "echo ''",
+    "echo '🔧 Configure your client with:'",
+    "echo '  {\"url\": \"http://localhost:8000/sse\"}'",
+    "echo ''",
+    "uv run python http_server.py"
+]
+
+[tasks.dev-sse-with-mock]
+description = "Start SSE server with mock Vista API"
+env = { VISTA_MCP_TRANSPORT = "sse" }
+run = [
+    # Auto-setup if needed
+    "python scripts/auto_setup.py",
+    # Start mock server if needed
+    "python scripts/start_mock_if_needed.py",
+    # Run SSE server
+    "echo '🌐 Starting SSE server with mock...'",
+    "echo '📍 SSE endpoint: http://localhost:8000/sse'",
+    "echo '📝 Message endpoint: http://localhost:8000/messages/'",
+    "echo ''",
+    "echo '🔧 Configure your client with:'",
+    "echo '  {\"url\": \"http://localhost:8000/sse\"}'",
+    "echo ''",
+    "uv run python http_server.py"
+]

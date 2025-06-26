@@ -2,7 +2,6 @@
 
 import json
 import logging
-from typing import Any, Dict
 
 from mcp.server.fastmcp import FastMCP
 
@@ -14,34 +13,39 @@ logger = logging.getLogger(__name__)
 
 def register_resources(mcp: FastMCP):
     """Register MCP resources with the server"""
-    
+
     @mcp.resource("vista://stations")
     async def get_stations() -> str:
         """
         Get list of available Vista stations
-        
+
         Returns:
             JSON list of stations with their information
         """
         stations = []
         for number, info in DEFAULT_STATIONS.items():
-            stations.append({
-                "number": number,
-                "name": info["name"],
-                "default_duz": info["duz"],
-                "timezone": info["timezone"],
-            })
-        
-        return json.dumps({
-            "stations": stations,
-            "description": "Available Vista stations for connection",
-        }, indent=2)
-    
+            stations.append(
+                {
+                    "number": number,
+                    "name": info["name"],
+                    "default_duz": info["duz"],
+                    "timezone": info["timezone"],
+                }
+            )
+
+        return json.dumps(
+            {
+                "stations": stations,
+                "description": "Available Vista stations for connection",
+            },
+            indent=2,
+        )
+
     @mcp.resource("vista://vpr-domains")
     async def get_vpr_domains() -> str:
         """
         Get list of available VPR data domains
-        
+
         Returns:
             JSON list of VPR domains with descriptions
         """
@@ -66,25 +70,30 @@ def register_resources(mcp: FastMCP):
             VprDomain.EXAM: "Physical examination findings",
             VprDomain.FACTOR: "Health factors",
         }
-        
+
         for domain in VprDomain:
-            domains.append({
-                "id": domain.value,
-                "name": domain.value.title(),
-                "description": domain_descriptions.get(domain, ""),
-            })
-        
-        return json.dumps({
-            "domains": domains,
-            "description": "VPR (Virtual Patient Record) data domains for get_patient_data tool",
-            "usage": "Use these domain IDs when calling get_patient_data to retrieve specific types of clinical data",
-        }, indent=2)
-    
+            domains.append(
+                {
+                    "id": domain.value,
+                    "name": domain.value.title(),
+                    "description": domain_descriptions.get(domain, ""),
+                }
+            )
+
+        return json.dumps(
+            {
+                "domains": domains,
+                "description": "VPR (Virtual Patient Record) data domains for get_patient_data tool",
+                "usage": "Use these domain IDs when calling get_patient_data to retrieve specific types of clinical data",
+            },
+            indent=2,
+        )
+
     @mcp.resource("vista://test-patients")
     async def get_test_patients() -> str:
         """
         Get catalog of test patients available in the mock server
-        
+
         Returns:
             JSON list of test patients with their characteristics
         """
@@ -115,7 +124,12 @@ def register_resources(mcp: FastMCP):
                 "ssn_last_four": "4567",
                 "age": 40,
                 "description": "OEF/OIF veteran with TBI, amputee, chronic pain",
-                "key_conditions": ["TBI", "Right leg amputation", "PTSD", "Chronic pain"],
+                "key_conditions": [
+                    "TBI",
+                    "Right leg amputation",
+                    "PTSD",
+                    "Chronic pain",
+                ],
                 "medications": 8,
                 "allergies": ["Penicillin"],
             },
@@ -135,7 +149,11 @@ def register_resources(mcp: FastMCP):
                 "ssn_last_four": "2345",
                 "age": 52,
                 "description": "Homeless veteran with substance abuse, mental health issues",
-                "key_conditions": ["Alcohol use disorder", "Bipolar disorder", "Hepatitis C"],
+                "key_conditions": [
+                    "Alcohol use disorder",
+                    "Bipolar disorder",
+                    "Hepatitis C",
+                ],
                 "medications": 4,
                 "allergies": [],
             },
@@ -170,19 +188,22 @@ def register_resources(mcp: FastMCP):
                 "allergies": ["Contrast dye"],
             },
         ]
-        
-        return json.dumps({
-            "test_patients": test_patients,
-            "description": "Test patients available in the Vista API mock server",
-            "usage": "Use these DFNs and patient information for testing",
-            "station": "500",
-        }, indent=2)
-    
+
+        return json.dumps(
+            {
+                "test_patients": test_patients,
+                "description": "Test patients available in the Vista API mock server",
+                "usage": "Use these DFNs and patient information for testing",
+                "station": "500",
+            },
+            indent=2,
+        )
+
     @mcp.resource("vista://rpc-catalog")
     async def get_rpc_catalog() -> str:
         """
         Get catalog of available RPCs and their purposes
-        
+
         Returns:
             JSON catalog of RPCs organized by category
         """
@@ -310,9 +331,12 @@ def register_resources(mcp: FastMCP):
                 ],
             },
         }
-        
-        return json.dumps({
-            "rpc_catalog": rpc_catalog,
-            "description": "Complete catalog of available Vista RPCs and their corresponding MCP tools",
-            "total_rpcs": sum(len(cat["rpcs"]) for cat in rpc_catalog.values()),
-        }, indent=2)
+
+        return json.dumps(
+            {
+                "rpc_catalog": rpc_catalog,
+                "description": "Complete catalog of available Vista RPCs and their corresponding MCP tools",
+                "total_rpcs": sum(len(cat["rpcs"]) for cat in rpc_catalog.values()),
+            },
+            indent=2,
+        )

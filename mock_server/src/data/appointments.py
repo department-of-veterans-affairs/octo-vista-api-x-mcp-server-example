@@ -2,8 +2,8 @@
 Appointment data for test patients
 """
 
-from typing import Dict, List
 from datetime import datetime, timedelta
+
 
 # Generate realistic appointment data
 def generate_appointment_date(days_offset: int) -> str:
@@ -11,8 +11,9 @@ def generate_appointment_date(days_offset: int) -> str:
     date = datetime.now() + timedelta(days=days_offset)
     return date.strftime("%Y-%m-%dT%H:%M:%S")
 
+
 # Appointments by patient
-PATIENT_APPOINTMENTS: Dict[str, List[Dict[str, any]]] = {
+PATIENT_APPOINTMENTS: dict[str, list[dict[str, any]]] = {
     # Vietnam Veteran - Regular chronic care
     "100022": [
         {
@@ -28,7 +29,7 @@ PATIENT_APPOINTMENTS: Dict[str, List[Dict[str, any]]] = {
             "length": "30",
             "checkInTime": "",
             "checkOutTime": "",
-            "purpose": "DIABETES FOLLOW UP"
+            "purpose": "DIABETES FOLLOW UP",
         },
         {
             "appointmentIEN": "1234568",
@@ -43,7 +44,7 @@ PATIENT_APPOINTMENTS: Dict[str, List[Dict[str, any]]] = {
             "length": "60",
             "checkInTime": "",
             "checkOutTime": "",
-            "purpose": "PTSD THERAPY"
+            "purpose": "PTSD THERAPY",
         },
         {
             "appointmentIEN": "1234569",
@@ -58,7 +59,7 @@ PATIENT_APPOINTMENTS: Dict[str, List[Dict[str, any]]] = {
             "length": "30",
             "checkInTime": "09:45",
             "checkOutTime": "10:35",
-            "purpose": "DIABETIC EDUCATION"
+            "purpose": "DIABETIC EDUCATION",
         },
         {
             "appointmentIEN": "1234570",
@@ -73,10 +74,9 @@ PATIENT_APPOINTMENTS: Dict[str, List[Dict[str, any]]] = {
             "length": "60",
             "checkInTime": "",
             "checkOutTime": "",
-            "purpose": "HEARING AID FITTING"
-        }
+            "purpose": "HEARING AID FITTING",
+        },
     ],
-    
     # Female Gulf War Veteran
     "100023": [
         {
@@ -92,7 +92,7 @@ PATIENT_APPOINTMENTS: Dict[str, List[Dict[str, any]]] = {
             "length": "50",
             "checkInTime": "",
             "checkOutTime": "",
-            "purpose": "MST COUNSELING"
+            "purpose": "MST COUNSELING",
         },
         {
             "appointmentIEN": "2234568",
@@ -107,7 +107,7 @@ PATIENT_APPOINTMENTS: Dict[str, List[Dict[str, any]]] = {
             "length": "30",
             "checkInTime": "",
             "checkOutTime": "",
-            "purpose": "ANNUAL EXAM"
+            "purpose": "ANNUAL EXAM",
         },
         {
             "appointmentIEN": "2234569",
@@ -122,10 +122,9 @@ PATIENT_APPOINTMENTS: Dict[str, List[Dict[str, any]]] = {
             "length": "30",
             "checkInTime": "",
             "checkOutTime": "",
-            "purpose": "FOLLOW UP"
-        }
+            "purpose": "FOLLOW UP",
+        },
     ],
-    
     # OEF/OIF Polytrauma
     "100024": [
         {
@@ -141,7 +140,7 @@ PATIENT_APPOINTMENTS: Dict[str, List[Dict[str, any]]] = {
             "length": "45",
             "checkInTime": "",
             "checkOutTime": "",
-            "purpose": "PROSTHETIC ADJUSTMENT"
+            "purpose": "PROSTHETIC ADJUSTMENT",
         },
         {
             "appointmentIEN": "3234568",
@@ -156,7 +155,7 @@ PATIENT_APPOINTMENTS: Dict[str, List[Dict[str, any]]] = {
             "length": "30",
             "checkInTime": "",
             "checkOutTime": "",
-            "purpose": "PAIN MANAGEMENT"
+            "purpose": "PAIN MANAGEMENT",
         },
         {
             "appointmentIEN": "3234569",
@@ -171,7 +170,7 @@ PATIENT_APPOINTMENTS: Dict[str, List[Dict[str, any]]] = {
             "length": "60",
             "checkInTime": "",
             "checkOutTime": "",
-            "purpose": "PTSD GROUP THERAPY"
+            "purpose": "PTSD GROUP THERAPY",
         },
         {
             "appointmentIEN": "3234570",
@@ -186,10 +185,9 @@ PATIENT_APPOINTMENTS: Dict[str, List[Dict[str, any]]] = {
             "length": "60",
             "checkInTime": "",
             "checkOutTime": "",
-            "purpose": "PHYSICAL THERAPY"
-        }
+            "purpose": "PHYSICAL THERAPY",
+        },
     ],
-    
     # Elderly Korean War Veteran
     "100025": [
         {
@@ -205,7 +203,7 @@ PATIENT_APPOINTMENTS: Dict[str, List[Dict[str, any]]] = {
             "length": "45",
             "checkInTime": "",
             "checkOutTime": "",
-            "purpose": "DEMENTIA FOLLOW UP"
+            "purpose": "DEMENTIA FOLLOW UP",
         },
         {
             "appointmentIEN": "4234568",
@@ -220,10 +218,9 @@ PATIENT_APPOINTMENTS: Dict[str, List[Dict[str, any]]] = {
             "length": "30",
             "checkInTime": "13:45",
             "checkOutTime": "14:40",
-            "purpose": "ROUTINE FOLLOW UP"
-        }
+            "purpose": "ROUTINE FOLLOW UP",
+        },
     ],
-    
     # Homeless Veteran
     "100026": [
         {
@@ -239,7 +236,7 @@ PATIENT_APPOINTMENTS: Dict[str, List[Dict[str, any]]] = {
             "length": "30",
             "checkInTime": "",
             "checkOutTime": "",
-            "purpose": "SUBSTANCE ABUSE COUNSELING"
+            "purpose": "SUBSTANCE ABUSE COUNSELING",
         },
         {
             "appointmentIEN": "5234568",
@@ -254,10 +251,9 @@ PATIENT_APPOINTMENTS: Dict[str, List[Dict[str, any]]] = {
             "length": "60",
             "checkInTime": "",
             "checkOutTime": "",
-            "purpose": "HOUSING ASSISTANCE"
-        }
+            "purpose": "HOUSING ASSISTANCE",
+        },
     ],
-    
     # Recent Female Veteran
     "100027": [
         {
@@ -273,7 +269,7 @@ PATIENT_APPOINTMENTS: Dict[str, List[Dict[str, any]]] = {
             "length": "50",
             "checkInTime": "",
             "checkOutTime": "",
-            "purpose": "INDIVIDUAL THERAPY"
+            "purpose": "INDIVIDUAL THERAPY",
         },
         {
             "appointmentIEN": "6234568",
@@ -288,10 +284,9 @@ PATIENT_APPOINTMENTS: Dict[str, List[Dict[str, any]]] = {
             "length": "60",
             "checkInTime": "",
             "checkOutTime": "",
-            "purpose": "ESTABLISH CARE"
-        }
+            "purpose": "ESTABLISH CARE",
+        },
     ],
-    
     # Rural Veteran with Telehealth
     "100028": [
         {
@@ -308,7 +303,7 @@ PATIENT_APPOINTMENTS: Dict[str, List[Dict[str, any]]] = {
             "checkInTime": "",
             "checkOutTime": "",
             "purpose": "TELEHEALTH FOLLOW UP",
-            "modality": "VIDEO"
+            "modality": "VIDEO",
         },
         {
             "appointmentIEN": "7234568",
@@ -323,13 +318,13 @@ PATIENT_APPOINTMENTS: Dict[str, List[Dict[str, any]]] = {
             "length": "30",
             "checkInTime": "",
             "checkOutTime": "",
-            "purpose": "ANNUAL PHYSICAL"
-        }
-    ]
+            "purpose": "ANNUAL PHYSICAL",
+        },
+    ],
 }
 
 # Clinic schedules
-CLINIC_SCHEDULES: Dict[str, Dict[str, any]] = {
+CLINIC_SCHEDULES: dict[str, dict[str, any]] = {
     "195": {  # Primary Care
         "name": "PRIMARY CARE CLINIC",
         "stopCode": "323",
@@ -342,12 +337,12 @@ CLINIC_SCHEDULES: Dict[str, Dict[str, any]] = {
             "thursday": "08:00-17:00",
             "friday": "08:00-17:00",
             "saturday": "CLOSED",
-            "sunday": "CLOSED"
+            "sunday": "CLOSED",
         },
         "providers": ["SMITH,JENNIFER A", "GARCIA,MARIA S"],
         "appointmentLength": "30",
         "overbookAllowed": True,
-        "maxOverbooks": "2"
+        "maxOverbooks": "2",
     },
     "196": {  # Mental Health
         "name": "MENTAL HEALTH CLINIC",
@@ -361,23 +356,25 @@ CLINIC_SCHEDULES: Dict[str, Dict[str, any]] = {
             "thursday": "08:00-18:00",
             "friday": "08:00-16:00",
             "saturday": "CLOSED",
-            "sunday": "CLOSED"
+            "sunday": "CLOSED",
         },
         "providers": ["WILLIAMS,PATRICIA L", "THOMPSON,MICHELLE K", "WILSON,JAMES T"],
         "appointmentLength": "50",
         "overbookAllowed": False,
-        "maxOverbooks": "0"
-    }
+        "maxOverbooks": "0",
+    },
 }
 
-def get_appointments_for_patient(dfn: str) -> List[Dict[str, any]]:
+
+def get_appointments_for_patient(dfn: str) -> list[dict[str, any]]:
     """Get appointments for a patient"""
     return PATIENT_APPOINTMENTS.get(dfn, [])
 
-def get_appointments_for_clinic(clinic_ien: str, start_date: str, end_date: str) -> List[Dict[str, any]]:
+
+def get_appointments_for_clinic(clinic_ien: str, start_date: str, end_date: str) -> list[dict[str, any]]:
     """Get appointments for a clinic within date range"""
     appointments = []
-    
+
     # In a real system, this would filter by date range
     for patient_dfn, patient_appts in PATIENT_APPOINTMENTS.items():
         for appt in patient_appts:
@@ -386,14 +383,12 @@ def get_appointments_for_clinic(clinic_ien: str, start_date: str, end_date: str)
                 appt_copy = appt.copy()
                 appt_copy["patientDFN"] = patient_dfn
                 appointments.append(appt_copy)
-    
+
     return appointments
 
-def get_clinic_info(clinic_ien: str) -> Dict[str, any]:
+
+def get_clinic_info(clinic_ien: str) -> dict[str, any]:
     """Get clinic information"""
-    return CLINIC_SCHEDULES.get(clinic_ien, {
-        "name": "UNKNOWN CLINIC",
-        "stopCode": "000",
-        "location": "UNKNOWN",
-        "phone": "(000) 000-0000"
-    })
+    return CLINIC_SCHEDULES.get(
+        clinic_ien, {"name": "UNKNOWN CLINIC", "stopCode": "000", "location": "UNKNOWN", "phone": "(000) 000-0000"}
+    )

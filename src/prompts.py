@@ -1,7 +1,6 @@
 """MCP Prompts for Vista API workflows"""
 
 import logging
-from typing import Dict, Optional
 
 from mcp.server.fastmcp import FastMCP
 
@@ -10,21 +9,21 @@ logger = logging.getLogger(__name__)
 
 def register_prompts(mcp: FastMCP):
     """Register MCP prompts with the server"""
-    
+
     @mcp.prompt()
     async def patient_summary(
         patient_dfn: str,
-        station: Optional[str] = None,
+        station: str | None = None,
     ) -> str:
         """
         Generate a comprehensive patient summary workflow
-        
+
         Args:
             patient_dfn: Patient's DFN to summarize
             station: Vista station number (optional)
         """
         station_param = f', station="{station}"' if station else ""
-        
+
         return f"""Please provide a comprehensive clinical summary for patient DFN {patient_dfn}:
 
 1. First, get the patient's demographics to understand who they are:
@@ -47,21 +46,21 @@ def register_prompts(mcp: FastMCP):
    - Clinical recommendations or areas of concern
 
 Please organize the summary in a clear, clinical format suitable for healthcare providers."""
-    
+
     @mcp.prompt()
     async def medication_review(
         patient_dfn: str,
-        station: Optional[str] = None,
+        station: str | None = None,
     ) -> str:
         """
         Generate a medication safety review workflow
-        
+
         Args:
             patient_dfn: Patient's DFN for medication review
             station: Vista station number (optional)
         """
         station_param = f', station="{station}"' if station else ""
-        
+
         return f"""Please perform a comprehensive medication review for patient DFN {patient_dfn}:
 
 1. Get patient context:
@@ -89,14 +88,14 @@ Please organize the summary in a clear, clinical format suitable for healthcare 
    - Potential deprescribing opportunities
    - Monitoring requirements
    - Patient education needs"""
-    
+
     @mcp.prompt()
     async def clinical_workflow(
         workflow_type: str = "assessment",
     ) -> str:
         """
         Generate a standard clinical workflow
-        
+
         Args:
             workflow_type: Type of workflow (assessment, admission, discharge)
         """
@@ -118,7 +117,6 @@ Please organize the summary in a clear, clinical format suitable for healthcare 
    - Vital sign patterns
 
 4. Document findings and plan""",
-            
             "admission": """For patient admission workflow:
 
 1. Verify patient identity
@@ -127,7 +125,6 @@ Please organize the summary in a clear, clinical format suitable for healthcare 
 4. Check allergies and alerts
 5. Order admission labs and vitals
 6. Document admission note""",
-            
             "discharge": """For patient discharge workflow:
 
 1. Review hospital course
@@ -137,23 +134,23 @@ Please organize the summary in a clear, clinical format suitable for healthcare 
 5. Schedule follow-up appointments
 6. Complete discharge summary""",
         }
-        
+
         return workflows.get(workflow_type, workflows["assessment"])
-    
+
     @mcp.prompt()
     async def appointment_schedule(
         clinic_ien: str = "195",
-        station: Optional[str] = None,
+        station: str | None = None,
     ) -> str:
         """
         Generate appointment management workflow
-        
+
         Args:
             clinic_ien: Clinic IEN (default: 195 - Primary Care)
             station: Vista station number (optional)
         """
         station_param = f', station="{station}"' if station else ""
-        
+
         return f"""To manage appointments for clinic {clinic_ien}:
 
 1. Get current appointment schedule:
@@ -173,21 +170,21 @@ Please organize the summary in a clear, clinical format suitable for healthcare 
    - Search patient: search_patients(search_term="NAME")
    - Review their care needs
    - Find appropriate appointment slot"""
-    
+
     @mcp.prompt()
     async def geriatric_assessment(
         patient_dfn: str,
-        station: Optional[str] = None,
+        station: str | None = None,
     ) -> str:
         """
         Generate a geriatric assessment workflow
-        
+
         Args:
             patient_dfn: Elderly patient's DFN
             station: Vista station number (optional)
         """
         station_param = f', station="{station}"' if station else ""
-        
+
         return f"""Please perform a comprehensive geriatric assessment for patient DFN {patient_dfn}:
 
 1. Get patient overview:
@@ -224,11 +221,11 @@ Please organize the summary in a clear, clinical format suitable for healthcare 
    - Fall prevention strategies
    - Cognitive protection measures
    - Care coordination needs"""
-    
+
     @mcp.prompt()
     async def mental_health_screening() -> str:
         """Generate a mental health screening workflow"""
-        
+
         return """For mental health screening and assessment:
 
 1. Patient identification and rapport building:

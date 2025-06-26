@@ -2,17 +2,16 @@
 VA Facilities test data - Real VA Medical Centers
 """
 
-from typing import Dict, List
 
 # Real VA Medical Centers across the US
-VA_FACILITIES: Dict[str, Dict[str, str]] = {
+VA_FACILITIES: dict[str, dict[str, str]] = {
     "500": {
         "name": "WASHINGTON DC VA MEDICAL CENTER",
         "address": "50 IRVING STREET NW, WASHINGTON, DC 20422",
         "phone": "(202) 745-8000",
         "region": "VISN 5",
         "complexity": "1a",
-        "type": "VAMC"
+        "type": "VAMC",
     },
     "508": {
         "name": "ATLANTA VA MEDICAL CENTER",
@@ -20,7 +19,7 @@ VA_FACILITIES: Dict[str, Dict[str, str]] = {
         "phone": "(404) 321-6111",
         "region": "VISN 7",
         "complexity": "1a",
-        "type": "VAMC"
+        "type": "VAMC",
     },
     "549": {
         "name": "NORTH TEXAS HCS (DALLAS)",
@@ -28,7 +27,7 @@ VA_FACILITIES: Dict[str, Dict[str, str]] = {
         "phone": "(214) 742-8387",
         "region": "VISN 17",
         "complexity": "1a",
-        "type": "VAMC"
+        "type": "VAMC",
     },
     "640": {
         "name": "PALO ALTO VA MEDICAL CENTER",
@@ -36,7 +35,7 @@ VA_FACILITIES: Dict[str, Dict[str, str]] = {
         "phone": "(650) 493-5000",
         "region": "VISN 21",
         "complexity": "1a",
-        "type": "VAMC"
+        "type": "VAMC",
     },
     "673": {
         "name": "TAMPA VA MEDICAL CENTER",
@@ -44,7 +43,7 @@ VA_FACILITIES: Dict[str, Dict[str, str]] = {
         "phone": "(813) 972-2000",
         "region": "VISN 8",
         "complexity": "1a",
-        "type": "VAMC"
+        "type": "VAMC",
     },
     "999": {
         "name": "TEST MEDICAL CENTER",
@@ -52,12 +51,12 @@ VA_FACILITIES: Dict[str, Dict[str, str]] = {
         "phone": "(000) 000-0000",
         "region": "TEST VISN",
         "complexity": "TEST",
-        "type": "TEST"
-    }
+        "type": "TEST",
+    },
 }
 
 # Clinic types available at VA facilities
-VA_CLINIC_TYPES: List[Dict[str, str]] = [
+VA_CLINIC_TYPES: list[dict[str, str]] = [
     {"code": "323", "name": "PRIMARY CARE", "stopCode": "323"},
     {"code": "303", "name": "CARDIOLOGY", "stopCode": "303"},
     {"code": "407", "name": "DIABETIC", "stopCode": "407"},
@@ -77,11 +76,11 @@ VA_CLINIC_TYPES: List[Dict[str, str]] = [
     {"code": "419", "name": "REHABILITATION", "stopCode": "419"},
     {"code": "511", "name": "SUBSTANCE ABUSE", "stopCode": "511"},
     {"code": "590", "name": "TELEHEALTH", "stopCode": "590"},
-    {"code": "680", "name": "HOME CARE", "stopCode": "680"}
+    {"code": "680", "name": "HOME CARE", "stopCode": "680"},
 ]
 
 # Service lines at VA
-VA_SERVICE_LINES: List[str] = [
+VA_SERVICE_LINES: list[str] = [
     "PRIMARY CARE",
     "MENTAL HEALTH",
     "SPECIALTY CARE",
@@ -91,16 +90,18 @@ VA_SERVICE_LINES: List[str] = [
     "REHABILITATION",
     "EXTENDED CARE",
     "DENTAL SERVICE",
-    "PHARMACY SERVICE"
+    "PHARMACY SERVICE",
 ]
 
-def get_facility_by_station(station: str) -> Dict[str, str]:
+
+def get_facility_by_station(station: str) -> dict[str, str]:
     """Get facility information by station number"""
     # Handle 6-character station codes by taking first 3 digits
     station_3digit = station[:3] if len(station) >= 3 else station
     return VA_FACILITIES.get(station_3digit, VA_FACILITIES["999"])
 
-def get_clinics_for_station(station: str) -> List[Dict[str, str]]:
+
+def get_clinics_for_station(station: str) -> list[dict[str, str]]:
     """Get available clinics for a station"""
     # In reality, different facilities have different clinics
     # For mock, return common clinics

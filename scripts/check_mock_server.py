@@ -3,13 +3,14 @@
 
 import sys
 import time
+
 import httpx
 
 
 def check_mock_server(url="http://localhost:8080/health", max_attempts=10):
     """Check if mock server is running"""
     print(f"Checking mock server at {url}...")
-    
+
     for attempt in range(max_attempts):
         try:
             response = httpx.get(url, timeout=2)
@@ -18,12 +19,14 @@ def check_mock_server(url="http://localhost:8080/health", max_attempts=10):
                 return True
         except:
             if attempt < max_attempts - 1:
-                print(f"⏳ Waiting for mock server... (attempt {attempt + 1}/{max_attempts})")
+                print(
+                    f"⏳ Waiting for mock server... (attempt {attempt + 1}/{max_attempts})"
+                )
                 time.sleep(2)
             else:
                 print("❌ Mock server is not responding")
                 return False
-    
+
     return False
 
 

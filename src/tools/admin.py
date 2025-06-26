@@ -2,10 +2,11 @@
 
 import logging
 import time
-from typing import Any, Dict, Optional
+from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from ..api_clients.base import BaseVistaClient, VistaAPIError
 from ..parsers import parse_appointments, parse_user_info
 from ..utils import (
     build_metadata,
@@ -15,37 +16,36 @@ from ..utils import (
     translate_vista_error,
     validate_duz,
 )
-from ..api_clients.base import BaseVistaClient, VistaAPIError
 
 logger = logging.getLogger(__name__)
 
 
 def register_admin_tools(mcp: FastMCP, vista_client: BaseVistaClient):
     """Register administrative tools with the MCP server"""
-    
+
     @mcp.tool()
     async def get_appointments(
         clinic_ien: str = "195",
-        station: Optional[str] = None,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        station: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> dict[str, Any]:
         """
         Get appointments for a specific clinic
-        
+
         Args:
             clinic_ien: Clinic IEN (default: 195 - Primary Care)
             station: Vista station number (default: configured default)
             start_date: Optional start date for appointment range
             end_date: Optional end date for appointment range
-            
+
         Returns:
             List of appointments with patient and provider information
         """
         start_time = time.time()
         station = station or get_default_station()
         caller_duz = get_default_duz()
-        
+
         try:
             # Build parameters
             parameters = [
@@ -53,7 +53,7 @@ def register_admin_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 {"string": start_date or ""},
                 {"string": end_date or ""},
             ]
-            
+
             # Invoke RPC
             result = await vista_client.invoke_rpc(
                 station=station,
@@ -63,13 +63,13 @@ def register_admin_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 parameters=parameters,
                 json_result=True,  # Try to get JSON response
             )
-            
+
             # Parse appointments
             appointments = parse_appointments(result)
-            
+
             # Calculate duration
             duration_ms = int((time.time() - start_time) * 1000)
-            
+
             # Log successful call
             log_rpc_call(
                 rpc_name="SDES GET APPTS BY CLIN IEN 2",
@@ -78,7 +78,7 @@ def register_admin_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 duration_ms=duration_ms,
                 success=True,
             )
-            
+
             return {
                 "success": True,
                 "clinic_ien": clinic_ien,
@@ -91,7 +91,7 @@ def register_admin_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                     duration_ms=duration_ms,
                 ),
             }
-            
+
         except VistaAPIError as e:
             log_rpc_call(
                 rpc_name="SDES GET APPTS BY CLIN IEN 2",
@@ -103,29 +103,33 @@ def register_admin_tools(mcp: FastMCP, vista_client: BaseVistaClient):
             return {
                 "success": False,
                 "error": translate_vista_error(e.to_dict()),
-                "metadata": build_metadata(station=station, rpc_name="SDES GET APPTS BY CLIN IEN 2"),
+                "metadata": build_metadata(
+                    station=station, rpc_name="SDES GET APPTS BY CLIN IEN 2"
+                ),
             }
-            
+
         except Exception as e:
             logger.exception("Unexpected error in get_appointments")
             return {
                 "success": False,
                 "error": f"Unexpected error: {str(e)}",
-                "metadata": build_metadata(station=station, rpc_name="SDES GET APPTS BY CLIN IEN 2"),
+                "metadata": build_metadata(
+                    station=station, rpc_name="SDES GET APPTS BY CLIN IEN 2"
+                ),
             }
-    
+
     @mcp.tool()
     async def get_user_profile(
-        user_duz: Optional[str] = None,
-        station: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        user_duz: str | None = None,
+        station: str | None = None,
+    ) -> dict[str, Any]:
         """
         Get detailed user profile information
-        
+
         Args:
             user_duz: DUZ of user to look up (default: current user)
             station: Vista station number (default: configured default)
-            
+
         Returns:
             User profile with name, title, service, and contact information
         """
@@ -133,7 +137,7 @@ def register_admin_tools(mcp: FastMCP, vista_client: BaseVistaClient):
         station = station or get_default_station()
         caller_duz = get_default_duz()
         target_duz = user_duz or caller_duz
-        
+
         # Validate DUZ
         if not validate_duz(target_duz):
             return {
@@ -141,7 +145,7 @@ def register_admin_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 "error": "Invalid DUZ format. DUZ must be numeric.",
                 "metadata": build_metadata(station=station),
             }
-        
+
         try:
             # Try SDES RPC first (may return JSON)
             try:
@@ -153,13 +157,13 @@ def register_admin_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                     parameters=[{"string": target_duz}],
                     json_result=True,
                 )
-                
+
                 # Parse user info
                 user_info = parse_user_info(result, target_duz)
-                
+
                 # Calculate duration
                 duration_ms = int((time.time() - start_time) * 1000)
-                
+
                 # Log successful call
                 log_rpc_call(
                     rpc_name="SDES GET USER PROFILE BY DUZ",
@@ -168,7 +172,7 @@ def register_admin_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                     duration_ms=duration_ms,
                     success=True,
                 )
-                
+
                 if user_info:
                     return {
                         "success": True,
@@ -179,11 +183,11 @@ def register_admin_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                             duration_ms=duration_ms,
                         ),
                     }
-                    
+
             except Exception:
                 # Fall back to basic user info RPC
                 pass
-            
+
             # Fall back to ORWU USERINFO
             result = await vista_client.invoke_rpc(
                 station=station,
@@ -191,13 +195,13 @@ def register_admin_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 rpc_name="ORWU USERINFO",
                 parameters=[{"string": target_duz}] if target_duz != caller_duz else [],
             )
-            
+
             # Parse user info
             user_info = parse_user_info(result, target_duz)
-            
+
             # Calculate duration
             duration_ms = int((time.time() - start_time) * 1000)
-            
+
             # Log successful call
             log_rpc_call(
                 rpc_name="ORWU USERINFO",
@@ -206,7 +210,7 @@ def register_admin_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 duration_ms=duration_ms,
                 success=True,
             )
-            
+
             if user_info:
                 return {
                     "success": True,
@@ -223,7 +227,7 @@ def register_admin_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                     "error": f"No user information found for DUZ {target_duz}",
                     "metadata": build_metadata(station=station),
                 }
-                
+
         except VistaAPIError as e:
             log_rpc_call(
                 rpc_name="ORWU USERINFO",
@@ -237,7 +241,7 @@ def register_admin_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 "error": translate_vista_error(e.to_dict()),
                 "metadata": build_metadata(station=station),
             }
-            
+
         except Exception as e:
             logger.exception("Unexpected error in get_user_profile")
             return {
@@ -245,24 +249,24 @@ def register_admin_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 "error": f"Unexpected error: {str(e)}",
                 "metadata": build_metadata(station=station),
             }
-    
+
     @mcp.tool()
     async def list_team_members(
-        station: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        station: str | None = None,
+    ) -> dict[str, Any]:
         """
         List all team members in the current context
-        
+
         Args:
             station: Vista station number (default: configured default)
-            
+
         Returns:
             List of team members with their roles and contact information
         """
         start_time = time.time()
         station = station or get_default_station()
         caller_duz = get_default_duz()
-        
+
         try:
             # Invoke RPC
             result = await vista_client.invoke_rpc(
@@ -271,7 +275,7 @@ def register_admin_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 rpc_name="ORWTPD1 LISTALL",
                 parameters=[],
             )
-            
+
             # Parse team members
             team_members = []
             if result:
@@ -287,10 +291,10 @@ def register_admin_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                             "pager": parts[4] if len(parts) > 4 else None,
                         }
                         team_members.append(member)
-            
+
             # Calculate duration
             duration_ms = int((time.time() - start_time) * 1000)
-            
+
             # Log successful call
             log_rpc_call(
                 rpc_name="ORWTPD1 LISTALL",
@@ -299,7 +303,7 @@ def register_admin_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 duration_ms=duration_ms,
                 success=True,
             )
-            
+
             return {
                 "success": True,
                 "station": station,
@@ -311,7 +315,7 @@ def register_admin_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                     duration_ms=duration_ms,
                 ),
             }
-            
+
         except VistaAPIError as e:
             log_rpc_call(
                 rpc_name="ORWTPD1 LISTALL",
@@ -325,7 +329,7 @@ def register_admin_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 "error": translate_vista_error(e.to_dict()),
                 "metadata": build_metadata(station=station, rpc_name="ORWTPD1 LISTALL"),
             }
-            
+
         except Exception as e:
             logger.exception("Unexpected error in list_team_members")
             return {

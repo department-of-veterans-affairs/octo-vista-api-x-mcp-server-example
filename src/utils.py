@@ -3,7 +3,7 @@
 import logging
 import os
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -16,13 +16,13 @@ DEFAULT_STATIONS = {
         "timezone": "America/New_York",
     },
     "508": {
-        "name": "Atlanta VAMC", 
+        "name": "Atlanta VAMC",
         "duz": "10000000220",
         "timezone": "America/New_York",
     },
     "640": {
         "name": "Palo Alto VAMC",
-        "duz": "10000000221", 
+        "duz": "10000000221",
         "timezone": "America/Los_Angeles",
     },
 }
@@ -40,22 +40,25 @@ def get_default_duz() -> str:
     return os.getenv("DEFAULT_DUZ", station_info["duz"])
 
 
-def get_station_info(station: str) -> Dict[str, str]:
+def get_station_info(station: str) -> dict[str, str]:
     """Get station information"""
-    return DEFAULT_STATIONS.get(station, {
-        "name": f"Station {station}",
-        "duz": get_default_duz(),
-        "timezone": "America/New_York",
-    })
+    return DEFAULT_STATIONS.get(
+        station,
+        {
+            "name": f"Station {station}",
+            "duz": get_default_duz(),
+            "timezone": "America/New_York",
+        },
+    )
 
 
-def translate_vista_error(error: Union[Exception, Dict[str, Any]]) -> str:
+def translate_vista_error(error: Exception | dict[str, Any]) -> str:
     """
     Translate Vista API errors to user-friendly messages
-    
+
     Args:
         error: Exception or error dictionary
-        
+
     Returns:
         User-friendly error message
     """
@@ -63,16 +66,16 @@ def translate_vista_error(error: Union[Exception, Dict[str, Any]]) -> str:
         error_type = error.get("errorType", "Unknown")
         error_code = error.get("errorCode", "")
         message = error.get("message", "An error occurred")
-        
+
         # Common error translations
         if error_type == "SecurityFault":
             if "permission" in message.lower():
                 return "You don't have permission to perform this operation. Please check your access rights."
             elif "station" in message.lower():
-                return f"Access denied to the requested station. Please verify station access."
+                return "Access denied to the requested station. Please verify station access."
             else:
                 return "Security error: Access denied."
-                
+
         elif error_type == "VistaLinkFault":
             if "connect" in message.lower():
                 return "Cannot connect to VistA system. The station may be offline or unreachable."
@@ -80,7 +83,7 @@ def translate_vista_error(error: Union[Exception, Dict[str, Any]]) -> str:
                 return "Connection to VistA timed out. Please try again."
             else:
                 return f"VistA connection error: {message}"
-                
+
         elif error_type == "RpcFault":
             if "not found" in message.lower():
                 return "The requested operation is not available."
@@ -88,19 +91,19 @@ def translate_vista_error(error: Union[Exception, Dict[str, Any]]) -> str:
                 return "Invalid parameters provided for the operation."
             else:
                 return f"Operation failed: {message}"
-                
+
         elif error_type == "JwtException":
             return "Authentication error. Please check your credentials."
-            
+
         else:
             return f"{error_type}: {message}"
-            
+
     else:
         # Handle exception objects
         return str(error)
 
 
-def format_timestamp(dt: Optional[datetime] = None) -> str:
+def format_timestamp(dt: datetime | None = None) -> str:
     """Format timestamp for responses"""
     if dt is None:
         dt = datetime.now()
@@ -142,10 +145,10 @@ def format_phone(phone: str) -> str:
     """Format phone number for display"""
     if not phone:
         return ""
-    
+
     # Remove non-digits
     digits = "".join(c for c in phone if c.isdigit())
-    
+
     # Format based on length
     if len(digits) == 10:
         return f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
@@ -165,67 +168,69 @@ def parse_boolean(value: Any) -> bool:
 
 
 def build_metadata(
-    station: Optional[str] = None,
-    rpc_name: Optional[str] = None,
-    duration_ms: Optional[int] = None,
-) -> Dict[str, Any]:
+    station: str | None = None,
+    rpc_name: str | None = None,
+    duration_ms: int | None = None,
+) -> dict[str, Any]:
     """Build standard metadata for responses"""
     metadata = {
         "timestamp": format_timestamp(),
         "source": "VistA RPC",
     }
-    
+
     if station:
         metadata["station"] = station
         station_info = get_station_info(station)
         if station_info:
             metadata["station_name"] = station_info.get("name", f"Station {station}")
-            
+
     if rpc_name:
         metadata["rpc"] = rpc_name
-        
+
     if duration_ms is not None:
         metadata["duration_ms"] = duration_ms
-        
+
     return metadata
 
 
-def chunk_list(lst: List[Any], chunk_size: int) -> List[List[Any]]:
+def chunk_list(lst: list[Any], chunk_size: int) -> list[list[Any]]:
     """Split list into chunks"""
-    return [lst[i:i + chunk_size] for i in range(0, len(lst), chunk_size)]
+    return [lst[i : i + chunk_size] for i in range(0, len(lst), chunk_size)]
 
 
-def safe_get(data: Dict[str, Any], path: str, default: Any = None) -> Any:
+def safe_get(data: dict[str, Any], path: str, default: Any = None) -> Any:
     """
     Safely get nested dictionary value
-    
+
     Args:
         data: Dictionary to search
         path: Dot-separated path (e.g., "patient.address.city")
         default: Default value if path not found
-        
+
     Returns:
         Value at path or default
     """
     keys = path.split(".")
     value = data
-    
+
     for key in keys:
         if isinstance(value, dict) and key in value:
             value = value[key]
         else:
             return default
-            
+
     return value
 
 
-def create_rpc_parameter(value: Union[str, List[str], Dict[str, str]]) -> Dict[str, Any]:
+def create_rpc_parameter(
+    value: str | list[str] | dict[str, str],
+) -> dict[str, Any]:
     """
     Create RPC parameter in correct format
-    
+
     Args:
         value: Parameter value (string, list, or dict)
-        
+
     Returns:
         Formatted parameter dictionary
     """
@@ -248,10 +253,10 @@ def log_rpc_call(
     rpc_name: str,
     station: str,
     duz: str,
-    parameters: Optional[List[Dict[str, Any]]] = None,
-    duration_ms: Optional[int] = None,
+    parameters: list[dict[str, Any]] | None = None,
+    duration_ms: int | None = None,
     success: bool = True,
-    error: Optional[str] = None,
+    error: str | None = None,
 ):
     """Log RPC call for audit trail"""
     log_data = {
@@ -261,16 +266,16 @@ def log_rpc_call(
         "timestamp": format_timestamp(),
         "success": success,
     }
-    
+
     if duration_ms is not None:
         log_data["duration_ms"] = duration_ms
-        
+
     if error:
         log_data["error"] = error
-        
+
     if is_debug_mode() and parameters:
         log_data["parameters"] = parameters
-        
+
     if success:
         logger.info(f"RPC call completed: {rpc_name}", extra=log_data)
     else:

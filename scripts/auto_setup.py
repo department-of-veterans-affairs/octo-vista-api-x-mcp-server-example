@@ -9,23 +9,23 @@ from pathlib import Path
 def needs_setup():
     """Check if setup is needed"""
     project_root = Path(__file__).parent.parent
-    
+
     # Check if virtual environment exists
     venv_path = project_root / ".venv"
     if not venv_path.exists():
         return True
-    
+
     # Check if .env exists
     env_file = project_root / ".env"
     if not env_file.exists():
         return True
-    
+
     # Check if dependencies are installed by looking for a marker file
     # (Importing them here would fail since we're not in the venv)
     marker_file = project_root / ".venv" / "pip-selfcheck.json"
     if not marker_file.exists():
         return True
-    
+
     return False
 
 

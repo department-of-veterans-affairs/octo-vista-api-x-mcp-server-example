@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+mock_server/
+scripts/
+tests/
+docs/
+.github/
+.git/
+.gitignore
+.gitattributes
+.mise.toml
+.env
+.env.*
+!.env.example
+*.log
+*.md
+!README.md
+
+# Development files
+claude_desktop_config*.json
+.cursorrules*
+.claude/
