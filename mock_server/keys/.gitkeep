@@ -1,0 +1,3 @@
+# This directory stores RSA keys for JWT signing
+# Keys are generated automatically by scripts/generate_rsa_keys.py
+# Never commit actual .pem files to version control

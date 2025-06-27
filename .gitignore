@@ -57,6 +57,7 @@ htmlcov/
 mock_server/venv/
 mock_server/.env
 mock_server/logs/
+mock_server/keys/*.pem
 
 # mise
 .mise/

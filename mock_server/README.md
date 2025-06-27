@@ -5,6 +5,11 @@ Mock implementation of Vista API X for local development and testing.
 ## Quick Start
 
 ```bash
+# Generate RSA keys for JWT signing (first time only)
+cd scripts
+python generate_rsa_keys.py
+cd ..
+
 # Start the mock server
 docker-compose up -d
 
@@ -57,6 +62,11 @@ curl -X POST http://localhost:8080/vista-sites/500/users/10000000219/rpc/invoke 
 ```bash
 # Install dependencies
 uv sync
+
+# Generate RSA keys (if not already present)
+cd scripts
+python generate_rsa_keys.py
+cd ..
 
 # Run locally (without Docker)
 uv run uvicorn src.main:app --reload

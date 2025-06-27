@@ -72,10 +72,15 @@ cp .env.example .env
 # Edit .env with your settings
 ```
 
-### 5. Start Mock Server
+### 5. Generate RSA Keys and Start Mock Server
 
 ```bash
-cd mock_server
+# Generate RSA keys (first time only)
+cd mock_server/scripts
+python generate_rsa_keys.py
+cd ..
+
+# Start the mock server
 docker-compose up -d
 ```
 
