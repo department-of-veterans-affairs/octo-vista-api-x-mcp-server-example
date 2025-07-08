@@ -9,12 +9,9 @@ from pathlib import Path
 def check_mock_server():
     """Check if mock server is running"""
     try:
-        result = subprocess.run(
-            ["curl", "-s", "http://localhost:8080/health"],
-            capture_output=True,
-            timeout=5,
-        )
-        return result.returncode == 0
+        import urllib.request
+        with urllib.request.urlopen("http://localhost:8080/health", timeout=5) as response:
+            return response.status == 200
     except Exception:
         return False
 
@@ -41,7 +38,7 @@ def main():
     if not keys_path.exists():
         print("🔑 Generating RSA keys...")
         subprocess.run(
-            [sys.executable, "scripts/generate_rsa_keys.py"],
+            [sys.executable, str(project_root / "mock_server" / "scripts" / "generate_rsa_keys.py")],
             cwd=project_root / "mock_server",
             check=True,
         )

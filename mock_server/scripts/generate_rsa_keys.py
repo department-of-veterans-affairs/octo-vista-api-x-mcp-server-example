@@ -4,10 +4,16 @@ Generate RSA key pair for JWT signing in Vista API X Mock
 """
 
 import os
+import sys
 
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
+try:
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+except ImportError:
+    print("Error: cryptography module not found.")
+    print("Please install it by running: pip install cryptography")
+    sys.exit(1)
 
 
 def generate_rsa_keys(key_dir: str = "../keys"):
@@ -46,9 +52,10 @@ def generate_rsa_keys(key_dir: str = "../keys"):
         f.write(public_pem)
     print(f"Public key written to: {public_key_path}")
 
-    # Set appropriate permissions
-    os.chmod(private_key_path, 0o600)
-    os.chmod(public_key_path, 0o644)
+    # Set appropriate permissions (Unix-like systems only)
+    if os.name != 'nt':  # Not Windows
+        os.chmod(private_key_path, 0o600)
+        os.chmod(public_key_path, 0o644)
 
     print("\nRSA key pair generated successfully!")
     print("Make sure to keep the private key secure and never commit it to version control.")
