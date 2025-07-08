@@ -11,11 +11,21 @@ def check_mock_server():
     """Check if mock server is running"""
     try:
         import urllib.request
+        import urllib.error
 
-        with urllib.request.urlopen(
-            "http://localhost:8080/health", timeout=5
-        ) as response:
-            return response.status == 200
+        # Try both localhost and 127.0.0.1 (Windows sometimes has issues with localhost)
+        urls = ["http://localhost:8080/health", "http://127.0.0.1:8080/health"]
+        
+        for url in urls:
+            try:
+                req = urllib.request.Request(url)
+                with urllib.request.urlopen(req, timeout=5) as response:
+                    if response.status == 200:
+                        return True
+            except (urllib.error.URLError, urllib.error.HTTPError):
+                continue
+        
+        return False
     except Exception:
         return False
 
@@ -64,7 +74,18 @@ def main():
     # Wait for it to be ready
     import time
 
-    for _ in range(10):
+    # On Windows, Docker containers might take longer to be ready
+    max_attempts = 30 if os.name == "nt" else 15
+    wait_time = 3 if os.name == "nt" else 2
+    
+    print(f"⏳ Waiting for mock server to be ready (up to {max_attempts * wait_time} seconds)...")
+    
+    # Extra initial delay for Windows
+    if os.name == "nt":
+        print("🪟 Windows detected - allowing extra startup time...")
+        time.sleep(5)
+
+    for attempt in range(max_attempts):
         if check_mock_server():
             print("✅ Mock server is ready!")
 
@@ -81,9 +102,23 @@ def main():
                 print("   You may need to run: python scripts/init_mock_db.py")
 
             return
-        time.sleep(2)
+        
+        print(f"⏳ Attempt {attempt + 1}/{max_attempts}: Waiting for mock server...")
+        time.sleep(wait_time)
 
-    print("❌ Mock server failed to start. Check logs with: mise run logs")
+    print("\n❌ Mock server failed to start.")
+    print("\n🔧 Troubleshooting tips:")
+    print("1. Check if Docker Desktop is running")
+    print("2. Check if port 8080 is already in use:")
+    if os.name == "nt":
+        print("   netstat -ano | findstr :8080")
+    else:
+        print("   lsof -i :8080")
+    print("3. Check container status: docker ps -a")
+    print("4. Check logs: docker logs vista-api-x-mock")
+    print("5. Try accessing http://localhost:8080/health in your browser")
+    if os.name == "nt":
+        print("6. On Windows, try using 127.0.0.1 instead of localhost")
     sys.exit(1)
 
 
