@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Start mock server if not already running"""
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -10,7 +11,10 @@ def check_mock_server():
     """Check if mock server is running"""
     try:
         import urllib.request
-        with urllib.request.urlopen("http://localhost:8080/health", timeout=5) as response:
+
+        with urllib.request.urlopen(
+            "http://localhost:8080/health", timeout=5
+        ) as response:
             return response.status == 200
     except Exception:
         return False
@@ -37,8 +41,17 @@ def main():
     keys_path = project_root / "mock_server" / "keys" / "private_key.pem"
     if not keys_path.exists():
         print("🔑 Generating RSA keys...")
+        # Use the Python from the virtual environment
+        if os.name == "nt":  # Windows
+            python_exe = str(project_root / ".venv" / "Scripts" / "python.exe")
+        else:
+            python_exe = str(project_root / ".venv" / "bin" / "python")
+
         subprocess.run(
-            [sys.executable, str(project_root / "mock_server" / "scripts" / "generate_rsa_keys.py")],
+            [
+                python_exe,
+                str(project_root / "mock_server" / "scripts" / "generate_rsa_keys.py"),
+            ],
             cwd=project_root / "mock_server",
             check=True,
         )

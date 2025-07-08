@@ -69,29 +69,44 @@ def main():
         if not check_keys():
             mock_keys_dir = project_root / "mock_server" / "keys"
             mock_keys_dir.mkdir(parents=True, exist_ok=True)
-            # Generate keys silently
-            subprocess.run(
-                [
-                    "openssl",
-                    "genrsa",
-                    "-out",
-                    str(mock_keys_dir / "private_key.pem"),
-                    "2048",
-                ],
+            
+            # Try to use the Python script first (which handles cryptography module)
+            if os.name == 'nt':  # Windows
+                python_exe = str(project_root / ".venv" / "Scripts" / "python.exe")
+            else:
+                python_exe = str(project_root / ".venv" / "bin" / "python")
+            
+            result = subprocess.run(
+                [python_exe, str(project_root / "mock_server" / "scripts" / "generate_rsa_keys.py")],
+                cwd=project_root / "mock_server",
                 capture_output=True,
             )
-            subprocess.run(
-                [
-                    "openssl",
-                    "rsa",
-                    "-in",
-                    str(mock_keys_dir / "private_key.pem"),
-                    "-pubout",
-                    "-out",
-                    str(mock_keys_dir / "public_key.pem"),
-                ],
-                capture_output=True,
-            )
+            
+            # Fall back to openssl if the script fails
+            if result.returncode != 0:
+                # Generate keys silently with openssl
+                subprocess.run(
+                    [
+                        "openssl",
+                        "genrsa",
+                        "-out",
+                        str(mock_keys_dir / "private_key.pem"),
+                        "2048",
+                    ],
+                    capture_output=True,
+                )
+                subprocess.run(
+                    [
+                        "openssl",
+                        "rsa",
+                        "-in",
+                        str(mock_keys_dir / "private_key.pem"),
+                        "-pubout",
+                        "-out",
+                        str(mock_keys_dir / "public_key.pem"),
+                    ],
+                    capture_output=True,
+                )
 
 
 if __name__ == "__main__":

@@ -46,6 +46,10 @@ def install_dependencies():
     )
     if result.returncode == 0:
         print("✅ Dependencies installed")
+        # Also ensure cryptography is installed for the mock server
+        subprocess.run(
+            ["uv", "pip", "install", "cryptography"], capture_output=True, text=True
+        )
     else:
         print("❌ Failed to install dependencies")
         print(result.stderr)
@@ -62,8 +66,14 @@ def setup_mock_keys():
     if not private_key.exists():
         print("🔑 Generating RSA keys for mock server...")
         os.chdir(project_root / "mock_server")
+        # Use the Python from the virtual environment
+        if os.name == 'nt':  # Windows
+            python_exe = str(project_root / ".venv" / "Scripts" / "python.exe")
+        else:
+            python_exe = str(project_root / ".venv" / "bin" / "python")
+        
         result = subprocess.run(
-            [sys.executable, "scripts/generate_rsa_keys.py"],
+            [python_exe, "scripts/generate_rsa_keys.py"],
             capture_output=True,
             text=True,
         )
