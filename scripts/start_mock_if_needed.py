@@ -64,7 +64,7 @@ def main():
     # Wait for it to be ready
     import time
 
-    for i in range(10):
+    for _ in range(10):
         if check_mock_server():
             print("✅ Mock server is ready!")
 
