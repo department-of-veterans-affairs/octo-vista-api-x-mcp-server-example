@@ -22,7 +22,7 @@ def generate_rsa_keys(key_dir: str = "../keys"):
     keys_path = (Path(__file__).parent / key_dir).resolve()
 
     # Create keys directory if it doesn't exist
-    Path(keys_path).mkdir(parents=True, exist_ok=True)
+    keys_path.mkdir(parents=True, exist_ok=True)
 
     # Generate private key
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
