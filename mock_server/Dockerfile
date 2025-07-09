@@ -35,6 +35,9 @@ COPY --from=builder /opt/venv /opt/venv
 # Copy application code
 COPY --chown=vistauser:vistauser . .
 
+# Create keys directory (in case volume mount fails on Windows)
+RUN mkdir -p /app/keys
+
 # Set environment variables
 ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"

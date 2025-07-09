@@ -1,0 +1,7 @@
+# Ignore everything except what we need
+**
+!src
+!scripts
+!pyproject.toml
+!README.md
+!keys/*.pem
