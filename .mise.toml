@@ -4,6 +4,7 @@ uv = "latest"
 
 [env]
 # Vista API configuration
+VISTA_AUTH_URL = "http://localhost:8080"
 VISTA_API_BASE_URL = "http://localhost:8080"
 VISTA_API_KEY = "test-wildcard-key-456"
 VISTA_MCP_DEBUG = "false"

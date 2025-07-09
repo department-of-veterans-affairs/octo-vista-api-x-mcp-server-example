@@ -19,6 +19,7 @@ class VistaAPIClient(BaseVistaClient):
         self,
         base_url: str,
         api_key: str,
+        auth_url: str,
         timeout: float = 30.0,
         token_cache_ttl: int = 3300,  # 55 minutes
         response_cache_ttl: int = 300,  # 5 minutes
@@ -27,14 +28,16 @@ class VistaAPIClient(BaseVistaClient):
         Initialize Vista API client
 
         Args:
-            base_url: Vista API X base URL
+            base_url: Vista API X base URL for RPC invocations
             api_key: API key for authentication
+            auth_url: Auth service URL for JWT token generation
             timeout: Request timeout in seconds
             token_cache_ttl: JWT token cache TTL in seconds
             response_cache_ttl: Response cache TTL in seconds
         """
         super().__init__(timeout)
         self.base_url = base_url.rstrip("/")
+        self.auth_url = auth_url.rstrip("/")
         self.api_key = api_key
 
         # Initialize HTTP client
@@ -60,7 +63,7 @@ class VistaAPIClient(BaseVistaClient):
 
         try:
             response = await self.client.post(
-                f"{self.base_url}/auth/token",
+                f"{self.auth_url}/auth/token",
                 json={"key": self.api_key},
                 headers={"Content-Type": "application/json"},
             )
