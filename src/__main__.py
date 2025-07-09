@@ -1,7 +1,11 @@
-"""Main entry point for Vista API MCP Server"""
+"""Main entry point for Vista API MCP Server when run as python -m src"""
 
-from .server import mcp
+# This file should not be needed for MCP servers
+# The server should be run via:
+# - python server.py
+# - mcp dev server.py:server
+# - python http_server.py (for SSE mode)
 
-# The server is already initialized when imported
-if __name__ == "__main__":
-    mcp.run()
+raise NotImplementedError(
+    "This MCP server should be run via 'python server.py' or 'mcp dev server.py:server'"
+)
