@@ -5,6 +5,7 @@ Generate RSA key pair for JWT signing in Vista API X Mock
 
 import os
 import sys
+from pathlib import Path
 
 try:
     from cryptography.hazmat.backends import default_backend
@@ -18,9 +19,10 @@ except ImportError:
 
 def generate_rsa_keys(key_dir: str = "../keys"):
     """Generate RSA key pair for JWT signing"""
+    keys_path = (Path(__file__).parent / key_dir).resolve()
 
     # Create keys directory if it doesn't exist
-    os.makedirs(key_dir, exist_ok=True)
+    Path(keys_path).mkdir(parents=True, exist_ok=True)
 
     # Generate private key
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
@@ -41,21 +43,21 @@ def generate_rsa_keys(key_dir: str = "../keys"):
     )
 
     # Write keys to files
-    private_key_path = os.path.join(key_dir, "private_key.pem")
-    public_key_path = os.path.join(key_dir, "public_key.pem")
+    private_key_path = keys_path / "private_key.pem"
+    public_key_path = keys_path / "public_key.pem"
 
-    with open(private_key_path, "wb") as f:
+    with private_key_path.open("wb") as f:
         f.write(private_pem)
     print(f"Private key written to: {private_key_path}")
 
-    with open(public_key_path, "wb") as f:
+    with public_key_path.open("wb") as f:
         f.write(public_pem)
     print(f"Public key written to: {public_key_path}")
 
     # Set appropriate permissions (Unix-like systems only)
-    if os.name != 'nt':  # Not Windows
-        os.chmod(private_key_path, 0o600)
-        os.chmod(public_key_path, 0o644)
+    if os.name != "nt":  # Not Windows
+        private_key_path.chmod(0o600)
+        public_key_path.chmod(0o644)
 
     print("\nRSA key pair generated successfully!")
     print("Make sure to keep the private key secure and never commit it to version control.")
