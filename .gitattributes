@@ -1,14 +1,17 @@
+# Set default line endings to LF
+* text=auto eol=lf
+
 # Python files
-*.py linguist-language=Python
+*.py linguist-language=Python text eol=lf
 
 # Configuration files
-*.toml linguist-language=TOML
-*.json linguist-language=JSON
-*.yml linguist-language=YAML
-*.yaml linguist-language=YAML
+*.toml linguist-language=TOML text eol=lf
+*.json linguist-language=JSON text eol=lf
+*.yml linguist-language=YAML text eol=lf
+*.yaml linguist-language=YAML text eol=lf
 
 # Documentation
-*.md linguist-documentation=true
+*.md linguist-documentation=true text eol=lf
 
 # Exclude certain files from language detection
 mock_server/* linguist-vendored=true

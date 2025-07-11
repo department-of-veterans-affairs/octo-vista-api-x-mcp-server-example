@@ -69,19 +69,27 @@ def main():
         if not check_keys():
             mock_keys_dir = project_root / "mock_server" / "keys"
             mock_keys_dir.mkdir(parents=True, exist_ok=True)
-            
+
             # Try to use the Python script first (which handles cryptography module)
-            if os.name == 'nt':  # Windows
+            if os.name == "nt":  # Windows
                 python_exe = str(project_root / ".venv" / "Scripts" / "python.exe")
             else:
                 python_exe = str(project_root / ".venv" / "bin" / "python")
-            
+
             result = subprocess.run(
-                [python_exe, str(project_root / "mock_server" / "scripts" / "generate_rsa_keys.py")],
+                [
+                    python_exe,
+                    str(
+                        project_root
+                        / "mock_server"
+                        / "scripts"
+                        / "generate_rsa_keys.py"
+                    ),
+                ],
                 cwd=project_root / "mock_server",
                 capture_output=True,
             )
-            
+
             # Fall back to openssl if the script fails
             if result.returncode != 0:
                 # Generate keys silently with openssl

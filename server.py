@@ -9,6 +9,7 @@ from mcp.server.fastmcp import FastMCP
 
 # Import from src directory
 from src.api_clients.vista_client import VistaAPIClient
+from src.config import get_vista_config
 from src.prompts import register_prompts
 from src.resources import register_resources
 from src.tools.admin import register_admin_tools
@@ -43,21 +44,18 @@ def initialize_server():
 
     # Create Vista client
     try:
-        base_url = os.getenv("VISTA_API_BASE_URL", "http://localhost:8080")
-        auth_url = os.getenv("VISTA_AUTH_URL", "http://localhost:8080")
-        api_key = os.getenv("VISTA_API_KEY")
+        config = get_vista_config()
         
-        if not api_key:
-            raise ValueError("VISTA_API_KEY environment variable is required")
-
+        logger.info(f"🔧 Vista mode: {config['mode'].upper()}")
+        logger.info(f"Auth endpoint: {config['auth_url']}")
+        logger.info(f"API endpoint: {config['base_url']}")
+        
         vista_client = VistaAPIClient(
-            base_url=base_url, 
-            api_key=api_key,
-            auth_url=auth_url,
+            base_url=config['base_url'],
+            api_key=config['api_key'],
+            auth_url=config['auth_url'],
             timeout=30.0
         )
-        logger.info(f"Auth endpoint: {auth_url}")
-        logger.info(f"API endpoint: {base_url}")
     except Exception as e:
         logger.error(f"Failed to create Vista client: {e}")
         raise

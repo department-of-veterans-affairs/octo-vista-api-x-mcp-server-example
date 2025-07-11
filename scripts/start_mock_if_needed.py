@@ -10,12 +10,12 @@ from pathlib import Path
 def check_mock_server():
     """Check if mock server is running"""
     try:
-        import urllib.request
         import urllib.error
+        import urllib.request
 
         # Try both localhost and 127.0.0.1 (Windows sometimes has issues with localhost)
         urls = ["http://localhost:8080/health", "http://127.0.0.1:8080/health"]
-        
+
         for url in urls:
             try:
                 req = urllib.request.Request(url)
@@ -24,7 +24,7 @@ def check_mock_server():
                         return True
             except (urllib.error.URLError, urllib.error.HTTPError):
                 continue
-        
+
         return False
     except Exception:
         return False
@@ -77,9 +77,11 @@ def main():
     # On Windows, Docker containers might take longer to be ready
     max_attempts = 30 if os.name == "nt" else 15
     wait_time = 3 if os.name == "nt" else 2
-    
-    print(f"⏳ Waiting for mock server to be ready (up to {max_attempts * wait_time} seconds)...")
-    
+
+    print(
+        f"⏳ Waiting for mock server to be ready (up to {max_attempts * wait_time} seconds)..."
+    )
+
     # Extra initial delay for Windows
     if os.name == "nt":
         print("🪟 Windows detected - allowing extra startup time...")
@@ -102,7 +104,7 @@ def main():
                 print("   You may need to run: python scripts/init_mock_db.py")
 
             return
-        
+
         print(f"⏳ Attempt {attempt + 1}/{max_attempts}: Waiting for mock server...")
         time.sleep(wait_time)
 

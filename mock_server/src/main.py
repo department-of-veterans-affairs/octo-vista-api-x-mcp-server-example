@@ -142,8 +142,8 @@ async def health():
         # Try a simple operation
         await db_client.get_application_by_key("health-check")
     except Exception as e:
-        db_status = f"unhealthy: {e!s}"
-
+        structlog.get_logger().error("DynamoDB health check failed", error=str(e))
+        db_status = "unhealthy: error encountered"
     return {
         "status": "healthy",
         "version": settings.app_version,

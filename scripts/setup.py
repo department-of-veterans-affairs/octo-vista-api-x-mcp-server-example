@@ -67,11 +67,11 @@ def setup_mock_keys():
         print("🔑 Generating RSA keys for mock server...")
         os.chdir(project_root / "mock_server")
         # Use the Python from the virtual environment
-        if os.name == 'nt':  # Windows
+        if os.name == "nt":  # Windows
             python_exe = str(project_root / ".venv" / "Scripts" / "python.exe")
         else:
             python_exe = str(project_root / ".venv" / "bin" / "python")
-        
+
         result = subprocess.run(
             [python_exe, "scripts/generate_rsa_keys.py"],
             capture_output=True,

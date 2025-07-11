@@ -67,6 +67,24 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 
 This automatically connects to the Vista API X mock server if it's running.
 
+## Configuration
+
+The server can be configured to use either a mock server or production Vista API:
+
+```bash
+# In your .env file:
+VISTA_MODE=mock  # Options: "mock", "production", "auto"
+```
+
+- **mock** (default): Always uses the built-in mock server at localhost:8080
+- **production**: Uses real Vista API (requires valid credentials)
+- **auto**: Uses mock if no production credentials are configured
+
+To verify your configuration:
+```bash
+python scripts/test_config.py
+```
+
 ## Documentation
 
 - [Setup Guide](docs/SETUP.md) - Installation and configuration
