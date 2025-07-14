@@ -69,16 +69,17 @@ This automatically connects to the Vista API X mock server if it's running.
 
 ## Configuration
 
-The server can be configured to use either a mock server or production Vista API:
+The server automatically detects whether to use production Vista API or the mock server based on environment variables:
 
 ```bash
 # In your .env file:
-VISTA_MODE=mock  # Options: "mock", "production", "auto"
+VISTA_API_BASE_URL=https://your-vista-api.com  # Production API URL
+VISTA_AUTH_URL=https://your-vista-auth.com     # Auth service URL (optional, defaults to API URL)
+VISTA_API_KEY=your-api-key                     # Your Vista API key
 ```
 
-- **mock** (default): Always uses the built-in mock server at localhost:8080
-- **production**: Uses real Vista API (requires valid credentials)
-- **auto**: Uses mock if no production credentials are configured
+- If all required variables are set, the server uses production Vista API
+- If any are missing, it falls back to the mock server at localhost:8080
 
 To verify your configuration:
 ```bash
