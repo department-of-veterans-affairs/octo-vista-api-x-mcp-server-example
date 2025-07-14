@@ -93,7 +93,7 @@ def main():
         "command": uv_path,
         "args": ["--directory", str(project_root), "run", "python", "server.py"],
         "env": {
-            "VISTA_API_BASE_URL": "http://localhost:8080",
+            "VISTA_API_BASE_URL": "http://localhost:8888",
             "VISTA_API_KEY": "test-wildcard-key-456",
             "DEFAULT_STATION": "500",
             "DEFAULT_DUZ": "10000000219",

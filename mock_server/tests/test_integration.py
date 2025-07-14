@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 # Test configuration
-BASE_URL = "http://localhost:8080/vista-api-x"
+BASE_URL = "http://localhost:8888"
 TEST_API_KEY = "test-standard-key-123"
 TEST_STATION = "500"
 TEST_DUZ = "10000000219"
@@ -54,7 +54,9 @@ async def test_auth_token_invalid_key(client):
 @pytest.mark.asyncio
 async def test_token_refresh(client, auth_token):
     """Test token refresh"""
-    response = await client.post("/auth/refresh", headers={"Authorization": f"Bearer {auth_token}"})
+    response = await client.post(
+        "/auth/refresh", headers={"Authorization": f"Bearer {auth_token}"}
+    )
 
     assert response.status_code == 200
     data = response.json()
@@ -69,7 +71,11 @@ async def test_rpc_patient_list(client, auth_token):
     response = await client.post(
         f"/vista-sites/{TEST_STATION}/users/{TEST_DUZ}/rpc/invoke",
         headers={"Authorization": f"Bearer {auth_token}"},
-        json={"context": "OR CPRS GUI CHART", "rpc": "ORWPT LIST", "parameters": [{"string": "^A"}]},
+        json={
+            "context": "OR CPRS GUI CHART",
+            "rpc": "ORWPT LIST",
+            "parameters": [{"string": "^A"}],
+        },
     )
 
     assert response.status_code == 200
@@ -155,7 +161,7 @@ async def test_health_check(client):
 @pytest.mark.asyncio
 async def test_root_endpoint():
     """Test root endpoint"""
-    async with httpx.AsyncClient(base_url="http://localhost:8080") as client:
+    async with httpx.AsyncClient(base_url="http://localhost:8888") as client:
         response = await client.get("/")
 
         assert response.status_code == 200

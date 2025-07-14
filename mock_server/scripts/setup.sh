@@ -70,7 +70,7 @@ fi
 # Wait for Vista mock to be ready
 echo "⏳ Waiting for Vista API X Mock to be ready..."
 for i in {1..30}; do
-    if curl -s http://localhost:8080/ > /dev/null 2>&1; then
+    if curl -s http://localhost:8888/ > /dev/null 2>&1; then
         echo "✅ Vista API X Mock is ready"
         break
     fi
@@ -83,7 +83,7 @@ done
 
 # Test authentication
 echo "🔍 Testing authentication..."
-TOKEN_RESPONSE=$(curl -s -X POST http://localhost:8080/auth/token \
+TOKEN_RESPONSE=$(curl -s -X POST http://localhost:8888/auth/token \
     -H "Content-Type: application/json" \
     -d '{"key": "test-standard-key-123"}')
 
@@ -101,12 +101,12 @@ echo ""
 echo "📋 Quick Test Commands:"
 echo ""
 echo "# Get a token:"
-echo "curl -X POST http://localhost:8080/auth/token \\"
+echo "curl -X POST http://localhost:8888/auth/token \\"
 echo "  -H \"Content-Type: application/json\" \\"
 echo "  -d '{\"key\": \"test-standard-key-123\"}'"
 echo ""
 echo "# Make an RPC call (replace TOKEN with actual token):"
-echo "curl -X POST http://localhost:8080/vista-sites/500/users/10000000219/rpc/invoke \\"
+echo "curl -X POST http://localhost:8888/vista-sites/500/users/10000000219/rpc/invoke \\"
 echo "  -H \"Authorization: Bearer TOKEN\" \\"
 echo "  -H \"Content-Type: application/json\" \\"
 echo "  -d '{"
@@ -121,8 +121,8 @@ echo "• test-wildcard-key-456 - Full access"
 echo "• test-limited-key-789  - Limited access"
 echo ""
 echo "🌐 Endpoints:"
-echo "• API: http://localhost:8080"
-echo "• API Docs: http://localhost:8080/docs"
+echo "• API: http://localhost:8888"
+echo "• API Docs: http://localhost:8888/docs"
 echo "• Health: http://localhost:9990/health"
 echo "• DynamoDB UI: http://localhost:8001"
 echo "• LocalStack: http://localhost:4566"
