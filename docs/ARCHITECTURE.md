@@ -320,7 +320,7 @@ Application Errors
 
 ```
 ├── MCP Inspector (localhost:6274)
-├── Mock Server (localhost:8080)
+├── Mock Server (localhost:8888)
 ├── LocalStack (localhost:4566)
 └── Application (stdio/pipes)
 ```
@@ -340,7 +340,7 @@ Application Errors
 
 ```env
 # Core settings
-VISTA_API_BASE_URL=http://localhost:8080    # or https://vista-api-x.va.gov
+VISTA_API_BASE_URL=http://localhost:8888    # or https://vista-api-x.va.gov
 VISTA_API_KEY=${VISTA_API_KEY}
 LOG_LEVEL=INFO|DEBUG|ERROR
 

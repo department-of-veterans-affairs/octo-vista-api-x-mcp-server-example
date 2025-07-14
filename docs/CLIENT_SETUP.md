@@ -29,6 +29,7 @@ python scripts/setup_claude_desktop.py
 ```
 
 This script will:
+
 - Find your uv installation
 - Locate your Claude Desktop config
 - Add the Vista API server
@@ -39,11 +40,13 @@ This script will:
 Edit the Claude configuration file:
 
 **macOS/Linux:**
+
 ```bash
 ~/.config/Claude/claude_desktop_config.json
 ```
 
 **Windows:**
+
 ```
 %APPDATA%\Claude\claude_desktop_config.json
 ```
@@ -63,7 +66,7 @@ Add the Vista API server configuration:
         "server.py"
       ],
       "env": {
-        "VISTA_API_BASE_URL": "http://localhost:8080",
+        "VISTA_API_BASE_URL": "http://localhost:8888",
         "VISTA_API_KEY": "test-wildcard-key-456",
         "DEFAULT_STATION": "500",
         "DEFAULT_DUZ": "10000000219"
@@ -76,12 +79,14 @@ Add the Vista API server configuration:
 ### 4. Find Your Paths
 
 **Find uv path:**
+
 ```bash
 which uv
 # Example output: /Users/username/.local/bin/uv
 ```
 
 **Find project path:**
+
 ```bash
 cd octo-vista-api-x-mcp-server
 pwd
@@ -91,6 +96,7 @@ pwd
 ### 5. Complete Examples
 
 #### stdio Transport (Local)
+
 ```json
 {
   "mcpServers": {
@@ -104,7 +110,7 @@ pwd
         "server.py"
       ],
       "env": {
-        "VISTA_API_BASE_URL": "http://localhost:8080",
+        "VISTA_API_BASE_URL": "http://localhost:8888",
         "VISTA_API_KEY": "test-wildcard-key-456",
         "DEFAULT_STATION": "500",
         "DEFAULT_DUZ": "10000000219"
@@ -117,6 +123,7 @@ pwd
 #### SSE Transport (Remote Access)
 
 For local development:
+
 ```json
 {
   "mcpServers": {
@@ -128,6 +135,7 @@ For local development:
 ```
 
 For production (with your deployed server):
+
 ```json
 {
   "mcpServers": {
@@ -147,6 +155,7 @@ For production (with your deployed server):
 ### 7. Test the Connection
 
 Try these prompts in Claude:
+
 - "Search for patients with last name ANDERSON"
 - "Show medications for patient 100022"
 - "Get vital signs for patient 100023"
@@ -178,7 +187,7 @@ Create or edit `.cursorrules` in your project root:
         "server.py"
       ],
       "env": {
-        "VISTA_API_BASE_URL": "http://localhost:8080",
+        "VISTA_API_BASE_URL": "http://localhost:8888",
         "VISTA_API_KEY": "test-wildcard-key-456",
         "DEFAULT_STATION": "500",
         "DEFAULT_DUZ": "10000000219"
@@ -200,11 +209,13 @@ You can also configure MCP servers in Cursor's settings:
 ### 4. Using in Cursor
 
 Once configured, you can use the Vista API tools in:
+
 - Chat panel
 - Inline code generation
 - Command palette (search for "MCP")
 
 Example usage in Cursor chat:
+
 ```
 @vista-api search for patient THOMPSON
 @vista-api get medications for patient 100024
@@ -232,7 +243,7 @@ Edit `~/.config/zed/settings.json`:
           "server.py"
         ],
         "env": {
-          "VISTA_API_BASE_URL": "http://localhost:8080",
+          "VISTA_API_BASE_URL": "http://localhost:8888",
           "VISTA_API_KEY": "test-wildcard-key-456"
         }
       }
@@ -274,7 +285,7 @@ Add to VS Code settings.json:
         "server.py"
       ],
       "env": {
-        "VISTA_API_BASE_URL": "http://localhost:8080",
+        "VISTA_API_BASE_URL": "http://localhost:8888",
         "VISTA_API_KEY": "test-wildcard-key-456",
         "DEFAULT_STATION": "500",
         "DEFAULT_DUZ": "10000000219"
@@ -312,7 +323,7 @@ async def main():
             "server.py"
         ],
         env={
-            "VISTA_API_BASE_URL": "http://localhost:8080",
+            "VISTA_API_BASE_URL": "http://localhost:8888",
             "VISTA_API_KEY": "test-wildcard-key-456"
         }
     )
@@ -354,7 +365,7 @@ async function main() {
       "server.py"
     ],
     env: {
-      VISTA_API_BASE_URL: "http://localhost:8080",
+      VISTA_API_BASE_URL: "http://localhost:8888",
       VISTA_API_KEY: "test-wildcard-key-456"
     }
   });
@@ -390,27 +401,32 @@ main().catch(console.error);
 ### Common Issues
 
 **1. Server not starting**
-- Check if mock server is running: `curl http://localhost:8080/health`
+
+- Check if mock server is running: `curl http://localhost:8888/health`
 - Verify uv path is correct: `which uv`
 - Check Python version: `python --version` (needs 3.12+)
 
 **2. Authentication errors**
+
 - Ensure `VISTA_API_KEY` is set correctly
 - Verify mock server has test data loaded
 - Check if using correct station number (500)
 
 **3. Client can't find server**
+
 - Use absolute paths in configuration
 - Restart the client application completely
 - Check client logs for error messages
 
 **4. Permission denied**
+
 - Make sure server.py is executable: `chmod +x server.py`
 - Check directory permissions
 
 ### Debug Mode
 
 Enable debug logging by setting in the environment:
+
 ```json
 "env": {
   "VISTA_MCP_DEBUG": "true",
@@ -421,10 +437,11 @@ Enable debug logging by setting in the environment:
 ### Testing Connection
 
 Test the server directly:
+
 ```bash
 # Start server manually
 cd /path/to/octo-vista-api-x-mcp-server
-VISTA_API_BASE_URL=http://localhost:8080 \
+VISTA_API_BASE_URL=http://localhost:8888 \
 VISTA_API_KEY=test-wildcard-key-456 \
 uv run python server.py
 ```
@@ -434,6 +451,7 @@ You should see initialization messages if it's working correctly.
 ## Best Practices
 
 1. **Use environment variables** for sensitive data:
+
    ```json
    "env": {
      "VISTA_API_BASE_URL": "${VISTA_API_BASE_URL}",
@@ -442,6 +460,7 @@ You should see initialization messages if it's working correctly.
    ```
 
 2. **Start mock server first** when developing:
+
    ```bash
    mise run dev-with-mock
    ```

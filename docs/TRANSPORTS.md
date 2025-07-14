@@ -7,12 +7,14 @@ The Vista API MCP Server supports two transport modes for maximum flexibility:
 Traditional process-based communication, ideal for local development.
 
 ### When to Use
+
 - Local development and testing
 - Direct integration with desktop applications
 - Simple setup without network configuration
 - Debugging with direct process access
 
 ### Configuration
+
 ```json
 {
   "mcpServers": {
@@ -20,7 +22,7 @@ Traditional process-based communication, ideal for local development.
       "command": "uv",
       "args": ["--directory", "/path/to/project", "run", "python", "server.py"],
       "env": {
-        "VISTA_API_BASE_URL": "http://localhost:8080"
+        "VISTA_API_BASE_URL": "http://localhost:8888"
       }
     }
   }
@@ -28,6 +30,7 @@ Traditional process-based communication, ideal for local development.
 ```
 
 ### Running
+
 ```bash
 # Development with MCP inspector
 mise run dev-with-mock
@@ -41,6 +44,7 @@ uv run python server.py
 Server-Sent Events transport for remote access and web integrations.
 
 ### When to Use
+
 - Remote server hosting
 - Multiple concurrent clients
 - Cloud deployment (AWS, GCP, Azure)
@@ -48,6 +52,7 @@ Server-Sent Events transport for remote access and web integrations.
 - Container deployments
 
 ### Configuration
+
 ```json
 {
   "mcpServers": {
@@ -59,6 +64,7 @@ Server-Sent Events transport for remote access and web integrations.
 ```
 
 ### Running Locally
+
 ```bash
 # Development with SSE transport
 mise run dev-sse-with-mock
@@ -70,6 +76,7 @@ VISTA_MCP_TRANSPORT=sse uv run python http_server.py
 ### Production Deployment
 
 #### Docker
+
 ```bash
 # Build and run
 docker build -t vista-mcp-http .
@@ -82,12 +89,14 @@ docker run -p 8000:8000 \
 #### Docker Compose
 
 **Prerequisites:**
+
 ```bash
 # Create the shared network (one-time setup)
 docker network create vista-network
 ```
 
 **Build and Run:**
+
 ```bash
 # Build the image
 docker-compose build
@@ -100,6 +109,7 @@ docker-compose ps
 ```
 
 **Testing the SSE Server:**
+
 ```bash
 # Test SSE endpoint
 curl -N http://localhost:8000/sse -H "Accept: text/event-stream"
@@ -118,6 +128,7 @@ docker-compose restart
 ```
 
 **Cleanup:**
+
 ```bash
 docker-compose down
 # Remove network if needed
@@ -125,6 +136,7 @@ docker network rm vista-network
 ```
 
 #### Cloud Run (Google Cloud)
+
 ```bash
 # Build and deploy
 gcloud builds submit --tag gcr.io/PROJECT-ID/vista-mcp
@@ -153,7 +165,7 @@ Both transports use the same environment variables:
 
 ```env
 # Vista API Configuration
-VISTA_API_BASE_URL=http://localhost:8080
+VISTA_API_BASE_URL=http://localhost:8888
 VISTA_API_KEY=your-api-key
 
 # Default Context
@@ -171,6 +183,7 @@ VISTA_MCP_HTTP_HOST=0.0.0.0
 ## Testing Different Transports
 
 ### Test stdio Mode
+
 ```bash
 # In one terminal
 mise run dev-with-mock
@@ -179,6 +192,7 @@ mise run dev-with-mock
 ```
 
 ### Test SSE Mode
+
 ```bash
 # In one terminal
 mise run dev-sse-with-mock
@@ -193,11 +207,13 @@ curl http://localhost:8000/health
 ## Security Considerations
 
 ### stdio Transport
+
 - Runs with user permissions
 - No network exposure
 - Suitable for trusted local environments
 
 ### HTTP/SSE Transport
+
 - Configure CORS appropriately
 - Use HTTPS in production
 - Implement authentication if needed
@@ -207,17 +223,20 @@ curl http://localhost:8000/health
 ## Troubleshooting
 
 ### stdio Issues
+
 - Check Python path and version
 - Verify uv installation
 - Ensure proper file permissions
 
 ### SSE Issues
+
 - Check port availability (8000)
 - Verify network connectivity
 - Monitor server logs
 - Test SSE endpoint with curl first
 
 ### Docker SSE Issues
+
 - **Network not found**: Run `docker network create vista-network`
 - **Port already in use**: Check `docker ps` and `lsof -i :8000`
 - **Cannot connect to mock**: Ensure mock_server is on same network

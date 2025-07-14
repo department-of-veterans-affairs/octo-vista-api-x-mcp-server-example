@@ -157,7 +157,7 @@ from src.api_clients.vista_client import VistaAPIClient
 async def test_get_new_data():
     # Use test/mock endpoint
     client = VistaAPIClient(
-        base_url="http://localhost:8080",
+        base_url="http://localhost:8888",
         api_key="test-wildcard-key-456"
     )
     result = await get_new_data(
@@ -173,7 +173,7 @@ async def test_get_new_data():
 ### Test in MCP Inspector
 
 1. Start development server: `mise run dev-with-mock`
-2. Open http://localhost:6274
+2. Open <http://localhost:6274>
 3. Test your new tool with various parameters
 
 ## Code Quality
@@ -183,12 +183,14 @@ async def test_get_new_data():
 #### Automatic Formatting (VS Code/Cursor)
 
 The project includes VS Code/Cursor settings for automatic formatting on save:
+
 - **Black**: Python code formatting
 - **Ruff**: Linting with auto-fix
 - **Import sorting**: Automatic organization of imports
 - **EditorConfig**: Consistent file formatting across editors
 
 To enable auto-formatting:
+
 1. Open the project in VS Code or Cursor
 2. Install recommended extensions when prompted
 3. Files will automatically format when saved
@@ -270,6 +272,7 @@ Create `.vscode/launch.json`:
 ### Adding Mock Data
 
 Edit files in `mock_server/src/data/`:
+
 - `test_patients.py` - Patient demographics
 - `clinical_data.py` - Clinical information
 - `appointments.py` - Scheduling data

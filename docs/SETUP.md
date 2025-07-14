@@ -34,12 +34,13 @@ mise run dev-with-mock
 ```
 
 That's it! This command automatically:
+
 - Installs Python 3.12
 - Creates virtual environment
 - Installs all dependencies
 - Generates RSA keys for mock authentication
 - Starts the mock Vista API server
-- Launches MCP inspector at http://localhost:6274
+- Launches MCP inspector at <http://localhost:6274>
 
 ## Manual Setup (Alternative)
 
@@ -117,7 +118,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
         "server.py"
       ],
       "env": {
-        "VISTA_API_BASE_URL": "http://localhost:8080",
+        "VISTA_API_BASE_URL": "http://localhost:8888",
         "VISTA_API_KEY": "test-wildcard-key-456",
         "DEFAULT_STATION": "500",
         "DEFAULT_DUZ": "10000000219"
@@ -144,7 +145,7 @@ Completely quit and restart Claude Desktop to load the new configuration.
 
 ```env
 # Vista API endpoint (can be mock server or real Vista API X)
-VISTA_API_BASE_URL=http://localhost:8080
+VISTA_API_BASE_URL=http://localhost:8888
 VISTA_API_KEY=test-wildcard-key-456
 
 # Default context
@@ -156,6 +157,7 @@ VISTA_MCP_DEBUG=false
 ```
 
 For production Vista API X:
+
 ```env
 VISTA_API_BASE_URL=https://your-vista-api-x-server
 VISTA_API_KEY=your-production-api-key
@@ -166,13 +168,14 @@ VISTA_API_KEY=your-production-api-key
 ### 1. Check Mock Server
 
 ```bash
-curl http://localhost:8080/health
+curl http://localhost:8888/health
 # Should return: {"status": "healthy"}
 ```
 
 ### 2. Test MCP Server
 
-In the MCP inspector (http://localhost:6274):
+In the MCP inspector (<http://localhost:6274>):
+
 1. Click "Connect"
 2. Try calling the `heartbeat` tool
 3. Search for patients with `search_patients`
@@ -180,6 +183,7 @@ In the MCP inspector (http://localhost:6274):
 ### 3. Test in Claude Desktop
 
 After restarting Claude Desktop:
+
 - Look for "vista-api" in the MCP servers list
 - Ask: "Can you search for patients in Vista?"
 

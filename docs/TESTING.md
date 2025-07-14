@@ -7,17 +7,20 @@ Comprehensive testing guide with prompts, test data, and examples for the Vista 
 Use these prompts to quickly verify the MCP server is working correctly:
 
 ### Basic Verification
+
 1. "Check if the Vista system is online"
 2. "What's the current server time?"
 3. "Show me the Vista server version"
 
 ### Patient Search
+
 1. "Search for patients with last name ANDERSON"
 2. "Find patients whose last name starts with MART"
 3. "Look up patient THOMPSON,MICHAEL"
 4. "Search for patient GARCIA"
 
 ### Clinical Data Retrieval
+
 1. "Show me medications for patient 100022"
 2. "Get lab results for patient 100023 from the last 30 days"
 3. "Get vital signs for patient 100024"
@@ -41,11 +44,13 @@ Use these prompts to quickly verify the MCP server is working correctly:
 ### Test Credentials
 
 **Mock Server:**
+
 - API Key: `test-wildcard-key-456`
 - Station: `500`
 - DUZ: `10000000219`
 
 **Test Stations:**
+
 - `500` - Washington DC VAMC (Primary)
 - `442` - Ann Arbor VAMC (Secondary)
 - `999` - Invalid station (for error testing)
@@ -53,6 +58,7 @@ Use these prompts to quickly verify the MCP server is working correctly:
 ## Comprehensive Test Scenarios
 
 ### Scenario 1: New Patient Intake
+
 ```
 1. "Search for patient ANDERSON"
 2. "Get demographics for patient 100022"
@@ -63,6 +69,7 @@ Use these prompts to quickly verify the MCP server is working correctly:
 ```
 
 ### Scenario 2: Clinical Review
+
 ```
 1. "Show medications for patient 100023"
 2. "Get lab results for patient 100023 from the last 30 days"
@@ -72,6 +79,7 @@ Use these prompts to quickly verify the MCP server is working correctly:
 ```
 
 ### Scenario 3: Appointment Management
+
 ```
 1. "Show appointments for clinic 195"
 2. "Get user profile for DUZ 10000000219"
@@ -80,6 +88,7 @@ Use these prompts to quickly verify the MCP server is working correctly:
 ```
 
 ### Scenario 4: Error Handling
+
 ```
 1. "Get data for patient 999999" (invalid patient)
 2. "Search for patient X" (too short)
@@ -89,6 +98,7 @@ Use these prompts to quickly verify the MCP server is working correctly:
 ## Expected Response Examples
 
 ### Patient Search Response
+
 ```json
 {
   "success": true,
@@ -107,6 +117,7 @@ Use these prompts to quickly verify the MCP server is working correctly:
 ```
 
 ### Medications Response
+
 ```json
 {
   "success": true,
@@ -134,6 +145,7 @@ Use these prompts to quickly verify the MCP server is working correctly:
 ```
 
 ### Lab Results Response
+
 ```json
 {
   "success": true,
@@ -163,6 +175,7 @@ Use these prompts to quickly verify the MCP server is working correctly:
 ## Integration Testing
 
 ### Python Test Script
+
 ```python
 import asyncio
 from mcp import ClientSession, StdioServerParameters
@@ -202,6 +215,7 @@ if __name__ == "__main__":
 ```
 
 ### Bash Test Script
+
 ```bash
 #!/bin/bash
 # Quick MCP server test
@@ -209,7 +223,7 @@ if __name__ == "__main__":
 echo "Testing Vista MCP Server..."
 
 # Start server if not running
-if ! curl -s http://localhost:8080/health > /dev/null; then
+if ! curl -s http://localhost:8888/health > /dev/null; then
     echo "Starting mock server..."
     cd mock_server && docker-compose up -d
     sleep 5
@@ -240,16 +254,21 @@ Expected response times for common operations:
 ## Common Issues and Solutions
 
 ### Issue: "Patient not found"
+
 **Solution:** Verify you're using correct test patient DFNs (100022-100029)
 
 ### Issue: "Authentication failed"
+
 **Solution:** Ensure mock server is running and using correct API key
 
 ### Issue: "Tool not found"
+
 **Solution:** Check tool name spelling (use underscores, not hyphens)
 
 ### Issue: Slow responses
-**Solution:** 
+
+**Solution:**
+
 1. Check if mock server is running locally
 2. Verify no network issues
 3. Consider implementing caching
@@ -257,6 +276,7 @@ Expected response times for common operations:
 ## Advanced Testing
 
 ### Load Testing with Locust
+
 ```python
 from locust import HttpUser, task, between
 
@@ -277,6 +297,7 @@ class VistaMCPUser(HttpUser):
 ```
 
 ### Continuous Testing
+
 Set up automated tests to run on every commit:
 
 ```yaml
@@ -300,22 +321,25 @@ jobs:
 ## Debugging Tips
 
 1. **Enable debug logging:**
+
    ```bash
    VISTA_MCP_DEBUG=true mise run dev-with-mock
    ```
 
 2. **Check mock server logs:**
+
    ```bash
    docker-compose -f mock_server/docker-compose.yml logs -f
    ```
 
 3. **Use MCP Inspector:**
-   - Open http://localhost:6274
+   - Open <http://localhost:6274>
    - Enable request/response logging
    - Test individual tools interactively
 
 4. **Verify mock data:**
+
    ```bash
    # Check if patient exists in mock
-   curl http://localhost:8080/test/patients
+   curl http://localhost:8888/test/patients
    ```
