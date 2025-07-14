@@ -7,7 +7,7 @@ import time
 import httpx
 
 
-def check_mock_server(url="http://localhost:8080/health", max_attempts=10):
+def check_mock_server(url="http://localhost:8888/health", max_attempts=10):
     """Check if mock server is running"""
     print(f"Checking mock server at {url}...")
 

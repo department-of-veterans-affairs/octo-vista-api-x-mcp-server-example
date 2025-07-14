@@ -14,7 +14,7 @@ def check_mock_server():
         import urllib.request
 
         # Try both localhost and 127.0.0.1 (Windows sometimes has issues with localhost)
-        urls = ["http://localhost:8080/health", "http://127.0.0.1:8080/health"]
+        urls = ["http://localhost:8888/health", "http://127.0.0.1:8888/health"]
 
         for url in urls:
             try:
@@ -111,14 +111,14 @@ def main():
     print("\n❌ Mock server failed to start.")
     print("\n🔧 Troubleshooting tips:")
     print("1. Check if Docker Desktop is running")
-    print("2. Check if port 8080 is already in use:")
+    print("2. Check if port 8888 is already in use:")
     if os.name == "nt":
-        print("   netstat -ano | findstr :8080")
+        print("   netstat -ano | findstr :8888")
     else:
-        print("   lsof -i :8080")
+        print("   lsof -i :8888")
     print("3. Check container status: docker ps -a")
     print("4. Check logs: docker logs vista-api-x-mock")
-    print("5. Try accessing http://localhost:8080/health in your browser")
+    print("5. Try accessing http://localhost:8888/health in your browser")
     if os.name == "nt":
         print("6. On Windows, try using 127.0.0.1 instead of localhost")
     sys.exit(1)

@@ -26,7 +26,7 @@ services:
       dockerfile: Dockerfile
     container_name: vista-api-x-mock
     ports:
-      - "8080:8080"
+      - "8888:8080"
       - "9990:9990"
     environment:
       - AWS_ENDPOINT_URL=http://localstack:4566

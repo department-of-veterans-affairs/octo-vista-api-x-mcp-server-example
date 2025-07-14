@@ -79,7 +79,7 @@ VISTA_API_KEY=your-api-key                     # Your Vista API key
 ```
 
 - If all required variables are set, the server uses production Vista API
-- If any are missing, it falls back to the mock server at localhost:8080
+- If any are missing, it falls back to the mock server at localhost:8888
 
 To verify your configuration:
 ```bash

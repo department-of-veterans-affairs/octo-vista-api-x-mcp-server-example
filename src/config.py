@@ -3,7 +3,7 @@
 import os
 
 # Mock server configuration (fallback)
-MOCK_SERVER_URL = "http://localhost:8080"
+MOCK_SERVER_URL = "http://localhost:8888"
 MOCK_API_KEY = "test-wildcard-key-456"
 
 # Vista API configuration (from environment)

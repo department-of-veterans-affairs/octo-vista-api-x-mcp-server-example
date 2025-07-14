@@ -14,27 +14,27 @@ cd ..
 docker-compose up -d
 
 # Check it's running
-curl http://localhost:8080/health
+curl http://localhost:8888/health
 ```
 
 ## Endpoints
 
-- **API**: http://localhost:8080
-- **Health Check**: http://localhost:8080/health
-- **API Docs**: http://localhost:8080/docs
+- **API**: http://localhost:8888
+- **Health Check**: http://localhost:8888/health
+- **API Docs**: http://localhost:8888/docs
 
 ## Authentication
 
 Get a token:
 ```bash
-curl -X POST http://localhost:8080/auth/token \
+curl -X POST http://localhost:8888/auth/token \
   -H "Content-Type: application/json" \
   -d '{"key": "test-wildcard-key-456"}'
 ```
 
 Use the token:
 ```bash
-curl -X POST http://localhost:8080/vista-sites/500/users/10000000219/rpc/invoke \
+curl -X POST http://localhost:8888/vista-sites/500/users/10000000219/rpc/invoke \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
