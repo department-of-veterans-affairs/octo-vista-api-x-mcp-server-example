@@ -15,6 +15,7 @@ docker-compose up -d
 
 # Check it's running
 curl http://localhost:8888/health
+
 ```
 
 ## Endpoints
