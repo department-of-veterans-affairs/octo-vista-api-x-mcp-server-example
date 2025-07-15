@@ -566,3 +566,45 @@ def parse_user_info(result: str | dict, duz: str) -> Provider | None:
             )
 
     return None
+
+
+def parse_current_user(result: str | dict) -> dict | None:
+    """
+    Parse get_current_user response
+
+    Returns:
+        Dict with name, division, ien, and station_id
+    """
+    if not result:
+        return None
+
+    # Handle string JSON response
+    if isinstance(result, str):
+        try:
+            import json
+
+            result = json.loads(result)
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse current user JSON: {e}")
+            return None
+
+    # Handle dict response
+    if isinstance(result, dict):
+        user_data = result.get("User")
+        if not user_data:
+            return None
+
+        # Extract division name from first division entry
+        division = None
+        divisions = user_data.get("Division", [])
+        if divisions and len(divisions) > 0:
+            division = divisions[0].get("Name")
+
+        return {
+            "name": user_data.get("Name"),
+            "division": division,
+            "ien": user_data.get("IEN"),
+            "station_id": user_data.get("Station ID"),
+        }
+
+    return None

@@ -3,6 +3,7 @@ Configuration management for Vista API X Mock Server
 """
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -10,7 +11,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Application settings with environment variable support"""
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False)
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", case_sensitive=False
+    )
 
     # AWS Configuration
     aws_endpoint_url: str = "http://localhost:4566"
@@ -81,14 +84,12 @@ class Settings(BaseSettings):
     @property
     def jwt_private_key(self) -> bytes:
         """Load JWT private key from file"""
-        with open(self.jwt_private_key_path, "rb") as f:
-            return f.read()
+        return Path(self.jwt_private_key_path).read_bytes()
 
     @property
     def jwt_public_key(self) -> bytes:
         """Load JWT public key from file"""
-        with open(self.jwt_public_key_path, "rb") as f:
-            return f.read()
+        return Path(self.jwt_public_key_path).read_bytes()
 
 
 @lru_cache

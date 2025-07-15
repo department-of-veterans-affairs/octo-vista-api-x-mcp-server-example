@@ -2,7 +2,7 @@
 Exception handlers matching Vista API X's 5 exception mappers
 """
 
-from typing import Any
+from typing import Any, cast
 
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -106,8 +106,9 @@ class FoundationsException(Exception):
 # Exception handlers for FastAPI
 
 
-async def vistalink_fault_handler(request: Request, exc: VistaLinkFaultException) -> JSONResponse:
+def vistalink_fault_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handle VistaLink faults"""
+    exc = cast(VistaLinkFaultException, exc)
     return JSONResponse(
         status_code=500,
         content=create_error_response(
@@ -124,8 +125,9 @@ async def vistalink_fault_handler(request: Request, exc: VistaLinkFaultException
     )
 
 
-async def security_fault_handler(request: Request, exc: SecurityFaultException) -> JSONResponse:
+def security_fault_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handle security faults"""
+    exc = cast(SecurityFaultException, exc)
     status_code = 403 if "DENIED" in exc.error_code else 401
     return JSONResponse(
         status_code=status_code,
@@ -141,8 +143,9 @@ async def security_fault_handler(request: Request, exc: SecurityFaultException) 
     )
 
 
-async def rpc_fault_handler(request: Request, exc: RpcFaultException) -> JSONResponse:
+def rpc_fault_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handle RPC faults"""
+    exc = cast(RpcFaultException, exc)
     return JSONResponse(
         status_code=400,
         content=create_error_response(
@@ -159,8 +162,9 @@ async def rpc_fault_handler(request: Request, exc: RpcFaultException) -> JSONRes
     )
 
 
-async def jwt_exception_handler(request: Request, exc: JwtException) -> JSONResponse:
+def jwt_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handle JWT exceptions"""
+    exc = cast(JwtException, exc)
     return JSONResponse(
         status_code=401,
         content=create_error_response(
@@ -174,8 +178,9 @@ async def jwt_exception_handler(request: Request, exc: JwtException) -> JSONResp
     )
 
 
-async def foundations_exception_handler(request: Request, exc: FoundationsException) -> JSONResponse:
+def foundations_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handle general foundations exceptions"""
+    exc = cast(FoundationsException, exc)
     return JSONResponse(
         status_code=500,
         content=create_error_response(
@@ -189,8 +194,9 @@ async def foundations_exception_handler(request: Request, exc: FoundationsExcept
     )
 
 
-async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+def http_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handle FastAPI HTTP exceptions in Vista API X format"""
+    exc = cast(HTTPException, exc)
     # If detail is already in our format, use it directly
     if isinstance(exc.detail, dict) and "errorCode" in exc.detail:
         return JSONResponse(status_code=exc.status_code, content=exc.detail)

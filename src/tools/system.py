@@ -7,7 +7,7 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from ..api_clients.base import BaseVistaClient, VistaAPIError
-from ..parsers import parse_fileman_date, parse_user_info
+from ..parsers import parse_current_user, parse_fileman_date, parse_user_info
 from ..utils import (
     build_metadata,
     get_default_duz,
@@ -21,6 +21,77 @@ logger = logging.getLogger(__name__)
 
 def register_system_tools(mcp: FastMCP, vista_client: BaseVistaClient):
     """Register system tools with the MCP server"""
+
+    @mcp.tool()
+    async def get_current_user() -> dict[str, Any]:
+        """
+        Get the current user information
+
+        Returns:
+            Current user information including DUZ and station
+        """
+
+        start_time = time.time()
+        station = get_default_station()
+        caller_duz = get_default_duz()
+
+        rpc_context = "SDECRPC"
+        rpc_name = "SDES GET USER PROFILE BY DUZ"
+
+        try:
+            # Invoke RPC to get user profile
+            result = await vista_client.invoke_rpc(
+                station=station,
+                caller_duz=caller_duz,
+                context=rpc_context,
+                rpc_name=rpc_name,
+                parameters=[{"string": caller_duz}],
+            )
+
+            # Calculate duration
+            duration_ms = int((time.time() - start_time) * 1000)
+
+            # Log call
+            log_rpc_call(
+                rpc_name=rpc_name,
+                station=station,
+                duz=caller_duz,
+                duration_ms=duration_ms,
+                success=True,
+            )
+
+            return {
+                "success": True,
+                "user": parse_current_user(result),
+                "station": station,
+                "metadata": build_metadata(
+                    station=station,
+                    rpc_name=rpc_name,
+                    duration_ms=duration_ms,
+                ),
+            }
+        except VistaAPIError as e:
+            log_rpc_call(
+                rpc_name=rpc_name,
+                station=station,
+                duz=caller_duz,
+                success=False,
+                error=str(e),
+            )
+            return {
+                "success": False,
+                "alive": False,
+                "error": translate_vista_error(e.to_dict()),
+                "metadata": build_metadata(station=station, rpc_name=rpc_name),
+            }
+        except Exception as e:
+            logger.exception("Unexpected error in get_current_user")
+            return {
+                "success": False,
+                "alive": False,
+                "error": f"Unexpected error: {str(e)}",
+                "metadata": build_metadata(station=station, rpc_name=rpc_name),
+            }
 
     @mcp.tool()
     async def heartbeat(

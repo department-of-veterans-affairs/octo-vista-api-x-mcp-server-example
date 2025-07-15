@@ -2,15 +2,14 @@
 Vista API X Mock Server - Main Application
 """
 
-import asyncio
+import logging
 from contextlib import asynccontextmanager
 
-import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.auth.resource import auth_router
-from src.config import settings
+from src.config import get_settings
 from src.database.dynamodb_client import get_dynamodb_client
 from src.exceptions.handlers import (
     FoundationsException,
@@ -28,41 +27,30 @@ from src.exceptions.handlers import (
 from src.middleware.auth_filter import VistaApiXAuthenticationFilter
 from src.rpc.resource import rpc_router
 
-# Configure structured logging
-structlog.configure(
-    processors=[
-        structlog.stdlib.filter_by_level,
-        structlog.stdlib.add_logger_name,
-        structlog.stdlib.add_log_level,
-        structlog.stdlib.PositionalArgumentsFormatter(),
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.processors.StackInfoRenderer(),
-        structlog.processors.format_exc_info,
-        structlog.processors.JSONRenderer(),
-    ],
-    context_class=dict,
-    logger_factory=structlog.stdlib.LoggerFactory(),
-    cache_logger_on_first_use=True,
-)
+# Get settings instance
+settings = get_settings()
 
-logger = structlog.get_logger()
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
     # Startup
-    logger.info("Starting Vista API X Mock Server", version=settings.app_version)
+    logger.info(f"Starting Vista API X Mock Server version {settings.app_version}")
 
-    # Initialize DynamoDB
+    # Initialize DynamoDB if in development
     if settings.environment == "development":
-        logger.info("Seeding test data in DynamoDB")
-        db_client = get_dynamodb_client()
         try:
+            db_client = get_dynamodb_client()
             await db_client.seed_test_data()
             logger.info("Test data seeded successfully")
         except Exception as e:
-            logger.error("Failed to seed test data", error=str(e))
+            logger.warning(f"Failed to seed test data: {e}")
 
     yield
 
@@ -98,28 +86,6 @@ vista_app.add_middleware(VistaApiXAuthenticationFilter)
 vista_app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
 vista_app.include_router(rpc_router, prefix="/vista-sites", tags=["RPC"])
 
-
-# Add root endpoint for vista-api-x
-@vista_app.get("/")
-async def vista_api_root():
-    """Vista API X root endpoint"""
-    return {
-        "service": "Vista API X Mock",
-        "version": settings.app_version,
-        "status": "healthy",
-        "endpoints": [
-            "POST /auth/token - Get JWT token",
-            "POST /auth/refresh - Refresh JWT token",
-            "POST /vista-sites/{station_number}/users/{caller_duz}/rpc/invoke - Execute RPC",
-        ],
-        "documentation": {
-            "openapi": "/openapi.json",
-            "docs": "/docs",
-            "redoc": "/redoc",
-        },
-    }
-
-
 # Register exception handlers
 vista_app.add_exception_handler(VistaLinkFaultException, vistalink_fault_handler)
 vista_app.add_exception_handler(SecurityFaultException, security_fault_handler)
@@ -128,22 +94,21 @@ vista_app.add_exception_handler(JwtException, jwt_exception_handler)
 vista_app.add_exception_handler(FoundationsException, foundations_exception_handler)
 vista_app.add_exception_handler(Exception, http_exception_handler)
 
-# Replace the main app with vista_app to match production paths
-app = vista_app
+# Mount vista_app under /vista-api-x for production path parity
+app.mount("/vista-api-x", vista_app)
 
 
 @app.get("/health")
 async def health():
     """Health check endpoint"""
-    # Check DynamoDB connectivity
-    db_status = "healthy"
     try:
         db_client = get_dynamodb_client()
-        # Try a simple operation
         await db_client.get_application_by_key("health-check")
+        db_status = "healthy"
     except Exception as e:
-        structlog.get_logger().error("DynamoDB health check failed", error=str(e))
-        db_status = "unhealthy: error encountered"
+        logger.error(f"DynamoDB health check failed: {e}")
+        db_status = "unhealthy"
+
     return {
         "status": "healthy",
         "version": settings.app_version,
@@ -152,47 +117,13 @@ async def health():
     }
 
 
-# Health check server on separate port
-health_app = FastAPI()
-
-
-@health_app.get("/health")
-async def health_check():
-    """Health check for load balancer"""
-    return {"status": "healthy"}
-
-
-async def run_servers():
-    """Run both main and health check servers concurrently"""
+if __name__ == "__main__":
     import uvicorn
 
-    # Main app config
-    main_config = uvicorn.Config(
+    uvicorn.run(
         "src.main:app",
         host="0.0.0.0",
         port=settings.server_port,
         log_level=settings.log_level.lower(),
-        access_log=True,
+        reload=True,
     )
-    main_server = uvicorn.Server(main_config)
-
-    # Health check app config
-    health_config = uvicorn.Config(
-        "src.main:health_app",
-        host="0.0.0.0",
-        port=settings.health_check_port,
-        log_level="warning",
-    )
-    health_server = uvicorn.Server(health_config)
-
-    # Run both servers concurrently
-    await asyncio.gather(main_server.serve(), health_server.serve())
-
-
-def run():
-    """Run the application"""
-    asyncio.run(run_servers())
-
-
-if __name__ == "__main__":
-    run()

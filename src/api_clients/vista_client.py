@@ -41,7 +41,7 @@ class VistaAPIClient(BaseVistaClient):
         self.api_key = api_key
 
         # Initialize HTTP client
-        self.client = httpx.AsyncClient(timeout=timeout)
+        self.client = httpx.AsyncClient(timeout=timeout, verify=False)
 
         # Initialize caches
         self.token_cache = TTLCache(maxsize=10, ttl=token_cache_ttl)
@@ -63,7 +63,7 @@ class VistaAPIClient(BaseVistaClient):
 
         try:
             response = await self.client.post(
-                f"{self.auth_url}/auth/token",
+                f"{self.auth_url}/vista-api-x/auth/token",
                 json={"key": self.api_key},
                 headers={"Content-Type": "application/json"},
             )
@@ -71,6 +71,14 @@ class VistaAPIClient(BaseVistaClient):
 
             data = response.json()
             token = data["data"]["token"]
+
+            if not token:
+                raise VistaAPIError(
+                    error_type="AuthenticationError",
+                    error_code="NoToken",
+                    message="No token received from authentication service",
+                    status_code=response.status_code,
+                )
 
             # Cache the token
             self.token_cache[cache_key] = token
@@ -136,7 +144,7 @@ class VistaAPIClient(BaseVistaClient):
             payload["parameters"] = parameters
 
         # Build URL
-        url = f"{self.base_url}/vista-sites/{station}/users/{caller_duz}/rpc/invoke"
+        url = f"{self.base_url}/vista-api-x/vista-sites/{station}/users/{caller_duz}/rpc/invoke"
 
         # Build headers
         headers = {

@@ -52,7 +52,7 @@ class AdminHandlers:
     ) -> dict[str, Any]:
         """
         Handle SDES GET USER PROFILE BY DUZ - Get user profile details
-        Returns JSON object with user profile
+        Returns JSON object with user profile in the shape expected by get_current_user
         """
         # Get DUZ from first parameter
         duz = ""
@@ -61,40 +61,25 @@ class AdminHandlers:
             if isinstance(param_value, str):
                 duz = param_value
 
-        # Mock user profiles
+        # Mock user profiles (flat)
         profiles = {
             "10000000219": {
-                "duz": "10000000219",
-                "name": "PROVIDER,TEST",
-                "title": "PHYSICIAN",
-                "service": "MEDICINE",
-                "phone": "202-555-1234",
-                "pager": "202-555-5678",
-                "email": "test.provider@va.gov",
-                "digitalSignature": True,
-                "securityKeys": ["ORES", "PROVIDER", "XUPROG"],
-                "menuOptions": ["OR CPRS GUI CHART", "SDESRPC"],
-                "defaultLocation": {"ien": "195", "name": "PRIMARY CARE"},
+                "Name": "PROVIDER,TEST",
+                "Division": [{"Name": "PRIMARY CARE"}],
+                "IEN": "10000000219",
+                "Station ID": "500",
             },
             "10000000220": {
-                "duz": "10000000220",
-                "name": "WILLIAMS,PATRICIA L",
-                "title": "PSYCHIATRIST",
-                "service": "MENTAL HEALTH",
-                "phone": "202-555-2345",
-                "pager": "202-555-6789",
-                "email": "patricia.williams@va.gov",
-                "digitalSignature": True,
-                "securityKeys": ["ORES", "PROVIDER", "XUPROG", "GMR MANAGER"],
-                "menuOptions": ["OR CPRS GUI CHART", "SDESRPC"],
-                "defaultLocation": {"ien": "196", "name": "MENTAL HEALTH"},
+                "Name": "WILLIAMS,PATRICIA L",
+                "Division": [{"Name": "MENTAL HEALTH"}],
+                "IEN": "10000000220",
+                "Station ID": "500",
             },
         }
 
-        # Return profile or error
-        profile = profiles.get(duz)
-        if profile:
-            return profile
+        user = profiles.get(duz)
+        if user:
+            return {"User": user}
         else:
             return {"error": "User not found", "errorCode": "USER_NOT_FOUND"}
 

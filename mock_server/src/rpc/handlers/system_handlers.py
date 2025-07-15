@@ -4,7 +4,6 @@ System RPC handlers for heartbeat, date/time, and system info
 
 from datetime import datetime
 
-from src.config import settings
 from src.rpc.models import Parameter
 
 
@@ -12,7 +11,7 @@ class SystemHandlers:
     """Handlers for system-related RPCs"""
 
     @staticmethod
-    def handle_xwb_im_here(parameters: list[Parameter]) -> str:
+    def handle_xwb_im_here(_parameters: list[Parameter]) -> str:
         """
         Handle XWB IM HERE - Heartbeat check
         Returns "1" for success
@@ -49,14 +48,14 @@ class SystemHandlers:
             return f"{fm_date}.{fm_time}"
 
     @staticmethod
-    def handle_xus_intro_msg(parameters: list[Parameter]) -> str:
+    def handle_xus_intro_msg(_parameters: list[Parameter]) -> str:
         """
         Handle XUS INTRO MSG - Get system intro message
         Returns system information text
         """
         return (
             "VISTA MOCK SYSTEM\n"
-            f"Software Version: {settings.app_version}\n"
+            "Software Version: 1.0.0\n"
             "Site: WASHINGTON DC VAMC (500)\n"
             "\n"
             "This is a mock implementation for development and testing.\n"
@@ -64,7 +63,7 @@ class SystemHandlers:
         )
 
     @staticmethod
-    def handle_orwu_userinfo(parameters: list[Parameter]) -> str:
+    def handle_orwu_userinfo(_parameters: list[Parameter]) -> str:
         """
         Handle ORWU USERINFO - Get basic user info
         Returns delimited user information
@@ -74,18 +73,20 @@ class SystemHandlers:
         return "10000000219^PROVIDER,TEST^TEST PROVIDER^PHYSICIAN^MEDICINE^202-555-1234"
 
     @staticmethod
-    def handle_orwu_versrv(parameters: list[Parameter]) -> str:
+    def handle_orwu_versrv(_parameters: list[Parameter]) -> str:
         """
         Handle ORWU VERSRV - Get server version
         Returns server version info
         """
-        return f"OR*3.0*999^{settings.app_version}^VISTA MOCK SERVER"
+        return "OR*3.0*999^1.0.0^VISTA MOCK SERVER"
 
     @staticmethod
-    def handle_xus_get_user_info(parameters: list[Parameter]) -> str:
+    def handle_xus_get_user_info(_parameters: list[Parameter]) -> str:
         """
         Handle XUS GET USER INFO - Get detailed user info
         Returns more detailed user information
         """
         # Format: DUZ^NAME^TITLE^SERVICE^PHONE^ROOM^VERIFYCODE_CHANGE_DATE
-        return "10000000219^PROVIDER,TEST^PHYSICIAN^MEDICINE^202-555-1234^ROOM 123^3250101"
+        return (
+            "10000000219^PROVIDER,TEST^PHYSICIAN^MEDICINE^202-555-1234^ROOM 123^3250101"
+        )
