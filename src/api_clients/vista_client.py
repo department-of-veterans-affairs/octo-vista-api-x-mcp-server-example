@@ -1,6 +1,7 @@
 """Vista API X client wrapper with authentication and caching"""
 
 import logging
+import os
 from datetime import datetime
 from typing import Any
 
@@ -8,6 +9,7 @@ import httpx
 from cachetools import TTLCache
 
 from .base import BaseVistaClient, VistaAPIError
+from .jwt_utils import get_token_ttl_seconds, has_token_expired
 
 logger = logging.getLogger(__name__)
 
@@ -50,14 +52,28 @@ class VistaAPIClient(BaseVistaClient):
         self._token: str | None = None
         self._token_expiry: datetime | None = None
 
+        # Token refresh configuration
+        self._token_refresh_buffer_seconds = int(
+            os.getenv("VISTA_TOKEN_REFRESH_BUFFER_SECONDS", "30")
+        )
+        self._token_cache_enabled = (
+            os.getenv("VISTA_TOKEN_CACHE_ENABLED", "true").lower() == "true"
+        )
+
     async def _get_jwt_token(self) -> str:
         """Get or refresh JWT token"""
         cache_key = f"token_{self.api_key}"
 
-        # Check cache first
-        if cache_key in self.token_cache:
-            logger.debug("Using cached JWT token")
-            return self.token_cache[cache_key]
+        # Check cache first if enabled
+        if self._token_cache_enabled and cache_key in self.token_cache:
+            cached_token = self.token_cache[cache_key]
+            # Validate cached token isn't expired
+            if not has_token_expired(cached_token, self._token_refresh_buffer_seconds):
+                logger.debug("Using cached JWT token")
+                return cached_token
+            else:
+                logger.info("Cached token expired or expiring soon, refreshing")
+                del self.token_cache[cache_key]
 
         logger.info("Obtaining new JWT token")
 
@@ -80,9 +96,19 @@ class VistaAPIClient(BaseVistaClient):
                     status_code=response.status_code,
                 )
 
-            # Cache the token
-            self.token_cache[cache_key] = token
-            logger.info("JWT token obtained and cached")
+            # Cache the token if caching is enabled
+            if self._token_cache_enabled:
+                # Simply store the token - the TTLCache was already initialized with a default TTL
+                # We'll check expiry when retrieving from cache
+                self.token_cache[cache_key] = token
+
+                # Log the actual token lifetime for debugging
+                token_ttl = get_token_ttl_seconds(token)
+                logger.info(
+                    f"JWT token obtained and cached (expires in {token_ttl:.0f}s)"
+                )
+            else:
+                logger.info("JWT token obtained (caching disabled)")
 
             return token
 
@@ -94,6 +120,27 @@ class VistaAPIClient(BaseVistaClient):
         except Exception as e:
             logger.error(f"Error obtaining JWT token: {str(e)}")
             raise
+
+    async def _ensure_valid_token(self) -> str:
+        """
+        Ensure we have a valid (non-expired) JWT token.
+
+        Returns:
+            Valid JWT token
+        """
+        cache_key = f"token_{self.api_key}"
+
+        # Check if we have a cached token and if it's still valid
+        if self._token_cache_enabled and cache_key in self.token_cache:
+            token = self.token_cache[cache_key]
+            if not has_token_expired(token, self._token_refresh_buffer_seconds):
+                return token
+            else:
+                logger.info("Token expired or expiring soon, refreshing proactively")
+                del self.token_cache[cache_key]
+
+        # Get a fresh token
+        return await self._get_jwt_token()
 
     async def invoke_rpc(
         self,
@@ -128,11 +175,11 @@ class VistaAPIClient(BaseVistaClient):
             logger.debug(f"Using cached response for {rpc_name}")
             return self.response_cache[cache_key]
 
-        # Get JWT token
-        token = await self._get_jwt_token()
+        # Ensure we have a valid JWT token
+        token = await self._ensure_valid_token()
 
         # Build request payload
-        payload = {
+        payload: dict[str, Any] = {
             "rpc": rpc_name,
             "context": context,
         }
@@ -156,18 +203,6 @@ class VistaAPIClient(BaseVistaClient):
 
         try:
             response = await self.client.post(url, json=payload, headers=headers)
-
-            # Handle token expiration
-            if response.status_code == 401:
-                logger.info("JWT token expired, refreshing...")
-                # Clear token from cache
-                self.token_cache.clear()
-                # Get new token
-                token = await self._get_jwt_token()
-                headers["Authorization"] = f"Bearer {token}"
-                # Retry request
-                response = await self.client.post(url, json=payload, headers=headers)
-
             response.raise_for_status()
 
             # Extract result

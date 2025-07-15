@@ -1,0 +1,212 @@
+# Development Workflow & Testing
+
+## Quick Start
+
+This project uses `mise` as the task runner. All development workflows are automated:
+
+```bash
+# For Claude Desktop and MCP clients (stdio)
+mise run dev-with-mock
+
+# For web-based integration (SSE/HTTP)
+mise run dev-sse-with-mock
+```
+
+## Transport Methods
+
+### 1. **stdio Transport** (Default MCP)
+
+For Claude Desktop, MCP clients, and direct protocol communication:
+
+```bash
+# Basic stdio server (requires production Vista config)
+mise run dev
+
+# stdio server with mock Vista API (recommended for development)
+mise run dev-with-mock
+```
+
+- Uses [server.py](mdc:server.py) as entry point
+- Runs via `uv run mcp dev server.py:server`
+- Perfect for Claude Desktop integration
+
+### 2. **SSE Transport** (HTTP/Web)
+
+For web applications, HTTP clients, and browser-based integration:
+
+```bash
+# Basic SSE server (requires production Vista config)
+mise run dev-sse
+
+# SSE server with mock Vista API (recommended for development)
+mise run dev-sse-with-mock
+```
+
+- Uses [http_server.py](mdc:http_server.py) as entry point
+- Sets `VISTA_MCP_TRANSPORT=sse` environment variable
+- Provides HTTP endpoints:
+  - SSE endpoint: `http://localhost:8000/sse`
+  - Message endpoint: `http://localhost:8000/messages/`
+
+## Automated Setup Process
+
+All development tasks automatically handle setup:
+
+1. **Silent Setup** via [scripts/silent_setup.py](mdc:scripts/silent_setup.py):
+   - Creates `.env` from `.env.example` if needed
+   - Installs dependencies with `uv`
+   - Generates RSA keys for mock server
+   - Only runs full setup if something is missing
+
+2. **Mock Server Management** via [scripts/start_mock_if_needed.py](mdc:scripts/start_mock_if_needed.py):
+   - Checks if mock server is already running
+   - Starts Docker containers if needed
+   - Initializes DynamoDB tables
+   - Waits for server to be ready
+
+## Mock Server Management
+
+```bash
+# Stop mock server
+mise run stop-mock
+
+# View mock server logs
+mise run logs
+
+# Check mock server status
+python scripts/check_mock_server.py
+```
+
+The mock server runs on `http://localhost:8888` and provides a complete Vista API simulation.
+
+## Claude Desktop Setup
+
+```bash
+# Configure Claude Desktop automatically
+mise run setup-claude
+```
+
+This creates the proper configuration in Claude Desktop's settings with:
+
+- Correct `uv` paths and project directory
+- Mock server environment variables
+- Automatic server restart instructions
+
+## Code Quality & Testing
+
+```bash
+# Run tests
+mise run test
+
+# Check code quality (black + ruff)
+mise run lint
+
+# Manual quality checks
+uv run black src/
+uv run ruff check src/
+```
+
+## Development Environment Details
+
+### Project Structure
+
+- **Main server**: [server.py](mdc:server.py) (stdio MCP)
+- **HTTP server**: [http_server.py](mdc:http_server.py) (SSE transport)
+- **Mock server**: [mock_server/](mdc:mock_server/) (Docker-based Vista simulation)
+- **Scripts**: [scripts/](mdc:scripts/) (Automated setup and utilities)
+
+### Configuration Files
+
+- [.mise.toml](mdc:.mise.toml) - Task definitions and workflow
+- [.env](mdc:.env) - Environment variables (created from `.env.example`)
+- [src/config.py](mdc:src/config.py) - Configuration management
+- [pyproject.toml](mdc:pyproject.toml) - Python dependencies
+
+### Mock Server Components
+
+- **Docker setup**: [mock_server/docker-compose.yml](mdc:mock_server/docker-compose.yml)
+- **API handlers**: [mock_server/src/rpc/handlers/](mdc:mock_server/src/rpc/handlers/)
+- **Test data**: [mock_server/src/data/](mdc:mock_server/src/data/)
+
+## Testing Strategy
+
+### Unit Testing
+
+- Test MCP tools independently in [tests/](mdc:tests/)
+- Mock Vista API responses using fixtures from [mock_server/src/data/](mdc:mock_server/src/data/)
+- Test error conditions and parameter validation
+- Validate HIPAA compliance in data handling
+
+### Integration Testing
+
+- Use full mock server for end-to-end testing
+- Test both stdio and SSE transport methods
+- Verify complete MCP workflows
+- Test authentication and authorization flows
+
+### Transport-Specific Testing
+
+- **stdio**: Test with Claude Desktop and MCP inspector
+- **SSE**: Test HTTP endpoints with web clients and browsers
+- Cross-transport compatibility testing
+
+## Troubleshooting
+
+### Common Issues
+
+```bash
+# Check all system status
+python scripts/diagnose_windows.py  # Windows-specific diagnostics
+
+# Verify Vista configuration
+python scripts/test_vista_config.py
+
+# Initialize mock database manually
+python scripts/init_mock_db.py
+```
+
+### Docker Issues
+
+- Ensure Docker Desktop is running
+- Check port conflicts (8888, 4566, 8001)
+- Use `docker ps -a` to check container status
+- Check logs: `docker logs vista-api-x-mock`
+
+### Windows-Specific
+
+- Mock server may take longer to start (extra delays built in)
+- Use `127.0.0.1` if `localhost` doesn't work
+- WSL2 recommended for better Docker performance
+
+## Production Deployment
+
+### Environment Setup
+
+1. Set production environment variables in `.env`:
+
+   ```bash
+   VISTA_API_BASE_URL=https://your-vista-api.gov
+   VISTA_API_KEY=your-production-key
+   DEFAULT_STATION=your-station
+   DEFAULT_DUZ=your-duz
+   ```
+
+2. Use Docker for production deployment:
+
+   ```bash
+   # stdio transport
+   docker-compose -f docker-compose.yml up -d
+   
+   # SSE transport
+   VISTA_MCP_TRANSPORT=sse docker-compose -f docker-compose.yml up -d
+   ```
+
+### Release Process
+
+1. Update version in [pyproject.toml](mdc:pyproject.toml)
+2. Run full test suite: `mise run test`
+3. Check code quality: `mise run lint`
+4. Test both transport methods with mock server
+5. Build and test Docker images
+6. Deploy to staging with production-like config
+7. Production deployment with rollback plan

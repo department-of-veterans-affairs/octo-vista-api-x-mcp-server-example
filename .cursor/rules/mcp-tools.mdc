@@ -1,0 +1,103 @@
+# MCP Tool Development Guidelines
+
+## Tool Structure Pattern
+
+Each MCP tool should follow this structure in [src/tools/](mdc:src/tools/):
+
+```python
+from typing import Dict, List, Optional, Any
+import logging
+from src.api_clients.vista_client import VistaClient
+from src.models import ToolResult
+
+logger = logging.getLogger(__name__)
+
+class ToolName:
+    def __init__(self, vista_client: VistaClient):
+        self.vista_client = vista_client
+    
+    async def execute(self, **kwargs) -> ToolResult:
+        """Execute the MCP tool with given parameters."""
+        try:
+            # Tool implementation
+            result = await self._perform_operation(**kwargs)
+            return ToolResult(success=True, data=result)
+        except Exception as e:
+            logger.error("Tool execution failed", tool="tool_name", error=str(e))
+            return ToolResult(success=False, error=str(e))
+```
+
+## Tool Categories
+
+### Patient Tools ([src/tools/patient.py](mdc:src/tools/patient.py))
+
+- `search_patients` - Find patients by name or SSN
+- `get_patient_demographics` - Retrieve patient basic info
+- `select_patient` - Set current patient context
+- `get_patient_data` - Comprehensive patient data retrieval
+
+### Clinical Tools ([src/tools/clinical.py](mdc:src/tools/clinical.py))
+
+- `get_medications` - Patient medication list
+- `get_lab_results` - Laboratory results
+- `get_vital_signs` - Vital sign measurements
+- `get_problems` - Problem list/diagnoses
+- `get_allergies` - Allergy information
+
+### System Tools ([src/tools/system.py](mdc:src/tools/system.py))
+
+- `heartbeat` - Check VistA connection
+- `get_server_time` - Get VistA server time
+- `get_user_info` - Current user information
+
+### Admin Tools ([src/tools/admin.py](mdc:src/tools/admin.py))
+
+- `get_appointments` - Clinic appointments
+- `list_team_members` - Team member information
+- `get_user_profile` - Detailed user profiles
+
+## Parameter Validation
+
+```python
+def validate_patient_dfn(dfn: str) -> bool:
+    """Validate patient DFN format."""
+    return dfn.isdigit() and len(dfn) > 0
+
+def validate_station(station: Optional[str]) -> str:
+    """Validate and normalize station number."""
+    if station is None:
+        return "200"  # Default station
+    if not station.isdigit() or len(station) != 3:
+        raise ValueError(f"Invalid station number: {station}")
+    return station
+```
+
+## Error Handling Patterns
+
+```python
+try:
+    result = await self.vista_client.call_rpc("RPC_NAME", params)
+except ConnectionError:
+    return ToolResult(success=False, error="VistA system unavailable")
+except PatientNotFoundError:
+    return ToolResult(success=False, error="Patient not found")
+except AuthenticationError:
+    return ToolResult(success=False, error="Authentication failed")
+```
+
+## Tool Registration
+
+Tools must be registered in [server.py](mdc:server.py) or [http_server.py](mdc:http_server.py):
+
+```python
+# Register MCP tools
+server.add_tool("search_patients", patient_tools.search_patients)
+server.add_tool("get_medications", clinical_tools.get_medications)
+```
+
+## Testing Tools
+
+- Write unit tests for each tool in [tests/](mdc:tests/)
+- Use mock VistA responses for testing
+- Test error conditions and edge cases
+- Validate HIPAA compliance in test scenarios

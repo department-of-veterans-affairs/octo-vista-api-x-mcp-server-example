@@ -27,11 +27,11 @@ class Settings(BaseSettings):
     # JWT Configuration
     jwt_private_key_path: str = "./keys/private_key.pem"
     jwt_public_key_path: str = "./keys/public_key.pem"
-    jwt_issuer: str = "gov.va.vista.api"
-    jwt_audience: str = "vista-api-x"
+    jwt_issuer: str = "gov.va.octo.vista-api-x"
+    jwt_audience: str = "gov.va.octo.vista-api-x"
     jwt_algorithm: str = "RS256"
-    jwt_ttl_hours: int = 1
-    jwt_refresh_ttl_hours: int = 24
+    jwt_ttl_hours: float = 0.05  # 3 minutes in hours (matches staging)
+    jwt_refresh_ttl_hours: int = 1  # 1 hour (60 minutes)
     jwt_clock_skew_seconds: int = 30
 
     # Application Configuration

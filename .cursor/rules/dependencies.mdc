@@ -1,0 +1,74 @@
+# Dependency Management Guidelines
+
+## Package Manager
+
+- **Primary**: Use `uv` for Python dependency management (faster than pip)
+- **Fallback**: Use `pip` only when `uv` is unavailable
+- **Lock Files**: Both [uv.lock](mdc:uv.lock) and [mock_server/uv.lock](mdc:mock_server/uv.lock) track exact versions
+
+## Common Package Issues
+
+### Logging Libraries
+
+- **Standard**: Use Python's built-in `logging` module
+- **Usage**: Import as `import logging`
+- **Configuration**: Set up logging in [src/config.py](mdc:src/config.py)
+
+### VistA API Dependencies
+
+- Required for VistA connectivity: `httpx`, `asyncio`, `pydantic`
+- Authentication: `PyJWT`, `cryptography`
+- Testing: `pytest`, `pytest-asyncio`
+
+### Mock Server Dependencies
+
+See [mock_server/pyproject.toml](mdc:mock_server/pyproject.toml) for complete list:
+
+- FastAPI framework stack
+- DynamoDB local testing
+- JWT authentication
+
+## Dependency Commands
+
+```bash
+# Main project dependencies
+uv add package-name
+uv remove package-name  
+uv sync  # Install from lock file
+
+# Mock server dependencies (from mock_server/)
+cd mock_server
+uv add package-name
+uv sync
+```
+
+## Version Constraints
+
+- **Production**: Pin exact versions in lock files
+- **Development**: Use version ranges in pyproject.toml
+- **Security**: Regularly update dependencies with `uv lock --upgrade`
+
+## Virtual Environment
+
+```bash
+# Activate virtual environment
+uv venv
+source .venv/bin/activate  # Linux/macOS
+.venv\Scripts\activate     # Windows
+
+# Install dependencies
+uv sync
+```
+
+## Docker Dependencies
+
+- Dependencies installed automatically in [Dockerfile](mdc:Dockerfile)
+- Mock server has separate [mock_server/Dockerfile](mdc:mock_server/Dockerfile)
+- Use multi-stage builds for smaller production images
+
+## Troubleshooting
+
+- **Package not found**: Check package name spelling and verify it exists on PyPI
+- **Version conflicts**: Use `uv lock --upgrade` to resolve
+- **Import errors**: Ensure virtual environment is activated
+- **Mock server issues**: Check [mock_server/pyproject.toml](mdc:mock_server/pyproject.toml) dependencies

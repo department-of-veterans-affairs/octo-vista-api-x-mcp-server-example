@@ -1,0 +1,65 @@
+# Healthcare Data Handling Guidelines
+
+## HIPAA Compliance Requirements
+
+- **Never log patient identifiers** (SSN, full names, DOB) in plain text
+- **Sanitize error messages** to remove patient data before logging
+- **Use DFN (internal ID)** for patient references in logs instead of identifiable info
+- **Encrypt sensitive data** in transit and at rest
+- **Audit access** to patient data with timestamps and user identification
+
+## Patient Data Identifiers
+
+- **DFN**: Patient's internal VistA identifier (use this for operations)
+- **SSN**: Social Security Number (use last 4 digits only for search)
+- **ICN**: Integration Control Number (national patient identifier)
+- **Patient Name**: Use formatted strings consistently
+
+## Data Validation Patterns
+
+```python
+# DFN validation (internal patient ID)
+dfn_pattern = r'^\d+$'
+
+# SSN last 4 digits for search
+ssn_last4_pattern = r'^\d{4}$'
+
+# Valid VistA station codes
+station_pattern = r'^\d{3}$'
+```
+
+## Secure Logging Examples
+
+```python
+# ❌ WRONG - Contains identifiable information
+logger.error(f"Failed to get data for patient John Doe (SSN: 123-45-6789)")
+
+# ✅ CORRECT - Uses internal ID only
+logger.error(f"Failed to get patient data", patient_dfn=dfn, error_code="VISTA_TIMEOUT")
+```
+
+## Data Minimization
+
+- Only request the **minimum data domains** needed for the operation
+- Use **date ranges** to limit data retrieval when possible
+- **Cache patient data** appropriately but with proper expiration
+- **Clear sensitive data** from memory after use
+
+## VistA API Data Domains
+
+Available domains for patient data requests:
+
+- `patient` - Basic demographics
+- `allergy` - Allergies and adverse reactions  
+- `med` - Medications
+- `lab` - Laboratory results
+- `vital` - Vital signs
+- `problem` - Problem list/diagnoses
+- `appointment` - Appointments
+- `document` - Clinical documents
+
+## Mock Data Handling
+
+- Use realistic but **fake patient data** in [mock_server/](mdc:mock_server/)
+- **Never use real patient data** for testing or development
+- Generate test data with consistent but fictional identifiers

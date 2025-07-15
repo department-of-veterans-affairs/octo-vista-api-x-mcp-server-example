@@ -1,0 +1,69 @@
+---
+globs: *.py
+---
+
+# Python Coding Standards for VistA API MCP Server
+
+## Code Style
+
+- Use type hints for all function parameters and return values
+- Follow PEP 8 style guidelines
+- Use descriptive variable names, especially for medical/clinical data
+- Use Python's standard `logging` module (avoid `print()` statements)
+- Use `async/await` for I/O operations when interfacing with VistA APIs
+
+## Import Organization
+
+```python
+# Standard library imports
+import asyncio
+from typing import Dict, List, Optional
+
+# Third-party imports
+import logging
+from pydantic import BaseModel
+
+# Local imports
+from src.models import PatientModel
+from src.api_clients.vista_client import VistaClient
+```
+
+## Error Handling
+
+- Always handle VistA API errors gracefully
+- Use specific exception types from [src/models.py](mdc:src/models.py)
+- Log errors with patient identifiers removed for HIPAA compliance
+- Provide meaningful error messages to MCP clients
+
+## Function Documentation
+
+```python
+async def get_patient_data(patient_dfn: str, domains: List[str]) -> Dict:
+    """Retrieve patient data from VistA system.
+    
+    Args:
+        patient_dfn: Patient's DFN (internal ID)
+        domains: List of data domains to retrieve (e.g., ["med", "lab"])
+        
+    Returns:
+        Dictionary containing patient data organized by domain
+        
+    Raises:
+        PatientNotFoundError: If patient DFN is invalid
+        VistaConnectionError: If VistA system is unavailable
+    """
+```
+
+## Configuration Management
+
+- Use [src/config.py](mdc:src/config.py) for all configuration
+- Never hardcode VistA endpoints or credentials
+- Use environment variables for sensitive data
+- Validate configuration at startup
+
+## Data Models
+
+- Use Pydantic models for all data structures
+- Define models in [src/models.py](mdc:src/models.py)
+- Include validation for medical data formats (DFN, SSN, etc.)
+- Use proper typing for medical identifiers

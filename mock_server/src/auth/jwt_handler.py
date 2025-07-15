@@ -25,11 +25,15 @@ class JwtHandler:
         """Load RSA keys from files"""
         # Load private key
         with open(settings.jwt_private_key_path, "rb") as f:
-            self._private_key = serialization.load_pem_private_key(f.read(), password=None, backend=default_backend())
+            self._private_key = serialization.load_pem_private_key(
+                f.read(), password=None, backend=default_backend()
+            )
 
         # Load public key
         with open(settings.jwt_public_key_path, "rb") as f:
-            self._public_key = serialization.load_pem_public_key(f.read(), backend=default_backend())
+            self._public_key = serialization.load_pem_public_key(
+                f.read(), backend=default_backend()
+            )
 
     def generate_token(
         self,
@@ -52,10 +56,16 @@ class JwtHandler:
         # Create user principal
         user_principal = JwtUserPrincipal(
             username=user_data.get("username", subject) if user_data else subject,
-            application=(user_data.get("application", "vista-api-x-mock") if user_data else "vista-api-x-mock"),
+            application=(
+                user_data.get("application", "vista-api-x-mock")
+                if user_data
+                else "vista-api-x-mock"
+            ),
             applicationEntry=user_data.get("applicationEntry", "") if user_data else "",
             authenticated=True,
-            serviceAccount=(user_data.get("serviceAccount", False) if user_data else False),
+            serviceAccount=(
+                user_data.get("serviceAccount", False) if user_data else False
+            ),
             id=user_data.get("id", "") if user_data else "",
             firstName=user_data.get("firstName", "") if user_data else "",
             lastName=user_data.get("lastName", "") if user_data else "",
@@ -79,8 +89,12 @@ class JwtHandler:
             nbf=int(now.timestamp()),
             jti=self._generate_jti(),
             applicationKey=application_key or "vista-api-x-mock",
-            ttl=ttl_hours,
-            refresh_ttl=refresh_ttl_hours,
+            ttl=int(
+                ttl_hours * 60
+            ),  # Convert hours to minutes - JWT standard uses 'ttl' in minutes
+            refresh_ttl=int(
+                refresh_ttl_hours * 60
+            ),  # Convert hours to minutes - JWT standard uses 'refresh_ttl' in minutes
             refresh_count=0,
             idType=token_type,
             user=user_principal,
@@ -92,7 +106,9 @@ class JwtHandler:
         payload_dict = payload.model_dump(by_alias=True, exclude_none=True)
 
         # Encode JWT with RSA private key
-        token = jwt.encode(payload_dict, self._private_key, algorithm=settings.jwt_algorithm)
+        token = jwt.encode(
+            payload_dict, self._private_key, algorithm=settings.jwt_algorithm
+        )
 
         return token
 
@@ -139,13 +155,19 @@ class JwtHandler:
         # Check if token is expired beyond refresh window
         now = datetime.now(UTC)
         exp = datetime.fromtimestamp(payload["exp"], UTC)
-        refresh_window = timedelta(hours=payload.get("refresh_ttl", settings.jwt_refresh_ttl_hours))
+        # refresh_ttl in JWT is in minutes
+        refresh_ttl_minutes = payload.get(
+            "refresh_ttl", int(settings.jwt_refresh_ttl_hours * 60)
+        )
+        refresh_window = timedelta(minutes=refresh_ttl_minutes)
 
         if now > exp + refresh_window:
             raise ValueError("Token is beyond refresh window")
 
         # Update token with new expiration
-        payload["exp"] = int((now + timedelta(hours=payload.get("ttl", settings.jwt_ttl_hours))).timestamp())
+        # ttl in JWT is in minutes
+        ttl_minutes = payload.get("ttl", int(settings.jwt_ttl_hours * 60))
+        payload["exp"] = int((now + timedelta(minutes=ttl_minutes)).timestamp())
         payload["iat"] = int(now.timestamp())
         payload["nbf"] = int(now.timestamp())
         payload["refresh_count"] = payload.get("refresh_count", 0) + 1
