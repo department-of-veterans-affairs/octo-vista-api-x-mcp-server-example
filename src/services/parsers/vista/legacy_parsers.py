@@ -4,7 +4,7 @@ import logging
 import re
 from datetime import datetime
 
-from .models import (
+from ....models.vista import (
     Allergy,
     Appointment,
     LabResult,
@@ -352,7 +352,7 @@ def parse_lab_results(result: str) -> list[LabResult]:
                     units=row[3] if len(row) > 3 else None,
                     reference_range=row[4] if len(row) > 4 else None,
                     date_time=(
-                        parse_fileman_date(row[5])
+                        parse_fileman_date(row[5]) or datetime.now().isoformat()
                         if row[5]
                         else datetime.now().isoformat()
                     ),
@@ -381,7 +381,7 @@ def parse_vital_signs(result: str) -> list[VitalSign]:
             try:
                 vital = VitalSign(
                     date_time=(
-                        parse_fileman_date(row[0])
+                        parse_fileman_date(row[0]) or datetime.now().isoformat()
                         if row[0]
                         else datetime.now().isoformat()
                     ),
@@ -518,7 +518,7 @@ def parse_appointments(result: str | dict) -> list[Appointment]:
                         appointment_ien=row[0],
                         patient_ien=row[1],
                         patient_name=row[2],
-                        date_time=parse_fileman_date(row[3]) if row[3] else "",
+                        date_time=parse_fileman_date(row[3]) or "" if row[3] else "",
                         clinic_ien=row[4] if len(row) > 4 else "",
                         clinic_name=row[5] if len(row) > 5 else "",
                         status=row[6] if len(row) > 6 else "SCHEDULED",

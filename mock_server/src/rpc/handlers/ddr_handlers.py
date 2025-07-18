@@ -38,8 +38,8 @@ class DDRHandlers:
                     pass
 
         # Mock some common file definitions
-        if file_number == "2":  # Patient file
-            return (
+        file_definitions = {
+            "2": (  # Patient file
                 "FILE #2^PATIENT^1^200000\n"
                 ".01^NAME^FREE TEXT^30^R\n"
                 ".02^SEX^SET^1^R\n"
@@ -48,9 +48,8 @@ class DDRHandlers:
                 ".301^SERVICE CONNECTED?^SET^1^\n"
                 ".302^SERVICE CONNECTED PERCENTAGE^NUMERIC^3^\n"
                 "1901^ELIGIBILITY STATUS^POINTER^10^"
-            )
-        elif file_number == "200":  # New Person file
-            return (
+            ),
+            "200": (  # New Person file
                 "FILE #200^NEW PERSON^1^50000\n"
                 ".01^NAME^FREE TEXT^30^R\n"
                 "8^TITLE^FREE TEXT^30^\n"
@@ -58,9 +57,8 @@ class DDRHandlers:
                 ".131^PERSON CLASS^MULTIPLE^200.05^\n"
                 ".132^DEA#^FREE TEXT^15^\n"
                 "53.1^ELECTRONIC SIGNATURE^MUMPS^20^"
-            )
-        elif file_number == "44":  # Hospital Location file
-            return (
+            ),
+            "44": (  # Hospital Location file
                 "FILE #44^HOSPITAL LOCATION^1^10000\n"
                 ".01^NAME^FREE TEXT^30^R\n"
                 "2^ABBREVIATION^FREE TEXT^6^\n"
@@ -68,10 +66,12 @@ class DDRHandlers:
                 "9^SERVICE^POINTER^49^\n"
                 "10^PHYSICAL LOCATION^FREE TEXT^20^\n"
                 "99^CLINIC STOP CODE^POINTER^40.7^"
-            )
-        else:
-            # Generic response for unknown files
-            return f"FILE #{file_number}^UNKNOWN FILE^0^0\nNo fields found"
+            ),
+        }
+
+        return file_definitions.get(
+            file_number, f"FILE #{file_number}^UNKNOWN FILE^0^0\nNo fields found"
+        )
 
     @staticmethod
     def handle_ddr_find(parameters: list[Parameter]) -> str:

@@ -3,6 +3,7 @@ JWT handling with RSA signing matching Vista API X
 """
 
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 import jwt
@@ -24,13 +25,13 @@ class JwtHandler:
     def _load_keys(self):
         """Load RSA keys from files"""
         # Load private key
-        with open(settings.jwt_private_key_path, "rb") as f:
+        with Path(settings.jwt_private_key_path).open("rb") as f:
             self._private_key = serialization.load_pem_private_key(
                 f.read(), password=None, backend=default_backend()
             )
 
         # Load public key
-        with open(settings.jwt_public_key_path, "rb") as f:
+        with Path(settings.jwt_public_key_path).open("rb") as f:
             self._public_key = serialization.load_pem_public_key(
                 f.read(), backend=default_backend()
             )
@@ -77,6 +78,9 @@ class JwtHandler:
             vistaIds=vista_ids,
             authorities=authorities,
             attributes=user_data.get("attributes", {}) if user_data else {},
+            flags=flags,
+            ssoiToken=False,
+            name=user_data.get("username", subject) if user_data else subject,
         )
 
         # Create JWT payload
@@ -98,7 +102,6 @@ class JwtHandler:
             refresh_count=0,
             idType=token_type,
             user=user_principal,
-            flags=flags,
             vamf_auth_roles=[],
         )
 

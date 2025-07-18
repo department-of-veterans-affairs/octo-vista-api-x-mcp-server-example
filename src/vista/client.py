@@ -8,8 +8,8 @@ from typing import Any
 import httpx
 from cachetools import TTLCache
 
+from .auth.jwt import get_token_ttl_seconds, has_token_expired
 from .base import BaseVistaClient, VistaAPIError
-from .jwt_utils import get_token_ttl_seconds, has_token_expired
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +46,10 @@ class VistaAPIClient(BaseVistaClient):
         self.client = httpx.AsyncClient(timeout=timeout, verify=False)
 
         # Initialize caches
-        self.token_cache = TTLCache(maxsize=10, ttl=token_cache_ttl)
-        self.response_cache = TTLCache(maxsize=1000, ttl=response_cache_ttl)
+        self.token_cache: TTLCache[str, str] = TTLCache(maxsize=10, ttl=token_cache_ttl)
+        self.response_cache: TTLCache[str, Any] = TTLCache(
+            maxsize=1000, ttl=response_cache_ttl
+        )
 
         self._token: str | None = None
         self._token_expiry: datetime | None = None
@@ -243,7 +245,7 @@ class VistaAPIClient(BaseVistaClient):
                     error_code=str(e.response.status_code),
                     message=str(e),
                     status_code=e.response.status_code,
-                )
+                ) from e
         except Exception as e:
             logger.error(f"Error invoking RPC {rpc_name}: {str(e)}")
             raise

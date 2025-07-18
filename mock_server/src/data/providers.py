@@ -205,7 +205,9 @@ def get_provider_by_duz(duz: str) -> dict[str, str]:
 
 def get_providers_by_service(service: str) -> list[dict[str, str]]:
     """Get all providers in a service"""
-    return [provider for provider in VA_PROVIDERS.values() if provider["service"] == service]
+    return [
+        provider for provider in VA_PROVIDERS.values() if provider["service"] == service
+    ]
 
 
 def get_providers_by_role(role: str) -> list[dict[str, str]]:

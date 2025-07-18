@@ -57,9 +57,18 @@ class JwtUserPrincipal(BaseModel):
     duz: str | None = Field("", description="User DUZ")
     domain: str | None = Field("", description="Domain")
     adSamAccountName: str | None = Field("", description="AD account name")
-    vistaIds: list[dict[str, str]] = Field(default_factory=list, description="Vista IDs")
-    authorities: list[dict[str, str]] = Field(default_factory=list, description="Authorities")
-    attributes: dict[str, Any] = Field(default_factory=dict, description="Additional attributes")
+    vistaIds: list[dict[str, str]] = Field(
+        default_factory=list, description="Vista IDs"
+    )
+    authorities: list[dict[str, str]] = Field(
+        default_factory=list, description="Authorities"
+    )
+    attributes: dict[str, Any] = Field(
+        default_factory=dict, description="Additional attributes"
+    )
+    flags: list[str] = Field(default_factory=list, description="Feature flags")
+    ssoiToken: bool = Field(False, description="SSOI token flag")
+    name: str | None = Field(None, description="Display name")
 
 
 class JwtPayload(BaseModel):
@@ -78,7 +87,6 @@ class JwtPayload(BaseModel):
     refresh_count: int | None = Field(0, description="Refresh count")
     idType: str | None = Field("STANDARD", description="ID type")
     user: JwtUserPrincipal | None = Field(None, description="User principal")
-    flags: list[str] = Field(default_factory=list, description="Feature flags")
     vamf_auth_roles: list[str] = Field(default_factory=list, alias="vamf.auth.roles")
 
     class Config:
@@ -107,7 +115,9 @@ class AuthApplication(BaseModel):
     appKey: str = Field(..., description="Application API key")
     appName: str = Field(..., description="Application name")
     active: bool = Field(True, description="Active status")
-    permissions: list[Permission] = Field(default_factory=list, description="Permissions")
+    permissions: list[Permission] = Field(
+        default_factory=list, description="Permissions"
+    )
     stations: list[Station] = Field(default_factory=list, description="Stations")
     configs: list[str] = Field(default_factory=list, description="Configuration flags")
 

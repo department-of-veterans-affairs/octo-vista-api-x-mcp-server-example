@@ -6,15 +6,19 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from ..api_clients.base import BaseVistaClient, VistaAPIError
-from ..parsers import parse_current_user, parse_fileman_date, parse_user_info
-from ..utils import (
+from ...services.parsers.vista import (
+    parse_current_user,
+    parse_fileman_date,
+    parse_user_info,
+)
+from ...utils import (
     build_metadata,
     get_default_duz,
     get_default_station,
     log_rpc_call,
     translate_vista_error,
 )
+from ...vista.base import BaseVistaClient, VistaAPIError
 
 logger = logging.getLogger(__name__)
 

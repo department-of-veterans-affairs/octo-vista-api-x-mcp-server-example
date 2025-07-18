@@ -5,7 +5,7 @@ import logging
 
 from mcp.server.fastmcp import FastMCP
 
-from .models import VprDomain
+from .models.base import VprDomain
 from .utils import DEFAULT_STATIONS
 
 logger = logging.getLogger(__name__)

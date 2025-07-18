@@ -56,9 +56,13 @@ class RpcRequestX(BaseModel):
     rpc: str = Field(..., description="RPC name")
     context: str = Field(..., description="RPC context")
     version: float | None = Field(None, description="RPC version")
-    timeout: int | None = Field(15000, ge=10000, le=60000, description="Timeout in milliseconds (10000-60000)")
+    timeout: int | None = Field(
+        15000, ge=10000, le=60000, description="Timeout in milliseconds (10000-60000)"
+    )
     jsonResult: bool | None = Field(False, description="Return result as JSON")
-    parameters: list[Parameter] | None = Field(default_factory=list, description="RPC parameters")
+    parameters: list[Parameter] | None = Field(
+        default_factory=list, description="RPC parameters"
+    )
 
 
 class RpcResponseX(BaseModel):

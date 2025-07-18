@@ -50,8 +50,12 @@ description = "Run tests"
 run = "uv run pytest"
 
 [tasks.lint]
-description = "Check code quality (format + lint)"
-run = ["uv run black src/", "uv run ruff check src/"]
+description = "Check code quality (format + lint + type check)"
+run = [
+    "uv run black .",
+    "uv run ruff check --fix .",
+    "uv run mypy ."
+]
 
 [tasks.logs]
 description = "View mock server logs"

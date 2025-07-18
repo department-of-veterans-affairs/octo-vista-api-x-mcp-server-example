@@ -64,7 +64,9 @@ RPC_HANDLERS = {
 
 
 @rpc_router.post("/{stationNo}/users/{duz}/rpc/invoke", response_model=RpcResponseX)
-async def invoke_rpc(stationNo: str, duz: str, request: Request, rpc_request: RpcRequestX) -> RpcResponseX:
+async def invoke_rpc(
+    stationNo: str, duz: str, request: Request, rpc_request: RpcRequestX
+) -> RpcResponseX:
     """
     Execute VistA RPC.
     Matches Vista API X /vista-sites/{stationNo}/users/{duz}/rpc/invoke endpoint.
@@ -90,22 +92,26 @@ async def invoke_rpc(stationNo: str, duz: str, request: Request, rpc_request: Rp
             try:
                 # Add configurable delay
                 if settings.enable_response_delay:
-                    delay_ms = random.randint(settings.min_response_delay_ms, settings.max_response_delay_ms)
+                    delay_ms = random.randint(
+                        settings.min_response_delay_ms, settings.max_response_delay_ms
+                    )
                     await asyncio.sleep(delay_ms / 1000)
 
                 # Simulate error injection
-                if settings.error_injection_rate > 0:
-                    if random.random() < settings.error_injection_rate:
-                        if retry_count < max_retries - 1:
-                            retry_count += 1
-                            await asyncio.sleep(settings.vistalink_retry_delay_ms / 1000)
-                            continue
-                        else:
-                            raise VistaLinkFaultException(
-                                message="Simulated VistaLink connection failure",
-                                fault_code="CONNECTION_TIMEOUT",
-                                fault_string="Connection timeout after 3 retry attempts",
-                            )
+                if (
+                    settings.error_injection_rate > 0
+                    and random.random() < settings.error_injection_rate
+                ):
+                    if retry_count < max_retries - 1:
+                        retry_count += 1
+                        await asyncio.sleep(settings.vistalink_retry_delay_ms / 1000)
+                        continue
+                    else:
+                        raise VistaLinkFaultException(
+                            message="Simulated VistaLink connection failure",
+                            fault_code="CONNECTION_TIMEOUT",
+                            fault_string="Connection timeout after 3 retry attempts",
+                        )
 
                 # Execute RPC
                 result = await execute_rpc(rpc_request)
@@ -197,15 +203,15 @@ async def execute_rpc(rpc_request: RpcRequestX) -> Any:
 def add_system_rpc_handlers():
     """Add system RPC handlers"""
 
-    def handle_xwb_im_here(parameters):
+    def handle_xwb_im_here(_parameters):
         """Heartbeat/keepalive"""
         return "1"
 
-    def handle_xus_intro_msg(parameters):
+    def handle_xus_intro_msg(_parameters):
         """System intro message"""
         return "Vista API X Mock Server\nVersion 2.1\nTest Environment"
 
-    def handle_orwu_dt(parameters):
+    def handle_orwu_dt(_parameters):
         """Get server date/time in FileMan format"""
         # FileMan date: YYYMMDD.HHMMSS where YYY = year - 1700
         import datetime

@@ -371,7 +371,9 @@ def get_appointments_for_patient(dfn: str) -> list[dict[str, any]]:
     return PATIENT_APPOINTMENTS.get(dfn, [])
 
 
-def get_appointments_for_clinic(clinic_ien: str, start_date: str, end_date: str) -> list[dict[str, any]]:
+def get_appointments_for_clinic(
+    clinic_ien: str, _start_date: str, _end_date: str
+) -> list[dict[str, any]]:
     """Get appointments for a clinic within date range"""
     from src.data.test_patients import TEST_PATIENTS
 

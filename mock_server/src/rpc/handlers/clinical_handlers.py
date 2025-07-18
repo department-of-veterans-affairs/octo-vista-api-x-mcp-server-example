@@ -144,7 +144,11 @@ class ClinicalHandlers:
 
         for i, prob in enumerate(problems, 1):
             # Format: SEQ^IEN^DESCRIPTION^ICD^STATUS^ONSETDATE^TYPE
-            prob_type = "CHRONIC" if "CHRONIC" in prob.get("description", "").upper() else "ACUTE"
+            prob_type = (
+                "CHRONIC"
+                if "CHRONIC" in prob.get("description", "").upper()
+                else "ACUTE"
+            )
             line = f"{i}^S:{78900 + i}^{prob['description']}^ICD-10: {prob['icd10']}^{prob['status'][0]}^{prob.get('onsetDate', '')}^{prob_type}"
             lines.append(line)
 

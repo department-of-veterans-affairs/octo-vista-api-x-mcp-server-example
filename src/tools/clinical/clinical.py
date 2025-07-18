@@ -6,16 +6,19 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from ..api_clients.base import BaseVistaClient, VistaAPIError
-from ..models import LabResultsResponse, MedicationsResponse, VitalSignsResponse
-from ..parsers import (
+from ...models.responses import (
+    LabResultsResponse,
+    MedicationsResponse,
+    VitalSignsResponse,
+)
+from ...services.parsers.vista import (
     parse_allergies,
     parse_lab_results,
     parse_medications,
     parse_problems,
     parse_vital_signs,
 )
-from ..utils import (
+from ...utils import (
     build_metadata,
     get_default_duz,
     get_default_station,
@@ -23,6 +26,7 @@ from ..utils import (
     translate_vista_error,
     validate_dfn,
 )
+from ...vista.base import BaseVistaClient, VistaAPIError
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +99,6 @@ def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 station=station,
                 count=len(medications),
                 medications=medications,
-                active_only=active_only,
                 metadata=build_metadata(
                     station=station,
                     rpc_name="ORWPS ACTIVE",
@@ -197,7 +200,6 @@ def register_clinical_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                 station=station,
                 count=len(lab_results),
                 lab_results=lab_results,
-                days_back=days_back,
                 metadata=build_metadata(
                     station=station,
                     rpc_name="ORWLRR INTERIM",

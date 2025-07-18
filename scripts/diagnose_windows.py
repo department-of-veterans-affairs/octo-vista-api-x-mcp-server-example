@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# mypy: ignore-errors
 """Diagnostic script for Windows Docker issues"""
 
 import os
@@ -132,7 +133,7 @@ def main():
     print("🔧 Recommendations:")
 
     if not docker_running:
-        print("1. Start Docker Desktop")
+        print("1. Start Docker Desktop")  # pragma: no cover
 
     if not check_port_available(8080):
         print("1. Stop whatever is using port 8080 or change the mock server port")

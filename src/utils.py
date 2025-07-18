@@ -172,7 +172,7 @@ def build_metadata(
     duration_ms: int | None = None,
 ) -> dict[str, Any]:
     """Build standard metadata for responses"""
-    metadata = {
+    metadata: dict[str, Any] = {
         "timestamp": format_timestamp(),
         "source": "VistA RPC",
     }
@@ -240,7 +240,7 @@ def create_rpc_parameter(
     elif isinstance(value, dict):
         return {"named_array": value}
     else:
-        return {"string": str(value)}
+        return {"string": str(value)}  # type: ignore[unreachable]
 
 
 def is_debug_mode() -> bool:

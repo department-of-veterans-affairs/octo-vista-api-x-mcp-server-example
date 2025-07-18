@@ -2,6 +2,9 @@
 DynamoDB client for authentication and permissions
 """
 
+import json
+from pathlib import Path
+
 import aioboto3
 
 from src.auth.models import AuthApplication, Permission, Station
@@ -54,7 +57,9 @@ class DynamoDBClient:
 
             stations = []
             for station in item.get("stations", []):
-                stations.append(Station(stationNo=station["stationNo"], userDuz=station["userDuz"]))
+                stations.append(
+                    Station(stationNo=station["stationNo"], userDuz=station["userDuz"])
+                )
 
             return AuthApplication(
                 appKey=item["appKey"],
@@ -71,9 +76,17 @@ class DynamoDBClient:
             if app_key in settings.test_api_keys:
                 return AuthApplication(
                     appKey=app_key,
-                    appName=("Test Application" if app_key != "test-wildcard-key-456" else "Test Wildcard Application"),
+                    appName=(
+                        "Test Application"
+                        if app_key != "test-wildcard-key-456"
+                        else "Test Wildcard Application"
+                    ),
                     active=True,
-                    permissions=[Permission(stationNo="*", userDuz="*", contextName="*", rpcName="*")],
+                    permissions=[
+                        Permission(
+                            stationNo="*", userDuz="*", contextName="*", rpcName="*"
+                        )
+                    ],
                     stations=[Station(stationNo="*", userDuz="*")],
                     configs=[
                         "ALLOW_VISTA_API_X_TOKEN",
@@ -103,7 +116,10 @@ class DynamoDBClient:
                     }
                     for p in app.permissions
                 ],
-                "stations": [{"stationNo": s.stationNo, "userDuz": s.userDuz} for s in app.stations],
+                "stations": [
+                    {"stationNo": s.stationNo, "userDuz": s.userDuz}
+                    for s in app.stations
+                ],
                 "configs": app.configs,
             }
 
@@ -115,75 +131,70 @@ class DynamoDBClient:
             return False
 
     async def seed_test_data(self):
-        """Seed test data for development"""
-        test_apps = [
-            AuthApplication(
-                appKey="test-standard-key-123",
-                appName="Test Standard Application",
-                active=True,
-                permissions=[
-                    Permission(
-                        stationNo="500",
-                        userDuz="10000000219",
-                        contextName="OR CPRS GUI CHART",
-                        rpcName="*",
-                    ),
-                    Permission(
-                        stationNo="500",
-                        userDuz="10000000219",
-                        contextName="VPR APPLICATION PROXY",
-                        rpcName="*",
-                    ),
-                    Permission(
-                        stationNo="508",
-                        userDuz="10000000220",
-                        contextName="OR CPRS GUI CHART",
-                        rpcName="*",
-                    ),
-                    Permission(
-                        stationNo="640",
-                        userDuz="10000000221",
-                        contextName="SDESRPC",
-                        rpcName="*",
-                    ),
-                ],
-                stations=[
-                    Station(stationNo="500", userDuz="10000000219"),
-                    Station(stationNo="508", userDuz="10000000220"),
-                    Station(stationNo="640", userDuz="10000000221"),
-                ],
-                configs=["ALLOW_VISTA_API_X_TOKEN", "ALLOW_DDR"],
-            ),
-            AuthApplication(
-                appKey="test-wildcard-key-456",
-                appName="Test Wildcard Application",
-                active=True,
-                permissions=[Permission(stationNo="*", userDuz="*", contextName="*", rpcName="*")],
-                stations=[Station(stationNo="*", userDuz="*")],
-                configs=["ALLOW_VISTA_API_X_TOKEN", "ALLOW_DDR"],
-            ),
-            AuthApplication(
-                appKey="test-limited-key-789",
-                appName="Test Limited Application",
-                active=True,
-                permissions=[
-                    Permission(
-                        stationNo="500",
-                        userDuz="10000000219",
-                        contextName="OR CPRS GUI CHART",
-                        rpcName="ORWPT LIST",
-                    ),
-                    Permission(
-                        stationNo="500",
-                        userDuz="10000000219",
-                        contextName="OR CPRS GUI CHART",
-                        rpcName="ORWPT ID INFO",
-                    ),
-                ],
-                stations=[Station(stationNo="500", userDuz="10000000219")],
-                configs=["ALLOW_VISTA_API_X_TOKEN"],
-            ),
+        """Seed test data from JSON configuration file"""
+        # Look for auth config file
+        config_paths = [
+            Path("/app/config/auth_applications.json"),  # Docker path
+            Path("./config/auth_applications.json"),  # Local path
+            Path("../config/auth_applications.json"),  # Alternative local path
         ]
+
+        config_file = None
+        for path in config_paths:
+            if path.exists():
+                config_file = path
+                break
+
+        if not config_file:
+            print("Warning: auth_applications.json not found, using default test data")
+            # Fall back to minimal default with LHS RPC CONTEXT
+            test_apps = [
+                AuthApplication(
+                    appKey="test-wildcard-key-456",
+                    appName="Test Wildcard Application",
+                    active=True,
+                    permissions=[
+                        Permission(
+                            stationNo="*", userDuz="*", contextName="*", rpcName="*"
+                        )
+                    ],
+                    stations=[Station(stationNo="*", userDuz="*")],
+                    configs=[
+                        "ALLOW_VISTA_API_X_TOKEN",
+                        "ALLOW_DDR",
+                        "ALLOW_ALL_STATIONS",
+                        "ALLOW_ALL_RPCS",
+                    ],
+                )
+            ]
+        else:
+            # Load from JSON file
+            print(f"Loading auth applications from {config_file}")
+            with config_file.open() as f:
+                config_data = json.load(f)
+
+            test_apps = []
+            for app_data in config_data.get("applications", []):
+                # Convert permissions
+                permissions = [
+                    Permission(**perm) for perm in app_data.get("permissions", [])
+                ]
+
+                # Convert stations
+                stations = [
+                    Station(**station) for station in app_data.get("stations", [])
+                ]
+
+                # Create application
+                app = AuthApplication(
+                    appKey=app_data["appKey"],
+                    appName=app_data["appName"],
+                    active=app_data.get("active", True),
+                    permissions=permissions,
+                    stations=stations,
+                    configs=app_data.get("configs", []),
+                )
+                test_apps.append(app)
 
         for app in test_apps:
             await self.create_application(app)

@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
     """Application lifespan events"""
     # Startup
     logger.info(f"Starting Vista API X Mock Server version {settings.app_version}")

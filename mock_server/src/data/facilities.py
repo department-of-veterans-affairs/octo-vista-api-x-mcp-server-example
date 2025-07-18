@@ -100,7 +100,7 @@ def get_facility_by_station(station: str) -> dict[str, str]:
     return VA_FACILITIES.get(station_3digit, VA_FACILITIES["999"])
 
 
-def get_clinics_for_station(station: str) -> list[dict[str, str]]:
+def get_clinics_for_station(_station: str) -> list[dict[str, str]]:
     """Get available clinics for a station"""
     # In reality, different facilities have different clinics
     # For mock, return common clinics

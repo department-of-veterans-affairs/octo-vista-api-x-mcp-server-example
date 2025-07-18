@@ -84,7 +84,7 @@ class AdminHandlers:
             return {"error": "User not found", "errorCode": "USER_NOT_FOUND"}
 
     @staticmethod
-    def handle_orwtpd1_listall(parameters: list[Parameter]) -> str:
+    def handle_orwtpd1_listall(_parameters: list[Parameter]) -> str:
         """
         Handle ORWTPD1 LISTALL - List all team members
         Returns delimited string format

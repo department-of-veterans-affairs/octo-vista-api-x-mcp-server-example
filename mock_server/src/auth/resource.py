@@ -19,7 +19,9 @@ auth_router = APIRouter()
 
 
 @auth_router.post("/token", response_model=VistaApiResponse)
-async def generate_token(credentials: Credentials, request: Request) -> VistaApiResponse:
+async def generate_token(
+    credentials: Credentials, request: Request
+) -> VistaApiResponse:
     """
     Generate JWT token from API key.
     Matches Vista API X /auth/token endpoint.
@@ -123,7 +125,9 @@ async def generate_token(credentials: Credentials, request: Request) -> VistaApi
 
 
 @auth_router.post("/refresh", response_model=VistaApiResponse)
-async def refresh_token(request: Request, auth_token: AuthenticationToken) -> VistaApiResponse:
+async def refresh_token(
+    request: Request, auth_token: AuthenticationToken
+) -> VistaApiResponse:
     """
     Refresh an existing JWT token.
     Matches Vista API X /auth/refresh endpoint.

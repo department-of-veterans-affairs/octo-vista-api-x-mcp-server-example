@@ -2,15 +2,210 @@
 Patient-related RPC handlers
 """
 
+import copy
+import json
+from pathlib import Path
 from typing import Any
 
-from src.data.clinical_data import get_clinical_data_for_patient
 from src.data.test_patients import get_patient_by_dfn, search_patients_by_name
 from src.rpc.models import Parameter
 
 
 class PatientHandlers:
     """Handlers for patient-related RPCs"""
+
+    # Load VPR template once at class level
+    _vpr_template = None
+
+    @classmethod
+    def _load_vpr_template(cls) -> dict:
+        """Load the VPR template JSON file"""
+        if cls._vpr_template is None:
+            template_path = (
+                Path(__file__).parent / ".." / ".." / "data" / "_VistARawSheba.json"
+            )
+            with template_path.open() as f:
+                cls._vpr_template = json.load(f)
+        return cls._vpr_template
+
+    @staticmethod
+    def _inject_patient_data(vpr_data: dict, dfn: str, patient: dict) -> dict:
+        """
+        Inject patient-specific data into VPR template.
+        This modifies UIDs and patient demographics while preserving the rest of the structure.
+        """
+        # Deep copy to avoid modifying the template
+        result = copy.deepcopy(vpr_data)
+
+        # Update the patient demographics (first item in items array)
+        if result.get("data", {}).get("items") and len(result["data"]["items"]) > 0:
+            patient_item = result["data"]["items"][0]
+
+            # Update basic demographics
+            patient_item["fullName"] = patient["name"]
+            patient_item["familyName"] = patient["name"].split(",")[0]
+            patient_item["givenNames"] = (
+                patient["name"].split(",")[1].strip() if "," in patient["name"] else ""
+            )
+            patient_item["ssn"] = int(patient["ssn"].replace("***-**-", "666000"))
+            patient_item["dateOfBirth"] = int(patient["dob"])
+            patient_item["genderCode"] = f"urn:va:pat-gender:{patient['gender']}"
+            patient_item["genderName"] = (
+                "Male" if patient["gender"] == "M" else "Female"
+            )
+            patient_item["localId"] = int(dfn)
+
+            # Update address
+            # Parse address from single string format "street, city, state zip"
+            address_parts = patient["address"].split(",")
+            street = address_parts[0].strip() if len(address_parts) > 0 else "UNKNOWN"
+            city = address_parts[1].strip() if len(address_parts) > 1 else "UNKNOWN"
+            state_zip = (
+                address_parts[2].strip() if len(address_parts) > 2 else "UNKNOWN 00000"
+            )
+
+            # Split state and zip
+            state_zip_parts = state_zip.split()
+            state = state_zip_parts[0] if len(state_zip_parts) > 0 else "UNKNOWN"
+            zip_code = state_zip_parts[1] if len(state_zip_parts) > 1 else "00000"
+
+            patient_item["addresses"] = [
+                {
+                    "city": city,
+                    "postalCode": zip_code,
+                    "stateProvince": state,
+                    "streetLine1": street,
+                }
+            ]
+
+            # Update telecoms
+            telecoms = []
+            if patient.get("phone"):
+                telecoms.append(
+                    {
+                        "telecom": patient["phone"],
+                        "usageCode": "HP",
+                        "usageName": "home phone",
+                    }
+                )
+            if patient.get("cellPhone"):
+                telecoms.append(
+                    {
+                        "telecom": patient["cellPhone"],
+                        "usageCode": "MC",
+                        "usageName": "mobile contact",
+                    }
+                )
+            if patient.get("workPhone"):
+                telecoms.append(
+                    {
+                        "telecom": patient["workPhone"],
+                        "usageCode": "WP",
+                        "usageName": "work place",
+                    }
+                )
+            patient_item["telecoms"] = telecoms
+
+            # Update emergency contact
+            if patient.get("emergencyContact"):
+                ec = patient["emergencyContact"]
+                patient_item["supports"] = [
+                    {
+                        "contactTypeCode": "urn:va:pat-contact:NOK",
+                        "contactTypeName": "Next of Kin",
+                        "name": ec["name"],
+                    },
+                    {
+                        "contactTypeCode": "urn:va:pat-contact:ECON",
+                        "contactTypeName": "Emergency Contact",
+                        "name": ec["name"],
+                    },
+                ]
+
+            # Update veteran info
+            if patient.get("veteranStatus"):
+                vs = patient["veteranStatus"]
+                patient_item["veteran"] = {
+                    "isVet": 1,
+                    "lrdfn": int(dfn),  # Using DFN as lrdfn for simplicity
+                    "serviceConnected": vs.get("serviceConnected", False),
+                    "serviceConnectionPercent": vs.get("serviceConnectedPercent", 0),
+                }
+
+            # Update patient UID
+            patient_item["uid"] = f"urn:va:patient:84F0:{dfn}:{dfn}"
+
+            # Update briefId (construct from name)
+            name_parts = patient["name"].split(",")
+            if len(name_parts) >= 2:
+                last_initial = name_parts[0][0] if name_parts[0] else ""
+                # Get last 4 of SSN substitute
+                ssn_last4 = patient["ssn"].split("-")[-1]
+                patient_item["briefId"] = f"{last_initial}{ssn_last4}"
+
+            # Update marital status
+            if patient.get("maritalStatus"):
+                marital_code_map = {
+                    "SINGLE": "S",
+                    "MARRIED": "M",
+                    "DIVORCED": "D",
+                    "WIDOWED": "W",
+                }
+                code = marital_code_map.get(patient["maritalStatus"], "U")
+                patient_item["maritalStatuses"] = [
+                    {
+                        "code": f"urn:va:pat-maritalStatus:{code}",
+                        "name": patient["maritalStatus"].title(),
+                    }
+                ]
+
+            # Update religion
+            if patient.get("religion"):
+                patient_item["religionName"] = patient["religion"]
+
+            # Update race and ethnicity
+            if patient.get("race"):
+                patient_item["races"] = [{"race": patient["race"]}]
+
+            if patient.get("ethnicity"):
+                patient_item["ethnicities"] = [{"ethnicity": patient["ethnicity"]}]
+
+            # Update flags
+            if patient.get("flags"):
+                patient_item["flags"] = [
+                    {"name": flag, "text": flag} for flag in patient["flags"]
+                ]
+
+            # Update service period from military info
+            if patient.get("military", {}).get("serviceEra"):
+                patient_item["servicePeriod"] = patient["military"]["serviceEra"]
+
+            # Update eligibility info
+            if patient.get("eligibility"):
+                eligibility = patient["eligibility"]
+                patient_item["eligibility"] = [
+                    {
+                        "name": eligibility.get("priorityGroup", "GROUP 5"),
+                        "primary": 1,
+                    }
+                ]
+                patient_item["eligibilityStatus"] = "VERIFIED"
+
+        # Update all UIDs in the rest of the items to use the correct DFN
+        for item in result["data"]["items"][1:]:
+            # Replace localId 237 with actual DFN in UIDs
+            if "uid" in item and isinstance(item["uid"], str):
+                item["uid"] = item["uid"].replace(":237:", f":{dfn}:")
+
+            # Update any orderUid references
+            if "orderUid" in item and isinstance(item["orderUid"], str):
+                item["orderUid"] = item["orderUid"].replace(":237:", f":{dfn}:")
+
+            # Update groupUid for lab results
+            if "groupUid" in item and isinstance(item["groupUid"], str):
+                item["groupUid"] = item["groupUid"].replace(":237:", f":{dfn}:")
+
+        return result
 
     @staticmethod
     def handle_orwpt_list(parameters: list[Parameter]) -> str:
@@ -83,58 +278,52 @@ class PatientHandlers:
         # Add emergency contact
         if patient.get("emergencyContact"):
             ec = patient["emergencyContact"]
-            lines.append(f"EMERGENCY CONTACT: {ec['name']} ({ec['relationship']}) {ec['phone']}")
+            lines.append(
+                f"EMERGENCY CONTACT: {ec['name']} ({ec['relationship']}) {ec['phone']}"
+            )
 
         return "\n".join(lines)
 
-    @staticmethod
-    def handle_vpr_get_patient_data_json(parameters: list[Parameter]) -> dict[str, Any]:
+    @classmethod
+    def handle_vpr_get_patient_data_json(
+        cls, parameters: list[Parameter]
+    ) -> dict[str, Any]:
         """
         Handle VPR GET PATIENT DATA JSON - Get comprehensive patient data
-        Returns JSON object
+        Returns JSON object using the VPR template with injected patient data
+
+        Supports parameter formats:
+        1. Legacy format: [";DFN", "START_DATE", "STOP_DATE", "DOMAINS"]
+        2. Named array format: [{"namedArray": {"patientId": "DFN"}}]
         """
         # Parse parameters
         patient_id = ""
-        domains = []
+        # domains = []  # Currently unused
 
-        # VPR uses different parameter format
-        if parameters:
-            for i, param in enumerate(parameters):
-                param_value = param.get_value()
-                if i == 0:  # Patient ID
-                    if isinstance(param_value, str):
-                        # Remove semicolon prefix if present
-                        patient_id = param_value.lstrip(";")
-                elif i == 1 or i == 2:  # Start date
-                    if isinstance(param_value, str):
-                        pass
-                elif i == 3:  # Domain list
-                    if isinstance(param_value, str) and param_value:
+        # Check if this is the new named array format
+        if parameters and len(parameters) > 0:
+            first_param = parameters[0]
+            param_value = first_param.get_value()
+
+            # Check for named array format
+            if isinstance(param_value, dict) and "patientId" in param_value:
+                patient_id = str(param_value["patientId"])
+            else:
+                # Legacy parameter format
+                for i, param in enumerate(parameters):
+                    param_value = param.get_value()
+                    if i == 0:  # Patient ID
+                        if isinstance(param_value, str):
+                            # Remove semicolon prefix if present
+                            patient_id = param_value.lstrip(";")
+                    elif i == 1 or i == 2:  # Start date
+                        if isinstance(param_value, str):
+                            pass
+                    elif (
+                        i == 3 and isinstance(param_value, str) and param_value
+                    ):  # Domain list
                         # Domains are semicolon-separated
-                        domains = param_value.split(";")
-
-        # If no domains specified, return all
-        if not domains:
-            domains = [
-                "patient",
-                "allergy",
-                "appointment",
-                "consult",
-                "document",
-                "education",
-                "exam",
-                "factor",
-                "image",
-                "immunization",
-                "lab",
-                "med",
-                "order",
-                "problem",
-                "procedure",
-                "surgery",
-                "visit",
-                "vital",
-            ]
+                        _ = param_value.split(";")  # domains variable not used
 
         # Get patient data
         patient = get_patient_by_dfn(patient_id)
@@ -142,113 +331,24 @@ class PatientHandlers:
         if not patient or patient.get("name") == "TEST,PATIENT":
             return {"error": "Patient not found"}
 
-        # Build response
-        response = {
-            "apiVersion": "1.0",
-            "data": {
-                "updated": 20240116143000,  # YYYYMMDDHHMMSS format
-                "totalItems": 0,
-                "items": [],
-            },
-        }
+        try:
+            # Load the VPR template
+            template = cls._load_vpr_template()
 
-        # Add patient demographics if requested
-        if "patient" in domains:
-            patient_item = {
-                "uid": f"urn:va:patient:{patient_id}",
-                "pid": patient_id,
-                "fullName": patient["name"],
-                "displayName": patient["name"],
-                "ssn": patient["ssn"],
-                "birthDate": patient["dob"],
-                "gender": patient["gender"],
-                "address": [
-                    {
-                        "use": "home",
-                        "line": [patient["address"]],
-                        "city": patient.get("city", ""),
-                        "state": patient.get("state", ""),
-                        "postalCode": patient.get("zip", ""),
-                    }
-                ],
-                "telecom": [
-                    {"use": "home", "value": patient["phone"]},
-                    {"use": "mobile", "value": patient.get("cellPhone", "")},
-                ],
+            # Inject patient-specific data
+            result = cls._inject_patient_data(template, patient_id, patient)
+
+            # If domains were specified, we could filter items here
+            # For now, return all data as the template includes comprehensive patient data
+
+            return result
+
+        except Exception as e:
+            # Fall back to error response if template loading fails
+            return {
+                "apiVersion": "1.0",
+                "error": f"Error loading VPR data: {e!s}",
             }
-            response["data"]["items"].append(patient_item)
-            response["data"]["totalItems"] += 1
-
-        # Add other domains
-        for domain in domains:
-            if domain == "patient":
-                continue  # Already handled
-
-            # Get clinical data for domain
-            domain_data = get_clinical_data_for_patient(patient_id, domain)
-
-            # Convert to VPR format
-            for item in domain_data:
-                vpr_item = {
-                    "uid": f"urn:va:{domain}:{patient_id}:{response['data']['totalItems']}",
-                    "kind": domain.upper(),
-                    "summary": item.get("description", item.get("name", "")),
-                    "pid": patient_id,
-                }
-
-                # Add domain-specific fields
-                if domain == "problem":
-                    vpr_item.update(
-                        {
-                            "problemText": item["description"],
-                            "icdCode": item.get("icd10", ""),
-                            "status": item["status"],
-                            "onset": item.get("onsetDate", ""),
-                        }
-                    )
-                elif domain == "med":
-                    vpr_item.update(
-                        {
-                            "name": item["name"],
-                            "sig": item["sig"],
-                            "status": item["status"],
-                            "orderDate": item.get("orderDate", ""),
-                        }
-                    )
-                elif domain == "allergy":
-                    vpr_item.update(
-                        {
-                            "agent": item["allergen"],
-                            "reaction": item["reaction"],
-                            "severity": item["severity"],
-                        }
-                    )
-                elif domain == "vital":
-                    vpr_item.update(
-                        {
-                            "dateTime": item["date"],
-                            "bp": item.get("bp", ""),
-                            "pulse": item.get("pulse", ""),
-                            "temp": item.get("temp", ""),
-                            "weight": item.get("weight", ""),
-                        }
-                    )
-                elif domain == "lab":
-                    vpr_item.update(
-                        {
-                            "test": item["test"],
-                            "result": item["value"],
-                            "units": item.get("units", ""),
-                            "referenceRange": item.get("refRange", ""),
-                            "flag": item.get("flag", ""),
-                            "dateTime": item["date"],
-                        }
-                    )
-
-                response["data"]["items"].append(vpr_item)
-                response["data"]["totalItems"] += 1
-
-        return response
 
     @staticmethod
     def handle_orwpt_select(parameters: list[Parameter]) -> str:

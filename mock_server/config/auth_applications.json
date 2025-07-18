@@ -1,0 +1,81 @@
+{
+  "applications": [
+    {
+      "appKey": "test-standard-key-123",
+      "appName": "Test Standard Application",
+      "active": true,
+      "permissions": [
+        {
+          "stationNo": "500",
+          "userDuz": "10000000219",
+          "contextName": "VPR APPLICATION PROXY",
+          "rpcName": "*"
+        },
+        {
+          "stationNo": "500",
+          "userDuz": "10000000219",
+          "contextName": "LHS RPC CONTEXT",
+          "rpcName": "*"
+        },
+        {
+          "stationNo": "508",
+          "userDuz": "10000000220",
+          "contextName": "OR CPRS GUI CHART",
+          "rpcName": "*"
+        },
+        {
+          "stationNo": "640",
+          "userDuz": "10000000221",
+          "contextName": "SDESRPC",
+          "rpcName": "*"
+        }
+      ],
+      "stations": [
+        {"stationNo": "500", "userDuz": "10000000219"},
+        {"stationNo": "508", "userDuz": "10000000220"},
+        {"stationNo": "640", "userDuz": "10000000221"}
+      ],
+      "configs": ["ALLOW_VISTA_API_X_TOKEN", "ALLOW_DDR"]
+    },
+    {
+      "appKey": "test-wildcard-key-456",
+      "appName": "Test Wildcard Application",
+      "active": true,
+      "permissions": [
+        {
+          "stationNo": "*",
+          "userDuz": "*",
+          "contextName": "*",
+          "rpcName": "*"
+        }
+      ],
+      "stations": [
+        {"stationNo": "*", "userDuz": "*"}
+      ],
+      "configs": ["ALLOW_VISTA_API_X_TOKEN", "ALLOW_DDR", "ALLOW_ALL_STATIONS", "ALLOW_ALL_RPCS"]
+    },
+    {
+      "appKey": "test-limited-key-789",
+      "appName": "Test Limited Application",
+      "active": true,
+      "permissions": [
+        {
+          "stationNo": "500",
+          "userDuz": "10000000219",
+          "contextName": "OR CPRS GUI CHART",
+          "rpcName": "ORWPT LIST"
+        },
+        {
+          "stationNo": "500",
+          "userDuz": "10000000219",
+          "contextName": "OR CPRS GUI CHART",
+          "rpcName": "ORWPT ID INFO"
+        }
+      ],
+      "stations": [
+        {"stationNo": "500", "userDuz": "10000000219"}
+      ],
+      "configs": ["ALLOW_VISTA_API_X_TOKEN"]
+    }
+  ]
+}

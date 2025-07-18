@@ -44,10 +44,10 @@ def decode_jwt_payload(token: str) -> dict[str, Any]:
 
     except (json.JSONDecodeError, UnicodeDecodeError) as e:
         logger.error(f"Failed to decode JWT payload: {e}")
-        raise ValueError(f"Failed to decode JWT payload: {e}")
+        raise ValueError(f"Failed to decode JWT payload: {e}") from e
     except Exception as e:
         logger.error(f"Unexpected error decoding JWT: {e}")
-        raise ValueError(f"Unexpected error decoding JWT: {e}")
+        raise ValueError(f"Unexpected error decoding JWT: {e}") from e
 
 
 def get_token_expiry(token: str) -> datetime:
@@ -75,7 +75,7 @@ def get_token_expiry(token: str) -> datetime:
         expiry = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
         return expiry
     except (ValueError, OverflowError, OSError) as e:
-        raise ValueError(f"Invalid expiry timestamp {exp_timestamp}: {e}")
+        raise ValueError(f"Invalid expiry timestamp {exp_timestamp}: {e}") from e
 
 
 def has_token_expired(token: str, buffer_seconds: int = 30) -> bool:

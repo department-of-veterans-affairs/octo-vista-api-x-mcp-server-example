@@ -45,15 +45,15 @@ class BaseVistaClient(ABC):
         pass
 
     @abstractmethod
-    async def close(self):
+    async def close(self) -> None:
         """Close any open connections"""
         pass
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "BaseVistaClient":
         """Async context manager entry"""
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Async context manager exit"""
         await self.close()
 

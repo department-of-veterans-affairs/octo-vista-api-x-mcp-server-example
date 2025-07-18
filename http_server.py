@@ -3,6 +3,7 @@
 import logging
 import os
 import sys
+from typing import Literal, cast
 
 from dotenv import load_dotenv
 
@@ -47,7 +48,9 @@ if __name__ == "__main__":
             uvicorn.run(app, host=host, port=port, log_level="info")
         else:
             # Run with specified transport
-            mcp.run(transport=transport)
+            mcp.run(
+                transport=cast(Literal["stdio", "sse", "streamable-http"], transport)
+            )
     except KeyboardInterrupt:
         logger.info("\nServer stopped by user")
     except Exception as e:

@@ -34,6 +34,7 @@ class StandardTokenParser(TokenParser):
 
     async def parse(self, token: str, headers: dict[str, str]) -> dict[str, Any]:
         """Parse standard JWT token"""
+        _ = headers  # Unused parameter
         try:
             # Decode token
             payload = jwt_handler.decode_token(token)
@@ -62,7 +63,9 @@ class SsoiTokenParser(TokenParser):
             # Get magic key from header
             magic_key = headers.get("x-octo-vista-api", "")
             if not magic_key:
-                raise ValueError("Missing X-OCTO-VISTA-API header for SSOi authentication")
+                raise ValueError(
+                    "Missing X-OCTO-VISTA-API header for SSOi authentication"
+                )
 
             # Decode token (SSOi tokens are pre-validated by STS)
             payload = jwt_handler.decode_token(token)
@@ -111,10 +114,12 @@ class RefreshTokenParser(TokenParser):
 
     def can_parse(self, headers: dict[str, str]) -> bool:
         """Refresh parser is selected explicitly, not by headers"""
+        _ = headers  # Unused parameter
         return False  # Only used when explicitly refreshing
 
     async def parse(self, token: str, headers: dict[str, str]) -> dict[str, Any]:
         """Parse refresh token"""
+        _ = headers  # Unused parameter
         try:
             # Decode token without exp verification for refresh
             payload = jwt_handler.decode_token(token, verify_exp=False)
@@ -142,7 +147,9 @@ class TokenParserFactory:
         self.ssoi_parser = SsoiTokenParser()
         self.refresh_parser = RefreshTokenParser()
 
-    def get_parser(self, headers: dict[str, str], is_refresh: bool = False) -> TokenParser:
+    def get_parser(
+        self, headers: dict[str, str], is_refresh: bool = False
+    ) -> TokenParser:
         """Get appropriate parser based on request headers"""
         if is_refresh:
             return self.refresh_parser

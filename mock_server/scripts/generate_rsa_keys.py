@@ -25,7 +25,9 @@ def generate_rsa_keys(key_dir: str = "../keys"):
     keys_path.mkdir(parents=True, exist_ok=True)
 
     # Generate private key
-    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
+    private_key = rsa.generate_private_key(
+        public_exponent=65537, key_size=2048, backend=default_backend()
+    )
 
     # Generate public key
     public_key = private_key.public_key()
@@ -39,7 +41,8 @@ def generate_rsa_keys(key_dir: str = "../keys"):
 
     # Serialize public key
     public_pem = public_key.public_bytes(
-        encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
     )
 
     # Write keys to files
@@ -60,7 +63,9 @@ def generate_rsa_keys(key_dir: str = "../keys"):
         public_key_path.chmod(0o644)
 
     print("\nRSA key pair generated successfully!")
-    print("Make sure to keep the private key secure and never commit it to version control.")
+    print(
+        "Make sure to keep the private key secure and never commit it to version control."
+    )
 
 
 if __name__ == "__main__":

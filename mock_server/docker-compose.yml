@@ -47,6 +47,7 @@ services:
     volumes:
       - ./keys:/app/keys:ro
       - ./src:/app/src:ro
+      - ./config:/app/config:ro
     networks:
       - vista-network
     healthcheck:

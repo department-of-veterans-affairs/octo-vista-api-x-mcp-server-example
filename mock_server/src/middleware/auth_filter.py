@@ -73,13 +73,17 @@ class VistaApiXAuthenticationFilter(BaseHTTPMiddleware):
 
                 return self._create_auth_error_response(request, error_code, str(e))
             except Exception as e:
-                return self._create_auth_error_response(request, "JWT-ERROR", f"Token validation failed: {e!s}")
+                return self._create_auth_error_response(
+                    request, "JWT-ERROR", f"Token validation failed: {e!s}"
+                )
 
         # Continue processing
         response = await call_next(request)
         return response
 
-    def _create_auth_error_response(self, request: Request, error_code: str, message: str) -> Response:
+    def _create_auth_error_response(
+        self, request: Request, error_code: str, message: str
+    ) -> Response:
         """Create authentication error response"""
         from starlette.responses import JSONResponse
 
@@ -137,8 +141,8 @@ class SecurityContext:
     @property
     def flags(self) -> list:
         """Get flags from token"""
-        if self._token_payload:
-            return self._token_payload.get("flags", [])
+        if self.user:
+            return self.user.get("flags", [])
         return []
 
     def has_authority(self, context: str, rpc: str) -> bool:
@@ -148,7 +152,9 @@ class SecurityContext:
             auth_rpc = auth.get("rpc", "")
 
             # Check wildcards
-            if (auth_context == "*" or auth_context == context) and (auth_rpc == "*" or auth_rpc == rpc):
+            if (auth_context == "*" or auth_context == context) and (
+                auth_rpc == "*" or auth_rpc == rpc
+            ):
                 return True
 
         return False
@@ -166,7 +172,9 @@ class SecurityContext:
             site_3digit = site_id[:3] if len(site_id) >= 3 else site_id
 
             # Check wildcards
-            if (site_id == "*" or site_3digit == station_3digit) and (user_duz == "*" or user_duz == duz):
+            if (site_id == "*" or site_3digit == station_3digit) and (
+                user_duz == "*" or user_duz == duz
+            ):
                 return True
 
         return False

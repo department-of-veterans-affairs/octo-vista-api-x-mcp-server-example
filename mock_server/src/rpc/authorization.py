@@ -18,7 +18,9 @@ class RpcAuthorization:
         Matches Vista API X assertAllowConnection.
         """
         if not self.context.is_authenticated:
-            raise SecurityFaultException(message="Not authenticated", error_code="JWT-ACCESS-DENIED-0001")
+            raise SecurityFaultException(
+                message="Not authenticated", error_code="JWT-ACCESS-DENIED-0001"
+            )
 
         # Normalize station to 3-digit
         station_3digit = station[:3] if len(station) >= 3 else station
@@ -36,16 +38,19 @@ class RpcAuthorization:
         Matches Vista API X assertAllowExecution.
         """
         if not self.context.is_authenticated:
-            raise SecurityFaultException(message="Not authenticated", error_code="JWT-ACCESS-DENIED-0001")
+            raise SecurityFaultException(
+                message="Not authenticated", error_code="JWT-ACCESS-DENIED-0001"
+            )
 
         # Check if DDR RPC requires special flag
-        if context == "DDR APPLICATION PROXY" or rpc.startswith("DDR"):
-            if not self.context.has_flag("ALLOW_DDR"):
-                raise SecurityFaultException(
-                    message="DDR access not allowed. Missing ALLOW_DDR flag.",
-                    error_code="ACCESS-DENIED-78292",
-                    fault_code="DDR_NOT_ALLOWED",
-                )
+        if (
+            context == "DDR APPLICATION PROXY" or rpc.startswith("DDR")
+        ) and not self.context.has_flag("ALLOW_DDR"):
+            raise SecurityFaultException(
+                message="DDR access not allowed. Missing ALLOW_DDR flag.",
+                error_code="ACCESS-DENIED-78292",
+                fault_code="DDR_NOT_ALLOWED",
+            )
 
         # Check RPC permission
         if not self.context.has_authority(context, rpc):
@@ -96,4 +101,7 @@ class RpcAuthorization:
 
     def has_wildcard_access(self) -> bool:
         """Check if user has wildcard (*/*) access"""
-        return any(auth.get("context") == "*" and auth.get("rpc") == "*" for auth in self.context.authorities)
+        return any(
+            auth.get("context") == "*" and auth.get("rpc") == "*"
+            for auth in self.context.authorities
+        )

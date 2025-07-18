@@ -118,6 +118,36 @@ async def test_rpc_vpr_patient_data(client, auth_token):
 
 
 @pytest.mark.asyncio
+async def test_rpc_vpr_patient_data_named_array(client, auth_token):
+    """Test VPR GET PATIENT DATA JSON RPC with named array format"""
+    response = await client.post(
+        f"/vista-sites/{TEST_STATION}/users/{TEST_DUZ}/rpc/invoke",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        json={
+            "context": "LHS RPC CONTEXT",
+            "rpc": "VPR GET PATIENT DATA JSON",
+            "jsonResult": True,
+            "parameters": [{"namedArray": {"patientId": "100841"}}],
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "payload" in data
+
+    # Should return JSON object directly
+    payload = data["payload"]
+    assert "data" in payload
+    assert "items" in payload["data"]
+
+    # Verify patient data was loaded correctly
+    items = payload["data"]["items"]
+    assert len(items) > 0
+    patient_item = items[0]
+    assert patient_item["localId"] == 100841
+
+
+@pytest.mark.asyncio
 async def test_rpc_unauthorized_station(client, auth_token):
     """Test RPC with unauthorized station"""
     response = await client.post(
