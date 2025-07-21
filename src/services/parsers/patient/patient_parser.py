@@ -53,6 +53,10 @@ class PatientDataParser:
         if not vpr_data:
             raise ValueError("VPR data is empty")
 
+        # Handle both wrapped (actual Vista API) and unwrapped (mock) formats
+        if "payload" in vpr_data and isinstance(vpr_data["payload"], dict):
+            vpr_data = vpr_data["payload"]
+
         # Get items array
         items = vpr_data.get("data", {}).get("items", [])
         if not items:
