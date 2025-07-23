@@ -6,7 +6,9 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from src.auth.jwt_handler import jwt_handler
+from src.auth.jwt_handler_vamf import vamf_jwt_handler
 from src.auth.models import TokenType
+from src.config import settings
 from src.database.dynamodb_client import get_dynamodb_client
 
 
@@ -36,7 +38,17 @@ class StandardTokenParser(TokenParser):
         """Parse standard JWT token"""
         _ = headers  # Unused parameter
         try:
-            # Decode token
+            # Try VAMF handler first if configured
+            if settings.jwt_use_vamf_format:
+                try:
+                    payload = vamf_jwt_handler.decode_token(token)
+                    # Convert VAMF format to internal format for compatibility
+                    return self._convert_vamf_to_internal(payload)
+                except Exception:
+                    # Fall back to standard handler
+                    pass
+
+            # Decode token with standard handler
             payload = jwt_handler.decode_token(token)
 
             # Verify token type
@@ -47,6 +59,37 @@ class StandardTokenParser(TokenParser):
 
         except Exception as e:
             raise ValueError(f"Failed to parse standard token: {e!s}")
+
+    def _convert_vamf_to_internal(self, vamf_payload: dict[str, Any]) -> dict[str, Any]:
+        """Convert VAMF JWT format to internal format"""
+        # Create user object from root-level fields
+        user = {
+            "username": vamf_payload.get("sub", ""),
+            "authenticated": vamf_payload.get("authenticated", True),
+            "firstName": vamf_payload.get("firstName", ""),
+            "lastName": vamf_payload.get("lastName", ""),
+            "email": vamf_payload.get("email", ""),
+            "vistaIds": vamf_payload.get("vistaIds", []),
+            "authorities": [],  # Will be populated from resources
+            "attributes": vamf_payload.get("attributes", {}),
+        }
+
+        # Convert VAMF resources to authorities
+        resources = vamf_payload.get("vamf.auth.resources", [])
+        # For mock, if we have patient resource access, grant full permissions
+        if resources and any("patient" in r for r in resources):
+            user["authorities"] = [
+                {"context": "LHS RPC CONTEXT", "rpc": "*"},
+                {"context": "OR CPRS GUI CHART", "rpc": "*"},
+            ]
+
+        # Build payload in internal format
+        return {
+            **vamf_payload,
+            "idType": TokenType.STANDARD,
+            "user": user,
+            "flags": ["ALLOW_VISTA_API_X_TOKEN"],
+        }
 
 
 class SsoiTokenParser(TokenParser):
@@ -68,7 +111,17 @@ class SsoiTokenParser(TokenParser):
                 )
 
             # Decode token (SSOi tokens are pre-validated by STS)
-            payload = jwt_handler.decode_token(token)
+            # Try VAMF handler first if configured
+            if settings.jwt_use_vamf_format:
+                try:
+                    payload = vamf_jwt_handler.decode_token(token)
+                    # Convert VAMF format to internal format
+                    payload = self._convert_vamf_to_internal(payload)
+                except Exception:
+                    # Fall back to standard handler
+                    payload = jwt_handler.decode_token(token)
+            else:
+                payload = jwt_handler.decode_token(token)
 
             # Load permissions from DynamoDB using magic key
             db_client = get_dynamodb_client()
@@ -108,6 +161,37 @@ class SsoiTokenParser(TokenParser):
         except Exception as e:
             raise ValueError(f"Failed to parse SSOi token: {e!s}")
 
+    def _convert_vamf_to_internal(self, vamf_payload: dict[str, Any]) -> dict[str, Any]:
+        """Convert VAMF JWT format to internal format"""
+        # Create user object from root-level fields
+        user = {
+            "username": vamf_payload.get("sub", ""),
+            "authenticated": vamf_payload.get("authenticated", True),
+            "firstName": vamf_payload.get("firstName", ""),
+            "lastName": vamf_payload.get("lastName", ""),
+            "email": vamf_payload.get("email", ""),
+            "vistaIds": vamf_payload.get("vistaIds", []),
+            "authorities": [],  # Will be populated from resources
+            "attributes": vamf_payload.get("attributes", {}),
+        }
+
+        # Convert VAMF resources to authorities
+        resources = vamf_payload.get("vamf.auth.resources", [])
+        # For mock, if we have patient resource access, grant full permissions
+        if resources and any("patient" in r for r in resources):
+            user["authorities"] = [
+                {"context": "LHS RPC CONTEXT", "rpc": "*"},
+                {"context": "OR CPRS GUI CHART", "rpc": "*"},
+            ]
+
+        # Build payload in internal format
+        return {
+            **vamf_payload,
+            "idType": TokenType.STANDARD,
+            "user": user,
+            "flags": ["ALLOW_VISTA_API_X_TOKEN"],
+        }
+
 
 class RefreshTokenParser(TokenParser):
     """Parser for refresh tokens"""
@@ -122,7 +206,9 @@ class RefreshTokenParser(TokenParser):
         _ = headers  # Unused parameter
         try:
             # Decode token without exp verification for refresh
-            payload = jwt_handler.decode_token(token, verify_exp=False)
+            # Try appropriate handler based on config
+            handler = vamf_jwt_handler if settings.jwt_use_vamf_format else jwt_handler
+            payload = handler.decode_token(token, verify_exp=False)
 
             # Verify token type allows refresh
             if payload.get("idType") not in [TokenType.STANDARD, TokenType.SSOI]:

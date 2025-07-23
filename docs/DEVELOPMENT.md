@@ -1,339 +1,548 @@
 # Development Guide
 
-Guide for developing and extending the Vista API MCP Server.
+This guide covers everything you need to develop, test, and extend the Vista API MCP Server.
 
-## Development Setup
+## Table of Contents
 
-### Prerequisites
+1. [Prerequisites](#prerequisites)
+2. [Initial Setup](#initial-setup)
+3. [Running the Server](#running-the-server)
+4. [Project Structure](#project-structure)
+5. [Development Workflow](#development-workflow)
+6. [Adding New Tools](#adding-new-tools)
+7. [Testing](#testing)
+8. [Code Quality](#code-quality)
+9. [Redis Configuration](#redis-configuration)
+10. [Architecture Overview](#architecture-overview)
+11. [Transport Modes](#transport-modes)
+12. [Troubleshooting](#troubleshooting)
 
-- Python 3.12+
-- Docker Desktop
-- Git
-- IDE with Python support (VS Code recommended)
+## Prerequisites
 
-### Initial Setup
+- Python 3.12 or higher
+- [mise](https://mise.jdx.dev/) (formerly rtx) for environment management
+- Docker (optional, for Redis)
+- Vista API credentials (contact your Vista administrator)
+
+## Initial Setup
+
+1. **Clone the repository:**
+
+   ```bash
+   git clone https://github.com/your-org/vista-api-mcp-server.git
+   cd vista-api-mcp-server
+   ```
+
+2. **Install mise and trust the configuration:**
+
+   ```bash
+   # Install mise (if not already installed)
+   curl https://mise.jdx.dev/install.sh | sh
+   
+   # Trust the mise configuration
+   mise trust
+   ```
+
+3. **Install dependencies (automatic with mise):**
+
+   ```bash
+   # Dependencies are automatically installed when you run any mise command
+   mise run dev  # This will trigger installation if needed
+   ```
+
+4. **Set up environment variables:**
+
+   ```bash
+   cp .env.example .env
+   # Edit .env with your Vista API credentials
+   ```
+
+## Running the Server
+
+### With Mock Server (Development)
+
+The mock server simulates the Vista API for local development without needing real Vista access:
 
 ```bash
-# Clone repository
-git clone <repository>
-cd octo-vista-api-x-mcp-server
-
-# Setup with mise (recommended)
-mise trust
+# Start both mock server and MCP server
 mise run dev-with-mock
 
-# Or manual setup
-uv sync
+# Or run them separately:
+mise run mock-server  # In one terminal
+mise run dev         # In another terminal
+```
+
+### Without Mock Server (Production/Staging)
+
+When connecting to a real Vista API instance:
+
+```bash
+# Standard stdio mode
+mise run dev
+
+# HTTP/SSE mode for remote access
+mise run dev-sse
+```
+
+### Available mise Commands
+
+```bash
+mise tasks  # List all available commands
+
+# Key commands:
+mise run dev              # Run MCP server in stdio mode
+mise run dev-sse          # Run MCP server in HTTP/SSE mode
+mise run dev-with-mock    # Run with mock Vista API
+mise run mock-server      # Run mock server only
+mise run test            # Run tests
+mise run lint            # Run linting and formatting
+mise run format          # Format code with black
+mise run typecheck       # Run mypy type checking
 ```
 
 ## Project Structure
 
 ```
-octo-vista-api-x-mcp-server/
-├── src/                    # Source code
-│   ├── api_clients/        # API client implementation
-│   │   ├── base.py         # Abstract base client
-│   │   └── vista_client.py # Vista API X client
-│   ├── tools/              # MCP tool implementations
-│   │   ├── patient.py      # Patient-related tools
-│   │   ├── clinical.py     # Clinical data tools
-│   │   ├── admin.py        # Administrative tools
-│   │   └── system.py       # System tools
-│   ├── models.py           # Pydantic models
-│   ├── parsers.py          # Vista data parsers
-│   ├── prompts.py          # MCP prompts
-│   ├── resources.py        # MCP resources
-│   └── utils.py            # Utility functions
-├── mock_server/            # Mock Vista API X server
-├── scripts/                # Helper scripts
-├── tests/                  # Test files
-├── docs/                   # Documentation
-└── server.py               # Main entry point
+vista-api-mcp-server/
+├── src/
+│   ├── __main__.py              # Entry point
+│   ├── config.py                # Configuration management
+│   ├── models/                  # Data models
+│   │   ├── patient/            # Patient-specific models
+│   │   ├── vista/              # Vista API response models
+│   │   └── responses/          # Tool response models
+│   ├── services/               # Business logic services
+│   │   ├── cache/             # Caching implementation
+│   │   ├── data/              # Data access layer
+│   │   ├── filters/           # Data filtering utilities
+│   │   ├── formatters/        # Output formatting
+│   │   ├── parsers/           # Response parsing
+│   │   ├── rpc/               # RPC execution helpers
+│   │   └── validators/        # Input validation
+│   ├── tools/                  # MCP tool implementations
+│   │   ├── admin/             # Administrative tools
+│   │   ├── clinical/          # Clinical data tools
+│   │   ├── patient/           # Patient data tools
+│   │   └── system/            # System utilities
+│   ├── vista/                  # Vista API client
+│   │   ├── auth/              # Authentication/JWT handling
+│   │   ├── base.py            # Base client interface
+│   │   └── client.py          # Vista API client implementation
+│   └── utils.py               # Common utilities
+├── mock_server/               # Mock Vista API implementation
+│   └── src/                   # Mock server source code
+├── tests/                     # Test suite
+├── mise.toml                  # mise configuration
+└── pyproject.toml            # Python project configuration
 ```
 
-## Adding New Tools
+## Development Workflow
 
-### 1. Define the Tool Function
+### 1. Create a Feature Branch
 
-Create a new tool in the appropriate module (e.g., `src/tools/clinical.py`):
-
-```python
-from mcp.server.fastmcp import FastMCP
-from ..models import StandardResponse
-from ..api_clients.base import BaseVistaClient
-
-@mcp.tool(
-    name="get_new_data",
-    description="Get new clinical data type"
-)
-async def get_new_data(
-    patient_id: str,
-    client: BaseVistaClient
-) -> StandardResponse:
-    """
-    Get new data for a patient.
-    
-    Args:
-        patient_id: Patient ID (DFN/IEN)
-        client: Vista API client instance
-    
-    Returns:
-        Structured response with data
-    """
-    try:
-        # Call Vista RPC
-        result = await client.invoke_rpc(
-            rpc_name="NEW DATA RPC",
-            params={"patientId": patient_id}
-        )
-        
-        # Parse and structure response
-        data = parse_new_data(result)
-        
-        return StandardResponse(
-            success=True,
-            data=data,
-            message=f"Retrieved {len(data)} items"
-        )
-    except Exception as e:
-        return StandardResponse(
-            success=False,
-            error=str(e),
-            message="Failed to retrieve data"
-        )
+```bash
+git checkout -b feature/your-feature-name
 ```
 
-### 2. Add Parser if Needed
+### 2. Make Your Changes
 
-Add parsing logic in `src/parsers.py`:
+Follow the existing patterns in the codebase. Key principles:
 
-```python
-def parse_new_data(raw_data: str) -> List[Dict[str, Any]]:
-    """Parse Vista delimited format into structured data"""
-    lines = raw_data.strip().split('\n')
-    results = []
-    
-    for line in lines:
-        if line:
-            parts = line.split('^')
-            results.append({
-                "id": parts[0],
-                "value": parts[1],
-                # ... map other fields
-            })
-    
-    return results
-```
+- Use type hints for all functions
+- Follow the service-oriented architecture
+- Keep tools focused on their specific domain
+- Use the existing RPC executor for Vista API calls
 
-### 3. Register the Tool
-
-The tool is automatically registered via the `@mcp.tool` decorator, but ensure the module is imported in `server.py`.
-
-## Testing
-
-### Run Tests
+### 3. Test Your Changes
 
 ```bash
 # Run all tests
 mise run test
 
 # Run specific test
-uv run pytest tests/test_clinical_tools.py -v
+pytest tests/test_your_feature.py -v
 
 # Run with coverage
-uv run pytest --cov=src --cov-report=html
+pytest --cov=src tests/
 ```
 
-### Write Tests
+### 4. Lint and Format
 
-Create test files in `tests/`:
+```bash
+# Always run lint before committing
+mise run lint
+
+# This runs:
+# - black (formatter)
+# - ruff (linter)
+# - mypy (type checker)
+```
+
+### 5. Commit Your Changes
+
+```bash
+git add .
+git commit -m "feat: add your feature description"
+```
+
+## Adding New Tools
+
+### 1. Choose the Right Module
+
+Tools are organized by domain:
+
+- `tools/patient/` - Patient data retrieval
+- `tools/clinical/` - Clinical data (medications, labs, vitals)
+- `tools/admin/` - Administrative functions
+- `tools/system/` - System utilities
+
+### 2. Key Patterns to Follow
+
+- Use the RPC executor service for all Vista API calls
+- Use parameter builders for RPC parameters
+- Use validators for input validation
+- Use formatters for output formatting
+- Return structured responses using Pydantic models
+
+## Testing
+
+### Running Tests
+
+```bash
+# Run all tests
+mise run test
+
+# Run with verbose output
+mise run test -- -v
+
+# Run specific test file
+pytest tests/test_patient_tools.py
+
+# Run with coverage
+pytest --cov=src tests/
+```
+
+### Test Data
+
+See [TEST_DATA.md](TEST_DATA.md) for:
+
+- Test patient IDs
+- Test credentials
+- Sample data reference
+
+### Writing Tests
 
 ```python
-import pytest
-from src.tools.clinical import get_new_data
-from src.api_clients.vista_client import VistaAPIClient
-
-@pytest.mark.asyncio
-async def test_get_new_data():
-    # Use test/mock endpoint
-    client = VistaAPIClient(
-        base_url="http://localhost:8888",
-        api_key="test-wildcard-key-456"
-    )
-    result = await get_new_data(
-        patient_id="100022",
-        client=client
+# Example test
+async def test_get_patient_demographics():
+    """Test patient demographics retrieval"""
+    result = await get_patient_demographics(
+        patient_dfn="100022",
+        station="500"
     )
     
-    assert result.success
-    assert len(result.data) > 0
-    assert result.data[0]["id"] is not None
+    assert result["success"] is True
+    assert result["patient"]["name"] == "CARTER,DAVID"
+    assert "***-**-" in result["patient"]["ssn"]
 ```
-
-### Test in MCP Inspector
-
-1. Start development server: `mise run dev-with-mock`
-2. Open <http://localhost:6274>
-3. Test your new tool with various parameters
 
 ## Code Quality
 
-### Formatting and Linting
+### Linting and Formatting
 
-#### Automatic Formatting (VS Code/Cursor)
-
-The project includes VS Code/Cursor settings for automatic formatting on save:
-
-- **Black**: Python code formatting
-- **Ruff**: Linting with auto-fix
-- **Import sorting**: Automatic organization of imports
-- **EditorConfig**: Consistent file formatting across editors
-
-To enable auto-formatting:
-
-1. Open the project in VS Code or Cursor
-2. Install recommended extensions when prompted
-3. Files will automatically format when saved
-
-#### Manual Formatting
+Always run linting before committing:
 
 ```bash
-# Format code
 mise run lint
-
-# Or manually
-uv run black src/
-uv run ruff check src/ --fix
 ```
 
-### Type Checking
+This runs:
 
-```bash
-uv run mypy src/
-```
+- **black**: Code formatting
+- **ruff**: Fast Python linter
+- **mypy**: Static type checking
 
-### Pre-commit Checks
+### Type Hints
+
+Always use type hints:
 
 ```python
-# In your code
-from typing import List, Dict, Any, Optional
+from typing import Any, Optional
 
-# Use type hints everywhere
-async def process_data(
-    patient_id: str,
-    options: Optional[Dict[str, Any]] = None
-) -> List[Dict[str, Any]]:
-    ...
+async def get_patient_data(
+    patient_dfn: str,
+    station: Optional[str] = None,
+) -> dict[str, Any]:
+    """Function with proper type hints"""
+    pass
 ```
 
-## Debugging
+### Import Organization
 
-### Enable Debug Logging
+Imports are automatically organized by `ruff`. Standard order:
+
+1. Standard library imports
+2. Third-party imports
+3. Local imports
+
+## Redis Configuration
+
+### Local Development
+
+Redis caching is optional but recommended for better performance:
 
 ```bash
-# Set in .env or environment
-VISTA_MCP_DEBUG=true
+# Start Redis with Docker
+docker run -d -p 6379:6379 redis:alpine
 
-# Or when running
-VISTA_MCP_DEBUG=true mise run dev-with-mock
+# Configure in .env
+CACHE_BACKEND=redis
+REDIS_URL=redis://localhost:6379
 ```
 
-### Debug in VS Code
+### Testing Redis Connection
 
-Create `.vscode/launch.json`:
+```python
+# Test script
+python -c "
+from src.services.cache.factory import CacheFactory
+import asyncio
 
-```json
-{
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "Debug MCP Server",
-            "type": "python",
-            "request": "launch",
-            "program": "server.py",
-            "console": "integratedTerminal",
-            "env": {
-                "API_CLIENT_TYPE": "mock",
-                "VISTA_MCP_DEBUG": "true"
-            }
-        }
-    ]
-}
+async def test():
+    cache = await CacheFactory.create_patient_cache()
+    print(f'Cache backend: {type(cache).__name__}')
+    
+asyncio.run(test())
+"
 ```
+
+## Architecture Overview
+
+### Core Components
+
+1. **MCP Server** (`src/__main__.py`)
+   - Handles MCP protocol communication
+   - Registers and exposes tools
+   - Manages sessions and authentication
+
+2. **Vista Client** (`src/vista/client.py`)
+   - Async HTTP client for Vista API
+   - JWT token management
+   - Automatic token refresh
+
+3. **Tools** (`src/tools/`)
+   - Individual functions exposed to LLM
+   - Domain-specific organization
+   - Standardized error handling
+
+4. **Services** (`src/services/`)
+   - Business logic layer
+   - Caching, parsing, formatting
+   - RPC execution helpers
+
+### Data Flow
+
+```
+LLM Client → MCP Server → Tool Function → Services → Vista Client → Vista API
+                ↑                              ↓
+                └──────── Response ────────────┘
+```
+
+### Security Model
+
+- JWT-based authentication with Vista API
+- Token refresh handled automatically
+- Station-based access control
+- No PHI logging
+
+## Transport Modes
+
+### stdio Mode (Default)
+
+- Communication via standard input/output
+- Best for local development
+- Used by Claude Desktop
+
+```bash
+mise run dev
+```
+
+### HTTP/SSE Mode
+
+- Server-Sent Events over HTTP
+- Enables remote connections
+- Better for debugging
+
+```bash
+mise run dev-sse
+# Access at http://localhost:8808/sse
+```
+
+## Troubleshooting
 
 ### Common Issues
 
-1. **Import Errors**: Ensure you're running from project root
-2. **Mock Data**: Add test data in `mock_server/src/data/`
-3. **RPC Errors**: Check RPC name and parameters match Vista specs
+1. **Import errors after changes:**
 
-## Working with Mock Server
+   ```bash
+   # Clear Python cache
+   find . -type d -name __pycache__ -exec rm -rf {} +
+   ```
 
-### Adding Mock Data
+2. **Type checking failures:**
 
-Edit files in `mock_server/src/data/`:
+   ```bash
+   # Run mypy directly for detailed errors
+   mypy src/
+   ```
 
-- `test_patients.py` - Patient demographics
-- `clinical_data.py` - Clinical information
-- `appointments.py` - Scheduling data
+3. **Mock server connection issues:**
 
-### Adding New RPCs
+   ```bash
+   # Check if mock server is running
+   curl http://localhost:8888/auth/token
+   ```
 
-1. Add handler in `mock_server/src/rpc/handlers/`
-2. Register in RPC registry
-3. Add test data as needed
+4. **Token expiration errors:**
+   - Check `VISTA_TOKEN_REFRESH_BUFFER_SECONDS` in .env
+   - Default is 30 seconds before expiry
 
-## Contributing
+### Debug Logging
 
-### Code Style
+Enable debug logging:
 
-- Follow PEP 8
-- Use meaningful variable names
-- Add docstrings to all functions
-- Keep functions focused and small
-- Handle errors gracefully
-
-### Pull Request Process
-
-1. Create feature branch
-2. Write tests for new functionality
-3. Ensure all tests pass
-4. Update documentation
-5. Submit PR with clear description
-
-### Documentation
-
-- Update TOOLS.md when adding tools
-- Add usage examples
-- Document any new environment variables
-- Keep README files current
-
-## Performance Considerations
-
-### Caching
-
-Use the built-in cache for expensive operations:
-
-```python
-from cachetools import TTLCache
-from ..utils import get_cache
-
-cache = get_cache()
-
-@cache.cached(key=lambda patient_id: f"labs_{patient_id}")
-async def get_cached_labs(patient_id: str):
-    # Expensive operation
-    return await fetch_labs(patient_id)
+```bash
+# In .env
+LOG_LEVEL=DEBUG
+MCP_LOG_LEVEL=DEBUG
 ```
 
-### Async Best Practices
+### Getting Help
 
-- Use `asyncio.gather()` for parallel operations
-- Don't block the event loop
-- Handle timeouts appropriately
+1. Check the error messages - they're designed to be helpful
+2. Review the test files for usage examples
+3. Check the mock server implementation for API behavior
+4. Open an issue on GitHub for bugs or questions
 
-### Data Limits
+## Tool Reference
 
-- Implement pagination for large datasets
-- Use date ranges to limit data
-- Consider response size for Claude
+### Patient Tools
+
+#### search_patients
+
+Search for patients by name or SSN fragment.
+
+**Parameters:**
+
+- `search_term` (required): Name prefix or SSN last 4 (min 2 chars)
+- `station`: Vista station number (optional)
+- `limit`: Maximum results (1-100, default: 10)
+
+**Example:**
+
+```python
+result = await search_patients(search_term="SMI", limit=5)
+```
+
+#### get_patient_vitals
+
+Retrieve vital sign measurements for a patient.
+
+**Parameters:**
+
+- `patient_dfn` (required): Patient DFN
+- `station`: Vista station number (optional)
+- `vital_type`: Filter by type (BLOOD PRESSURE, PULSE, etc.)
+- `days_back`: History period (1-365, default: 30)
+
+#### get_patient_labs
+
+Get laboratory test results.
+
+**Parameters:**
+
+- `patient_dfn` (required): Patient DFN
+- `station`: Vista station number (optional)
+- `abnormal_only`: Return only abnormal results (default: false)
+- `lab_type`: Filter by test name (optional)
+- `days_back`: History period (1-730, default: 90)
+
+#### get_patient_summary
+
+Generate comprehensive clinical summary.
+
+**Parameters:**
+
+- `patient_dfn` (required): Patient DFN
+- `station`: Vista station number (optional)
+
+#### get_patient_consults
+
+Retrieve consultation requests.
+
+**Parameters:**
+
+- `patient_dfn` (required): Patient DFN
+- `station`: Vista station number (optional)
+- `active_only`: Filter active only (default: true)
+
+### System Tools
+
+#### get_current_user
+
+Get current authenticated user context.
+
+**Parameters:** None
+
+#### heartbeat
+
+Check server connectivity.
+
+**Parameters:**
+
+- `station`: Vista station number (optional)
+
+#### get_server_time
+
+Get Vista server time.
+
+**Parameters:**
+
+- `station`: Vista station number (optional)
+
+#### get_intro_message
+
+Get system welcome message.
+
+**Parameters:**
+
+- `station`: Vista station number (optional)
+
+#### get_user_info
+
+Get detailed user information.
+
+**Parameters:**
+
+- `user_duz`: User DUZ (optional)
+- `station`: Vista station number (optional)
+
+#### get_server_version
+
+Get Vista version information.
+
+**Parameters:**
+
+- `station`: Vista station number (optional)
+
+### Authentication Tool
+
+#### authenticate_user
+
+Authenticate and get JWT token.
+
+**Parameters:**
+
+- `access_code`: Vista access code
+- `verify_code`: Vista verify code
+- `station`: Vista station number

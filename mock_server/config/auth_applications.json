@@ -8,32 +8,19 @@
         {
           "stationNo": "500",
           "userDuz": "10000000219",
-          "contextName": "VPR APPLICATION PROXY",
-          "rpcName": "*"
-        },
-        {
-          "stationNo": "500",
-          "userDuz": "10000000219",
           "contextName": "LHS RPC CONTEXT",
           "rpcName": "*"
         },
         {
-          "stationNo": "508",
+          "stationNo": "530",
           "userDuz": "10000000220",
-          "contextName": "OR CPRS GUI CHART",
-          "rpcName": "*"
-        },
-        {
-          "stationNo": "640",
-          "userDuz": "10000000221",
-          "contextName": "SDESRPC",
+          "contextName": "LHS RPC CONTEXT",
           "rpcName": "*"
         }
       ],
       "stations": [
-        {"stationNo": "500", "userDuz": "10000000219"},
-        {"stationNo": "508", "userDuz": "10000000220"},
-        {"stationNo": "640", "userDuz": "10000000221"}
+        {"stationNo": "500", "userDuz": "10000000219", "siteName": "500 VEText VistA "},
+        {"stationNo": "530", "userDuz": "10000000220", "siteName": "Site #530"}
       ],
       "configs": ["ALLOW_VISTA_API_X_TOKEN", "ALLOW_DDR"]
     },

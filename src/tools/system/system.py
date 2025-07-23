@@ -1,24 +1,27 @@
 """System-level MCP tools"""
 
 import logging
-import time
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from src.services.validators.vista_validators import validate_duz
+
 from ...services.parsers.vista import (
-    parse_current_user,
     parse_fileman_date,
     parse_user_info,
+)
+from ...services.rpc import (
+    build_empty_params,
+    build_single_string_param,
+    execute_rpc,
 )
 from ...utils import (
     build_metadata,
     get_default_duz,
     get_default_station,
-    log_rpc_call,
-    translate_vista_error,
 )
-from ...vista.base import BaseVistaClient, VistaAPIError
+from ...vista.base import BaseVistaClient
 
 logger = logging.getLogger(__name__)
 
@@ -27,74 +30,98 @@ def register_system_tools(mcp: FastMCP, vista_client: BaseVistaClient):
     """Register system tools with the MCP server"""
 
     @mcp.tool()
-    async def get_current_user() -> dict[str, Any]:
+    async def get_user_profile(
+        user_duz: str | None = None,
+        station: str | None = None,
+    ) -> dict[str, Any]:
         """
-        Get the current user information
+        Get detailed user profile information
+
+        Args:
+            user_duz: DUZ of user to look up (default: current user)
+            station: Vista station number (default: configured default)
 
         Returns:
-            Current user information including DUZ and station
+            User profile with name, title, service, and contact information
         """
-
-        start_time = time.time()
-        station = get_default_station()
+        station = station or get_default_station()
         caller_duz = get_default_duz()
+        target_duz = user_duz or caller_duz
 
-        rpc_context = "SDECRPC"
-        rpc_name = "SDES GET USER PROFILE BY DUZ"
+        # Validate DUZ
+        if not validate_duz(target_duz):
+            return {
+                "success": False,
+                "error": "Invalid DUZ format. DUZ must be numeric.",
+                "metadata": build_metadata(station=station),
+            }
 
-        try:
-            # Invoke RPC to get user profile
-            result = await vista_client.invoke_rpc(
-                station=station,
-                caller_duz=caller_duz,
-                context=rpc_context,
-                rpc_name=rpc_name,
-                parameters=[{"string": caller_duz}],
-            )
+        # Try SDES RPC first (may return JSON)
+        rpc_result = await execute_rpc(
+            vista_client=vista_client,
+            rpc_name="SDES GET USER PROFILE BY DUZ",
+            parameters=build_single_string_param(target_duz),
+            parser=lambda result: parse_user_info(result, target_duz),
+            station=station,
+            caller_duz=caller_duz,
+            context="SDESRPC",
+            json_result=True,
+            error_response_builder=lambda error, metadata: {
+                "error": error,
+                "metadata": metadata,
+            },  # Suppress errors for fallback
+        )
 
-            # Calculate duration
-            duration_ms = int((time.time() - start_time) * 1000)
-
-            # Log call
-            log_rpc_call(
-                rpc_name=rpc_name,
-                station=station,
-                duz=caller_duz,
-                duration_ms=duration_ms,
-                success=True,
-            )
-
+        # Check if SDES RPC succeeded and returned user info
+        if "parsed_data" in rpc_result and rpc_result["parsed_data"]:
+            user_info = rpc_result["parsed_data"]
+            metadata = rpc_result["metadata"]
             return {
                 "success": True,
-                "user": parse_current_user(result),
-                "station": station,
-                "metadata": build_metadata(
-                    station=station,
-                    rpc_name=rpc_name,
-                    duration_ms=duration_ms,
-                ),
+                "user": user_info.model_dump(),
+                "metadata": metadata,
             }
-        except VistaAPIError as e:
-            log_rpc_call(
-                rpc_name=rpc_name,
-                station=station,
-                duz=caller_duz,
-                success=False,
-                error=str(e),
-            )
+
+        # Fall back to ORWU USERINFO
+        parameters = (
+            build_single_string_param(target_duz)
+            if target_duz != caller_duz
+            else build_empty_params()
+        )
+
+        rpc_result = await execute_rpc(
+            vista_client=vista_client,
+            rpc_name="ORWU USERINFO",
+            parameters=parameters,
+            parser=lambda result: parse_user_info(result, target_duz),
+            station=station,
+            caller_duz=caller_duz,
+            error_response_builder=lambda error, metadata: {
+                "success": False,
+                "error": error,
+                "metadata": metadata,
+            },
+        )
+
+        # Check if this is an error response
+        if "error" in rpc_result:
+            return rpc_result
+
+        # Get parsed data and metadata
+        user_info = rpc_result["parsed_data"]
+        metadata = rpc_result["metadata"]
+
+        if user_info:
+            return {
+                "success": True,
+                "user": user_info.model_dump(),
+                "metadata": metadata,
+            }
+        else:
             return {
                 "success": False,
-                "alive": False,
-                "error": translate_vista_error(e.to_dict()),
-                "metadata": build_metadata(station=station, rpc_name=rpc_name),
-            }
-        except Exception as e:
-            logger.exception("Unexpected error in get_current_user")
-            return {
-                "success": False,
-                "alive": False,
-                "error": f"Unexpected error: {str(e)}",
-                "metadata": build_metadata(station=station, rpc_name=rpc_name),
+                "error": f"No user information found for DUZ {target_duz}",
+                "metadata": metadata,
             }
 
     @mcp.tool()
@@ -110,73 +137,44 @@ def register_system_tools(mcp: FastMCP, vista_client: BaseVistaClient):
         Returns:
             Connection status
         """
-        start_time = time.time()
         station = station or get_default_station()
         caller_duz = get_default_duz()
 
-        try:
-            # Invoke RPC
-            result = await vista_client.invoke_rpc(
-                station=station,
-                caller_duz=caller_duz,
-                rpc_name="XWB IM HERE",
-                parameters=[],
-            )
-
-            # Check result (should be "1" for alive)
-            is_alive = result == "1"
-
-            # Calculate duration
-            duration_ms = int((time.time() - start_time) * 1000)
-
-            # Log call
-            log_rpc_call(
-                rpc_name="XWB IM HERE",
-                station=station,
-                duz=caller_duz,
-                duration_ms=duration_ms,
-                success=is_alive,
-            )
-
-            return {
-                "success": True,
-                "alive": is_alive,
-                "station": station,
-                "message": (
-                    "Vista connection is active"
-                    if is_alive
-                    else "Vista connection check failed"
-                ),
-                "metadata": build_metadata(
-                    station=station,
-                    rpc_name="XWB IM HERE",
-                    duration_ms=duration_ms,
-                ),
-            }
-
-        except VistaAPIError as e:
-            log_rpc_call(
-                rpc_name="XWB IM HERE",
-                station=station,
-                duz=caller_duz,
-                success=False,
-                error=str(e),
-            )
-            return {
+        # Execute RPC with standardized error handling
+        rpc_result = await execute_rpc(
+            vista_client=vista_client,
+            rpc_name="XWB IM HERE",
+            parameters=build_empty_params(),
+            parser=lambda result: result == "1",
+            station=station,
+            caller_duz=caller_duz,
+            error_response_builder=lambda error, metadata: {
                 "success": False,
                 "alive": False,
-                "error": translate_vista_error(e.to_dict()),
-                "metadata": build_metadata(station=station, rpc_name="XWB IM HERE"),
-            }
+                "error": error,
+                "metadata": metadata,
+            },
+        )
 
-        except Exception as e:
-            logger.exception("Unexpected error in heartbeat")
-            return {
-                "success": False,
-                "alive": False,
-                "error": f"Unexpected error: {str(e)}",
-                "metadata": build_metadata(station=station, rpc_name="XWB IM HERE"),
-            }
+        # Check if this is an error response
+        if "error" in rpc_result:
+            return rpc_result
+
+        # Get parsed data and metadata
+        is_alive = rpc_result["parsed_data"]
+        metadata = rpc_result["metadata"]
+
+        return {
+            "success": True,
+            "alive": is_alive,
+            "station": station,
+            "message": (
+                "Vista connection is active"
+                if is_alive
+                else "Vista connection check failed"
+            ),
+            "metadata": metadata,
+        }
 
     @mcp.tool()
     async def get_server_time(
@@ -193,68 +191,48 @@ def register_system_tools(mcp: FastMCP, vista_client: BaseVistaClient):
         Returns:
             Server date/time in ISO format
         """
-        start_time = time.time()
         station = station or get_default_station()
         caller_duz = get_default_duz()
 
-        try:
-            # Invoke RPC
-            result = await vista_client.invoke_rpc(
-                station=station,
-                caller_duz=caller_duz,
-                rpc_name="ORWU DT",
-                parameters=[{"string": format}],
-            )
-
-            # Parse FileMan date
+        # Parser function that returns both parsed and raw values
+        def parse_server_time(result: str) -> dict[str, Any]:
             iso_datetime = parse_fileman_date(result.strip())
-
-            # Calculate duration
-            duration_ms = int((time.time() - start_time) * 1000)
-
-            # Log successful call
-            log_rpc_call(
-                rpc_name="ORWU DT",
-                station=station,
-                duz=caller_duz,
-                duration_ms=duration_ms,
-                success=True,
-            )
-
             return {
-                "success": True,
-                "station": station,
-                "server_time": iso_datetime or result,
+                "iso_datetime": iso_datetime,
                 "fileman_time": result.strip(),
-                "format": format,
-                "metadata": build_metadata(
-                    station=station,
-                    rpc_name="ORWU DT",
-                    duration_ms=duration_ms,
-                ),
             }
 
-        except VistaAPIError as e:
-            log_rpc_call(
-                rpc_name="ORWU DT",
-                station=station,
-                duz=caller_duz,
-                success=False,
-                error=str(e),
-            )
-            return {
+        # Execute RPC with standardized error handling
+        rpc_result = await execute_rpc(
+            vista_client=vista_client,
+            rpc_name="ORWU DT",
+            parameters=build_single_string_param(format),
+            parser=parse_server_time,
+            station=station,
+            caller_duz=caller_duz,
+            error_response_builder=lambda error, metadata: {
                 "success": False,
-                "error": translate_vista_error(e.to_dict()),
-                "metadata": build_metadata(station=station, rpc_name="ORWU DT"),
-            }
+                "error": error,
+                "metadata": metadata,
+            },
+        )
 
-        except Exception as e:
-            logger.exception("Unexpected error in get_server_time")
-            return {
-                "success": False,
-                "error": f"Unexpected error: {str(e)}",
-                "metadata": build_metadata(station=station, rpc_name="ORWU DT"),
-            }
+        # Check if this is an error response
+        if "error" in rpc_result:
+            return rpc_result
+
+        # Get parsed data and metadata
+        time_data = rpc_result["parsed_data"]
+        metadata = rpc_result["metadata"]
+
+        return {
+            "success": True,
+            "station": station,
+            "server_time": time_data["iso_datetime"] or time_data["fileman_time"],
+            "fileman_time": time_data["fileman_time"],
+            "format": format,
+            "metadata": metadata,
+        }
 
     @mcp.tool()
     async def get_intro_message(
@@ -269,152 +247,47 @@ def register_system_tools(mcp: FastMCP, vista_client: BaseVistaClient):
         Returns:
             System introduction message and version information
         """
-        start_time = time.time()
         station = station or get_default_station()
         caller_duz = get_default_duz()
 
-        try:
-            # Invoke RPC
-            result = await vista_client.invoke_rpc(
-                station=station,
-                caller_duz=caller_duz,
-                rpc_name="XUS INTRO MSG",
-                parameters=[],
-            )
-
-            # Calculate duration
-            duration_ms = int((time.time() - start_time) * 1000)
-
-            # Log successful call
-            log_rpc_call(
-                rpc_name="XUS INTRO MSG",
-                station=station,
-                duz=caller_duz,
-                duration_ms=duration_ms,
-                success=True,
-            )
-
-            # Parse message lines
+        # Parser function for intro message
+        def parse_intro_message(result: str) -> dict[str, Any]:
             lines = result.strip().split("\n") if result else []
-
             return {
-                "success": True,
-                "station": station,
                 "message": result.strip(),
                 "lines": lines,
-                "metadata": build_metadata(
-                    station=station,
-                    rpc_name="XUS INTRO MSG",
-                    duration_ms=duration_ms,
-                ),
             }
 
-        except VistaAPIError as e:
-            log_rpc_call(
-                rpc_name="XUS INTRO MSG",
-                station=station,
-                duz=caller_duz,
-                success=False,
-                error=str(e),
-            )
-            return {
+        # Execute RPC with standardized error handling
+        rpc_result = await execute_rpc(
+            vista_client=vista_client,
+            rpc_name="XUS INTRO MSG",
+            parameters=build_empty_params(),
+            parser=parse_intro_message,
+            station=station,
+            caller_duz=caller_duz,
+            error_response_builder=lambda error, metadata: {
                 "success": False,
-                "error": translate_vista_error(e.to_dict()),
-                "metadata": build_metadata(station=station, rpc_name="XUS INTRO MSG"),
-            }
+                "error": error,
+                "metadata": metadata,
+            },
+        )
 
-        except Exception as e:
-            logger.exception("Unexpected error in get_intro_message")
-            return {
-                "success": False,
-                "error": f"Unexpected error: {str(e)}",
-                "metadata": build_metadata(station=station, rpc_name="XUS INTRO MSG"),
-            }
+        # Check if this is an error response
+        if "error" in rpc_result:
+            return rpc_result
 
-    @mcp.tool()
-    async def get_user_info(
-        station: str | None = None,
-    ) -> dict[str, Any]:
-        """
-        Get information about the current user
+        # Get parsed data and metadata
+        msg_data = rpc_result["parsed_data"]
+        metadata = rpc_result["metadata"]
 
-        Args:
-            station: Vista station number (default: configured default)
-
-        Returns:
-            Current user information including name, title, and service
-        """
-        start_time = time.time()
-        station = station or get_default_station()
-        caller_duz = get_default_duz()
-
-        try:
-            # Invoke RPC
-            result = await vista_client.invoke_rpc(
-                station=station,
-                caller_duz=caller_duz,
-                rpc_name="ORWU USERINFO",
-                parameters=[],
-            )
-
-            # Parse user info
-            user_info = parse_user_info(result, caller_duz)
-
-            # Calculate duration
-            duration_ms = int((time.time() - start_time) * 1000)
-
-            # Log successful call
-            log_rpc_call(
-                rpc_name="ORWU USERINFO",
-                station=station,
-                duz=caller_duz,
-                duration_ms=duration_ms,
-                success=True,
-            )
-
-            if user_info:
-                # Add station
-                user_info.station = station
-
-                return {
-                    "success": True,
-                    "user": user_info.model_dump(),
-                    "metadata": build_metadata(
-                        station=station,
-                        rpc_name="ORWU USERINFO",
-                        duration_ms=duration_ms,
-                    ),
-                }
-            else:
-                return {
-                    "success": False,
-                    "error": "Unable to parse user information",
-                    "metadata": build_metadata(
-                        station=station, rpc_name="ORWU USERINFO"
-                    ),
-                }
-
-        except VistaAPIError as e:
-            log_rpc_call(
-                rpc_name="ORWU USERINFO",
-                station=station,
-                duz=caller_duz,
-                success=False,
-                error=str(e),
-            )
-            return {
-                "success": False,
-                "error": translate_vista_error(e.to_dict()),
-                "metadata": build_metadata(station=station, rpc_name="ORWU USERINFO"),
-            }
-
-        except Exception as e:
-            logger.exception("Unexpected error in get_user_info")
-            return {
-                "success": False,
-                "error": f"Unexpected error: {str(e)}",
-                "metadata": build_metadata(station=station, rpc_name="ORWU USERINFO"),
-            }
+        return {
+            "success": True,
+            "station": station,
+            "message": msg_data["message"],
+            "lines": msg_data["lines"],
+            "metadata": metadata,
+        }
 
     @mcp.tool()
     async def get_server_version(
@@ -429,60 +302,35 @@ def register_system_tools(mcp: FastMCP, vista_client: BaseVistaClient):
         Returns:
             Server version information
         """
-        start_time = time.time()
         station = station or get_default_station()
         caller_duz = get_default_duz()
 
-        try:
-            # Invoke RPC
-            result = await vista_client.invoke_rpc(
-                station=station,
-                caller_duz=caller_duz,
-                rpc_name="ORWU VERSRV",
-                parameters=[],
-            )
-
-            # Calculate duration
-            duration_ms = int((time.time() - start_time) * 1000)
-
-            # Log successful call
-            log_rpc_call(
-                rpc_name="ORWU VERSRV",
-                station=station,
-                duz=caller_duz,
-                duration_ms=duration_ms,
-                success=True,
-            )
-
-            return {
-                "success": True,
-                "station": station,
-                "version": result.strip(),
-                "metadata": build_metadata(
-                    station=station,
-                    rpc_name="ORWU VERSRV",
-                    duration_ms=duration_ms,
-                ),
-            }
-
-        except VistaAPIError as e:
-            log_rpc_call(
-                rpc_name="ORWU VERSRV",
-                station=station,
-                duz=caller_duz,
-                success=False,
-                error=str(e),
-            )
-            return {
+        # Execute RPC with standardized error handling
+        rpc_result = await execute_rpc(
+            vista_client=vista_client,
+            rpc_name="ORWU VERSRV",
+            parameters=build_empty_params(),
+            parser=lambda result: result.strip(),
+            station=station,
+            caller_duz=caller_duz,
+            error_response_builder=lambda error, metadata: {
                 "success": False,
-                "error": translate_vista_error(e.to_dict()),
-                "metadata": build_metadata(station=station, rpc_name="ORWU VERSRV"),
-            }
+                "error": error,
+                "metadata": metadata,
+            },
+        )
 
-        except Exception as e:
-            logger.exception("Unexpected error in get_server_version")
-            return {
-                "success": False,
-                "error": f"Unexpected error: {str(e)}",
-                "metadata": build_metadata(station=station, rpc_name="ORWU VERSRV"),
-            }
+        # Check if this is an error response
+        if "error" in rpc_result:
+            return rpc_result
+
+        # Get parsed data and metadata
+        version = rpc_result["parsed_data"]
+        metadata = rpc_result["metadata"]
+
+        return {
+            "success": True,
+            "station": station,
+            "version": version,
+            "metadata": metadata,
+        }

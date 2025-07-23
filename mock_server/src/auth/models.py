@@ -107,6 +107,7 @@ class Station(BaseModel):
 
     stationNo: str = Field(..., description="Station number")
     userDuz: str = Field(..., description="User DUZ")
+    siteName: str | None = Field(None, description="Site name")
 
 
 class AuthApplication(BaseModel):

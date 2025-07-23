@@ -6,40 +6,26 @@
     {"M": {
       "stationNo": {"S": "500"},
       "userDuz": {"S": "10000000219"},
-      "contextName": {"S": "OR CPRS GUI CHART"},
+      "contextName": {"S": "LHS RPC CONTEXT"},
       "rpcName": {"S": "*"}
     }},
     {"M": {
-      "stationNo": {"S": "500"},
-      "userDuz": {"S": "10000000219"},
-      "contextName": {"S": "VPR APPLICATION PROXY"},
-      "rpcName": {"S": "*"}
-    }},
-    {"M": {
-      "stationNo": {"S": "508"},
+      "stationNo": {"S": "530"},
       "userDuz": {"S": "10000000220"},
-      "contextName": {"S": "OR CPRS GUI CHART"},
-      "rpcName": {"S": "*"}
-    }},
-    {"M": {
-      "stationNo": {"S": "640"},
-      "userDuz": {"S": "10000000221"},
-      "contextName": {"S": "SDESRPC"},
+      "contextName": {"S": "LHS RPC CONTEXT"},
       "rpcName": {"S": "*"}
     }}
   ]},
   "stations": {"L": [
     {"M": {
       "stationNo": {"S": "500"},
-      "userDuz": {"S": "10000000219"}
+      "userDuz": {"S": "10000000219"},
+      "siteName": {"S": "500 VEText VistA "}
     }},
     {"M": {
-      "stationNo": {"S": "508"},
-      "userDuz": {"S": "10000000220"}
-    }},
-    {"M": {
-      "stationNo": {"S": "640"},
-      "userDuz": {"S": "10000000221"}
+      "stationNo": {"S": "530"},
+      "userDuz": {"S": "10000000220"},
+      "siteName": {"S": "Site #530"}
     }}
   ]},
   "configs": {"L": [

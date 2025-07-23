@@ -30,9 +30,10 @@ class Settings(BaseSettings):
     jwt_issuer: str = "gov.va.octo.vista-api-x"
     jwt_audience: str = "gov.va.octo.vista-api-x"
     jwt_algorithm: str = "RS256"
-    jwt_ttl_hours: float = 0.05  # 3 minutes in hours (matches staging)
+    jwt_ttl_hours: float = 0.25  # 15 minutes in hours (matches dev environment)
     jwt_refresh_ttl_hours: int = 1  # 1 hour (60 minutes)
     jwt_clock_skew_seconds: int = 30
+    jwt_use_vamf_format: bool = True  # Use VAMF-compatible JWT structure
 
     # Application Configuration
     app_name: str = "Vista API X Mock Server"

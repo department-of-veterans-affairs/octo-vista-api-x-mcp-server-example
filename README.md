@@ -20,7 +20,7 @@ Then connect via URL: `http://localhost:8000/sse`
 
 ## Features
 
-- **20+ VistA Tools**: Patient search, clinical data, administrative functions
+- **VistA Tools**: Patient search and data retrieval, system utilities
 - **Mock Server Included**: Full Vista API X mock for development
 - **Dual Transport**: stdio for local dev, SSE for remote access
 - **LLM Client Ready**: Works with any MCP-compatible client
@@ -31,10 +31,9 @@ Then connect via URL: `http://localhost:8000/sse`
 
 Connect the Vista API MCP Server to your favorite LLM:
 
-- **[Claude Desktop](docs/CLIENT_SETUP.md#claude-desktop)** - Native MCP support
-- **[Cursor IDE](docs/CLIENT_SETUP.md#cursor)** - AI-powered code editor
-- **[VS Code + Cline](docs/CLIENT_SETUP.md#vs-code-cline-extension)** - Popular IDE with MCP
-- **[Other Clients](docs/CLIENT_SETUP.md#custom-mcp-clients)** - Zed, custom implementations
+- **[Claude Desktop](docs/DEVELOPMENT.md#claude-desktop)** - Native MCP support
+- **[Continue.dev](docs/DEVELOPMENT.md#vs-code-with-continuedev)** - AI-powered development assistant
+- **[Other Clients](docs/DEVELOPMENT.md#other-clients)** - HTTP/SSE mode for any client
 
 ### Quick Setup for Claude Desktop
 
@@ -88,14 +87,14 @@ python scripts/test_config.py
 
 ## Documentation
 
-- [Setup Guide](docs/SETUP.md) - Installation and configuration
-- [Client Setup](docs/CLIENT_SETUP.md) - Connect to Claude, Cursor, and other clients
-- [Transport Modes](docs/TRANSPORTS.md) - stdio vs HTTP/SSE transports
-- [Tools Reference](docs/TOOLS.md) - All available MCP tools
-- [Example Prompts](docs/PROMPTS.md) - Sample queries and workflows
-- [Testing Guide](docs/TESTING.md) - Test data and testing strategies
-- [Development](docs/DEVELOPMENT.md) - Contributing and extending
-- [Architecture](docs/ARCHITECTURE.md) - System design
+- [Development Guide](docs/DEVELOPMENT.md) - Complete guide for developers including:
+  - Setup and installation
+  - Running with/without mock server
+  - Client configuration (Claude, Continue.dev, etc.)
+  - Adding new tools
+  - Architecture overview
+  - Tool reference
+- [Test Data](docs/TEST_DATA.md) - Test patient IDs and credentials
 - [Deployment](docs/DEPLOYMENT.md) - Production deployment guide
 
 ## Example Usage

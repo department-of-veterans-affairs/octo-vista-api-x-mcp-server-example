@@ -95,7 +95,7 @@ async def test_rpc_vpr_patient_data(client, auth_token):
         f"/vista-sites/{TEST_STATION}/users/{TEST_DUZ}/rpc/invoke",
         headers={"Authorization": f"Bearer {auth_token}"},
         json={
-            "context": "VPR APPLICATION PROXY",
+            "context": "LHS RPC CONTEXT",
             "rpc": "VPR GET PATIENT DATA JSON",
             "jsonResult": True,
             "parameters": [

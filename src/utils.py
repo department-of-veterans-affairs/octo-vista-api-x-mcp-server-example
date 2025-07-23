@@ -116,56 +116,6 @@ def mask_ssn(ssn: str) -> str:
     return f"***-**-{ssn[-4:]}"
 
 
-def validate_station(station: str) -> bool:
-    """Validate station number format"""
-    if not station:
-        return False
-    # Station should be 3 digits, optionally followed by division suffix
-    return len(station) >= 3 and station[:3].isdigit()
-
-
-def validate_duz(duz: str) -> bool:
-    """Validate DUZ format"""
-    if not duz:
-        return False
-    # DUZ should be numeric
-    return duz.isdigit()
-
-
-def validate_dfn(dfn: str) -> bool:
-    """Validate DFN format"""
-    if not dfn:
-        return False
-    # DFN should be numeric
-    return dfn.isdigit()
-
-
-def format_phone(phone: str) -> str:
-    """Format phone number for display"""
-    if not phone:
-        return ""
-
-    # Remove non-digits
-    digits = "".join(c for c in phone if c.isdigit())
-
-    # Format based on length
-    if len(digits) == 10:
-        return f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
-    elif len(digits) == 7:
-        return f"{digits[:3]}-{digits[3:]}"
-    else:
-        return phone
-
-
-def parse_boolean(value: Any) -> bool:
-    """Parse various boolean representations"""
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        return value.upper() in ["TRUE", "YES", "Y", "1", "ON"]
-    return bool(value)
-
-
 def build_metadata(
     station: str | None = None,
     rpc_name: str | None = None,
@@ -190,6 +140,14 @@ def build_metadata(
         metadata["duration_ms"] = duration_ms
 
     return metadata
+
+
+def build_rpc_url(station: str, caller_duz: str) -> str | None:
+    """Build RPC invoke URL if base URL is available"""
+    base_url = os.getenv("VISTA_API_URL", "")
+    if not base_url:
+        return None
+    return f"{base_url}/vista-api-x/vista-sites/{station}/users/{caller_duz}/rpc/invoke"
 
 
 def chunk_list(lst: list[Any], chunk_size: int) -> list[list[Any]]:

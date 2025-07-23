@@ -60,8 +60,6 @@ def initialize_server():
     # Register all tools
     logger.info("Registering tools...")
     register_patient_tools(mcp, vista_client)
-    # register_clinical_tools(mcp, vista_client)
-    # register_admin_tools(mcp, vista_client)
     register_system_tools(mcp, vista_client)
 
     # # Register resources

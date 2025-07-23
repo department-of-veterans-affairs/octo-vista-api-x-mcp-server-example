@@ -5,12 +5,14 @@ Authentication resource endpoints matching Vista API X
 from fastapi import APIRouter, HTTPException, Request
 
 from src.auth.jwt_handler import jwt_handler
+from src.auth.jwt_handler_vamf import vamf_jwt_handler
 from src.auth.models import (
     AuthenticationToken,
     Credentials,
     TokenType,
     VistaApiResponse,
 )
+from src.config import settings
 from src.database.dynamodb_client import get_dynamodb_client
 from src.exceptions.handlers import create_error_response
 
@@ -82,18 +84,26 @@ async def generate_token(
         for station in app_data.stations:
             vista_id = f"{station.stationNo}:{station.userDuz}"
             if vista_id not in seen_ids:
+                site_name = getattr(station, "siteName", None)
+                if site_name is None:
+                    site_name = f"Site #{station.stationNo}"
                 vista_ids.append(
                     {
                         "siteId": station.stationNo,
                         "duz": station.userDuz,
-                        "siteName": "",
+                        "siteName": site_name,
                     }
                 )
                 seen_ids.add(vista_id)
 
-        # Generate JWT token
-        token = jwt_handler.generate_token(
-            subject=app_data.appName,
+        # Generate JWT token using appropriate handler
+        handler = vamf_jwt_handler if settings.jwt_use_vamf_format else jwt_handler
+
+        # For VAMF tokens, use a mock user ID as subject
+        subject = "1014354511" if settings.jwt_use_vamf_format else app_data.appName
+
+        token = handler.generate_token(
+            subject=subject,
             authorities=authorities,
             vista_ids=vista_ids,
             flags=app_data.configs,
@@ -103,6 +113,10 @@ async def generate_token(
                 "username": app_data.appName,
                 "application": "vista-api-x-mock",
                 "serviceAccount": False,
+                "firstName": "TEST",
+                "lastName": "USER",
+                "email": "testuser@va.gov",
+                "adSamAccountName": "TESTUSER",
             },
         )
 
@@ -148,9 +162,10 @@ async def refresh_token(
                 ),
             )
 
-        # Refresh the token
+        # Refresh the token using appropriate handler
         try:
-            new_token = jwt_handler.refresh_token(token)
+            handler = vamf_jwt_handler if settings.jwt_use_vamf_format else jwt_handler
+            new_token = handler.refresh_token(token)
         except ValueError as e:
             if "expired" in str(e).lower():
                 error_code = "JWT-EXPIRED"

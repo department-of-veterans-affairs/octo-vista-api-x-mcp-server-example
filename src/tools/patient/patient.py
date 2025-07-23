@@ -7,20 +7,24 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from ...models.patient.patient import PatientDataCollection
 from ...models.responses import PatientSearchResponse
-from ...services.cache.factory import CacheFactory
-from ...services.parsers.patient.patient_parser import parse_vpr_patient_data
+from ...services.data import get_patient_data
+from ...services.formatters import (
+    format_lab_type,
+    format_service_name,
+    format_status,
+    format_urgency,
+    format_vital_type,
+)
 from ...services.parsers.vista import parse_patient_search
+from ...services.rpc import build_single_string_param, execute_rpc
+from ...services.validators import validate_dfn
 from ...utils import (
     build_metadata,
     get_default_duz,
     get_default_station,
-    log_rpc_call,
-    translate_vista_error,
-    validate_dfn,
 )
-from ...vista.base import BaseVistaClient, VistaAPIError
+from ...vista.base import BaseVistaClient
 
 logger = logging.getLogger(__name__)
 
@@ -28,122 +32,7 @@ logger = logging.getLogger(__name__)
 def register_patient_tools(mcp: FastMCP, vista_client: BaseVistaClient):
     """Register patient-related tools with the MCP server"""
 
-    # Create patient cache
-    patient_cache = None
-
-    async def get_patient_cache():
-        """Get or create patient cache instance"""
-        nonlocal patient_cache
-        if patient_cache is None:
-            patient_cache = await CacheFactory.create_patient_cache()
-        return patient_cache
-
-    def format_vital_type(type_name: str) -> str:
-        """Convert vital type name to snake_case"""
-        # Map common vital types to clean snake_case names
-        vital_type_map = {
-            "BLOOD PRESSURE": "blood_pressure",
-            "PULSE OXIMETRY": "pulse_oximetry",
-            "TEMPERATURE": "temperature",
-            "RESPIRATION": "respiration",
-            "PULSE": "pulse",
-            "WEIGHT": "weight",
-            "HEIGHT": "height",
-            "PAIN": "pain",
-            "BMI": "bmi",
-        }
-        return vital_type_map.get(
-            type_name.upper(), type_name.lower().replace(" ", "_")
-        )
-
-    def format_lab_type(type_name: str) -> str:
-        """Convert lab type name to snake_case"""
-        if not type_name:
-            return "unknown"
-        # Common lab types that need special formatting
-        lab_type_map = {
-            "GLUCOSE": "glucose",
-            "HEMOGLOBIN": "hemoglobin",
-            "HEMATOCRIT": "hematocrit",
-            "WBC": "wbc",
-            "RBC": "rbc",
-            "PLATELET COUNT": "platelet_count",
-            "SODIUM": "sodium",
-            "POTASSIUM": "potassium",
-            "CHLORIDE": "chloride",
-            "CO2": "co2",
-            "BUN": "bun",
-            "CREATININE": "creatinine",
-            "CALCIUM": "calcium",
-            "TOTAL PROTEIN": "total_protein",
-            "ALBUMIN": "albumin",
-            "BILIRUBIN": "bilirubin",
-            "ALT": "alt",
-            "AST": "ast",
-            "CHOLESTEROL": "cholesterol",
-            "TRIGLYCERIDES": "triglycerides",
-            "HDL": "hdl",
-            "LDL": "ldl",
-            "TSH": "tsh",
-            "T4": "t4",
-            "T3": "t3",
-            "HBA1C": "hba1c",
-            "PSA": "psa",
-            "INR": "inr",
-            "PT": "pt",
-            "PTT": "ptt",
-        }
-        # Check if we have a specific mapping
-        normalized = type_name.upper()
-        if normalized in lab_type_map:
-            return lab_type_map[normalized]
-        # Otherwise, convert to snake_case
-        return type_name.lower().replace(" ", "_").replace("-", "_").replace("/", "_")
-
-    def format_service_name(service: str) -> str:
-        """Convert service name to proper case"""
-        if not service:
-            return "unknown"
-        # Special cases that need specific formatting
-        service_map = {
-            "CARDIOLOGY": "Cardiology",
-            "COM-CARE CARDIOLOGY": "Community Care Cardiology",
-            "AUDIOLOGY OUTPATIENT": "Audiology Outpatient",
-            "AUDIOLOGY": "Audiology",
-            "DERMATOLOGY": "Dermatology",
-            "ENDOCRINOLOGY": "Endocrinology",
-            "GASTROENTEROLOGY": "Gastroenterology",
-            "HEMATOLOGY": "Hematology",
-            "INFECTIOUS DISEASE": "Infectious Disease",
-            "NEPHROLOGY": "Nephrology",
-            "NEUROLOGY": "Neurology",
-            "ONCOLOGY": "Oncology",
-            "OPHTHALMOLOGY": "Ophthalmology",
-            "ORTHOPEDICS": "Orthopedics",
-            "PSYCHIATRY": "Psychiatry",
-            "PULMONARY": "Pulmonary",
-            "RHEUMATOLOGY": "Rheumatology",
-            "UROLOGY": "Urology",
-        }
-        # Check if we have a specific mapping
-        normalized = service.upper()
-        if normalized in service_map:
-            return service_map[normalized]
-        # Otherwise, convert to title case
-        return " ".join(word.capitalize() for word in service.split())
-
-    def format_status(status: str) -> str:
-        """Convert status to lowercase"""
-        if not status:
-            return "unknown"
-        return status.lower()
-
-    def format_urgency(urgency: str) -> str:
-        """Convert urgency to lowercase"""
-        if not urgency:
-            return "routine"
-        return urgency.lower()
-
+    # TODO: This tool will be removed in the future as patient context is injected by CPRS.
     @mcp.tool()
     async def search_patients(
         search_term: str,
@@ -172,77 +61,50 @@ def register_patient_tools(mcp: FastMCP, vista_client: BaseVistaClient):
             - Station where patient record exists
             Results sorted by name alphabetically
         """
-        start_time = time.time()
         station = station or get_default_station()
         caller_duz = get_default_duz()
 
-        try:
-            # Invoke RPC
-            result = await vista_client.invoke_rpc(
-                station=station,
-                caller_duz=caller_duz,
-                rpc_name="ORWPT LIST",
-                parameters=[{"string": f"^{search_term.upper()}"}],
-            )
+        # Execute RPC with standardized error handling
+        rpc_result = await execute_rpc(
+            vista_client=vista_client,
+            rpc_name="ORWPT LIST",
+            parameters=build_single_string_param(f"^{search_term.upper()}"),
+            parser=parse_patient_search,
+            station=station,
+            caller_duz=caller_duz,
+            error_response_builder=lambda error, metadata: PatientSearchResponse.error_response(
+                error=error,
+                metadata=metadata,
+            ).model_dump(),
+        )
 
-            # Parse results
-            patients = parse_patient_search(result)
+        # Check if this is an error response
+        if "error" in rpc_result:
+            return rpc_result
 
-            # Add station to each patient
-            for patient in patients:
-                patient.station = station
+        # Get parsed data and metadata
+        patients = rpc_result["parsed_data"]
+        metadata = rpc_result["metadata"]
 
-            # Limit results
-            if limit and len(patients) > limit:
-                patients = patients[:limit]
+        # Add station to each patient
+        for patient in patients:
+            patient.station = station
 
-            # Calculate duration
-            duration_ms = int((time.time() - start_time) * 1000)
+        # Limit results
+        if limit and len(patients) > limit:
+            patients = patients[:limit]
 
-            # Log successful call
-            log_rpc_call(
-                rpc_name="ORWPT LIST",
-                station=station,
-                duz=caller_duz,
-                duration_ms=duration_ms,
-                success=True,
-            )
+        # Build response
+        response = PatientSearchResponse(
+            success=True,
+            search_term=search_term,
+            station=station,
+            count=len(patients),
+            patients=patients,
+            metadata=metadata,
+        )
 
-            # Build response
-            response = PatientSearchResponse(
-                success=True,
-                search_term=search_term,
-                station=station,
-                count=len(patients),
-                patients=patients,
-                metadata=build_metadata(
-                    station=station,
-                    rpc_name="ORWPT LIST",
-                    duration_ms=duration_ms,
-                ),
-            )
-
-            return response.model_dump()
-
-        except VistaAPIError as e:
-            log_rpc_call(
-                rpc_name="ORWPT LIST",
-                station=station,
-                duz=caller_duz,
-                success=False,
-                error=str(e),
-            )
-            return PatientSearchResponse.error_response(
-                error=translate_vista_error(e.to_dict()),
-                metadata=build_metadata(station=station, rpc_name="ORWPT LIST"),
-            ).model_dump()
-
-        except Exception as e:
-            logger.exception("Unexpected error in search_patients")
-            return PatientSearchResponse.error_response(
-                error=f"Unexpected error: {str(e)}",
-                metadata=build_metadata(station=station, rpc_name="ORWPT LIST"),
-            ).model_dump()
+        return response.model_dump()
 
     @mcp.tool()
     async def get_patient_vitals(
@@ -292,29 +154,10 @@ def register_patient_tools(mcp: FastMCP, vista_client: BaseVistaClient):
             }
 
         try:
-            # Get patient data from cache
-            cache = await get_patient_cache()
-            cached_data = await cache.get_patient_data(station, patient_dfn, caller_duz)
-
-            if cached_data:
-                # Deserialize from cache
-                patient_data = PatientDataCollection(**cached_data)
-            else:
-                # Fetch from VistA
-                result = await vista_client.invoke_rpc(
-                    station=station,
-                    caller_duz=caller_duz,
-                    rpc_name="VPR GET PATIENT DATA JSON",
-                    context="VPR APPLICATION PROXY",
-                    parameters=[{"namedArray": {"patientId": patient_dfn}}],
-                    json_result=True,
-                )
-
-                # Parse and cache
-                patient_data = parse_vpr_patient_data(result, station, patient_dfn)
-                await cache.set_patient_data(
-                    station, patient_dfn, caller_duz, patient_data.model_dump()
-                )
+            # Get patient data (handles caching internally)
+            patient_data = await get_patient_data(
+                vista_client, station, patient_dfn, caller_duz
+            )
 
             # Filter vitals
             cutoff_date = datetime.now() - timedelta(days=days_back)
@@ -362,11 +205,19 @@ def register_patient_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                         for v in vitals
                     ],
                 },
-                "metadata": build_metadata(
-                    station=station,
-                    rpc_name="get_patient_vitals",
-                    duration_ms=int((time.time() - start_time) * 1000),
-                ),
+                "metadata": {
+                    **build_metadata(
+                        station=station,
+                        duration_ms=int((time.time() - start_time) * 1000),
+                    ),
+                    "rpc": {
+                        "rpc": "VPR GET PATIENT DATA JSON",
+                        "context": "LHS RPC CONTEXT",
+                        "jsonResult": True,
+                        "parameters": [{"namedArray": {"patientId": patient_dfn}}],
+                    },
+                    "duz": caller_duz,
+                },
             }
 
         except Exception as e:
@@ -425,29 +276,10 @@ def register_patient_tools(mcp: FastMCP, vista_client: BaseVistaClient):
             }
 
         try:
-            # Get patient data from cache
-            cache = await get_patient_cache()
-            cached_data = await cache.get_patient_data(station, patient_dfn, caller_duz)
-
-            if cached_data:
-                # Deserialize from cache
-                patient_data = PatientDataCollection(**cached_data)
-            else:
-                # Fetch from VistA
-                result = await vista_client.invoke_rpc(
-                    station=station,
-                    caller_duz=caller_duz,
-                    rpc_name="VPR GET PATIENT DATA JSON",
-                    context="VPR APPLICATION PROXY",
-                    parameters=[{"namedArray": {"patientId": patient_dfn}}],
-                    json_result=True,
-                )
-
-                # Parse and cache
-                patient_data = parse_vpr_patient_data(result, station, patient_dfn)
-                await cache.set_patient_data(
-                    station, patient_dfn, caller_duz, patient_data.model_dump()
-                )
+            # Get patient data (handles caching internally)
+            patient_data = await get_patient_data(
+                vista_client, station, patient_dfn, caller_duz
+            )
 
             # Filter labs
             cutoff_date = datetime.now() - timedelta(days=days_back)
@@ -529,212 +361,23 @@ def register_patient_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                         for lab in labs[:100]  # Limit to 100 results
                     ],
                 },
-                "metadata": build_metadata(
-                    station=station,
-                    rpc_name="get_patient_labs",
-                    duration_ms=int((time.time() - start_time) * 1000),
-                ),
+                "metadata": {
+                    **build_metadata(
+                        station=station,
+                        duration_ms=int((time.time() - start_time) * 1000),
+                    ),
+                    "rpc": {
+                        "rpc": "VPR GET PATIENT DATA JSON",
+                        "context": "LHS RPC CONTEXT",
+                        "jsonResult": True,
+                        "parameters": [{"namedArray": {"patientId": patient_dfn}}],
+                    },
+                    "duz": caller_duz,
+                },
             }
 
         except Exception as e:
             logger.exception("Unexpected error in get_patient_labs")
-            return {
-                "success": False,
-                "error": f"Unexpected error: {str(e)}",
-                "metadata": build_metadata(station=station),
-            }
-
-    @mcp.tool()
-    async def get_patient_summary(
-        patient_dfn: str,
-        station: str | None = None,
-    ) -> dict[str, Any]:
-        """
-        Generate a comprehensive clinical summary for a specific patient
-
-        Provides a complete overview of the patient's current health status by
-        aggregating demographics, vital signs, laboratory results, and consultations.
-        Ideal for quick patient reviews, handoffs, or generating reports.
-
-        Args:
-            patient_dfn: Patient's unique identifier (DFN) in the Vista system
-            station: Vista station number for multi-site access (default: user's home station)
-
-        Returns:
-            Comprehensive patient summary containing:
-            - Demographics: Name, age, gender, contact info, emergency contacts
-            - Insurance and eligibility information
-            - Latest vital signs for all types
-            - Recent abnormal lab results (up to 10 most critical)
-            - Active consultation requests with urgency levels
-            - Patient flags (allergies, alerts, advance directives)
-            - Primary care team and provider information
-            Data freshness timestamp included for cache management
-        """
-        start_time = time.time()
-        station = station or get_default_station()
-        caller_duz = get_default_duz()
-
-        # Validate DFN
-        if not validate_dfn(patient_dfn):
-            return {
-                "success": False,
-                "error": "Invalid patient DFN format. DFN must be numeric.",
-                "metadata": build_metadata(station=station),
-            }
-
-        try:
-            # Get patient data from cache
-            cache = await get_patient_cache()
-            cached_data = await cache.get_patient_data(station, patient_dfn, caller_duz)
-
-            if cached_data:
-                # Deserialize from cache
-                patient_data = PatientDataCollection(**cached_data)
-            else:
-                # Fetch from VistA
-                result = await vista_client.invoke_rpc(
-                    station=station,
-                    caller_duz=caller_duz,
-                    rpc_name="VPR GET PATIENT DATA JSON",
-                    context="VPR APPLICATION PROXY",
-                    parameters=[{"namedArray": {"patientId": patient_dfn}}],
-                    json_result=True,
-                )
-
-                # Parse and cache
-                patient_data = parse_vpr_patient_data(result, station, patient_dfn)
-                await cache.set_patient_data(
-                    station, patient_dfn, caller_duz, patient_data.model_dump()
-                )
-
-            # Get demographics
-            demographics = patient_data.demographics
-
-            # Get latest vitals
-            latest_vitals = patient_data.get_latest_vitals()
-
-            # Get recent abnormal labs
-            abnormal_labs = patient_data.get_abnormal_labs()[:10]  # Top 10
-
-            # Get active consults
-            active_consults = patient_data.get_active_consults()
-
-            # Build summary
-            return {
-                "success": True,
-                "patient": {
-                    "dfn": patient_dfn,
-                    "icn": demographics.icn,
-                    "name": demographics.full_name,
-                    "ssn": demographics.ssn,
-                    "dob": demographics.date_of_birth.isoformat(),
-                    "age": demographics.calculate_age(),
-                    "gender": demographics.gender_name,
-                    "phone": demographics.primary_phone,
-                    "address": (
-                        {
-                            "street": (
-                                demographics.primary_address.street_line1
-                                if demographics.primary_address
-                                else None
-                            ),
-                            "city": (
-                                demographics.primary_address.city
-                                if demographics.primary_address
-                                else None
-                            ),
-                            "state": (
-                                demographics.primary_address.state_province
-                                if demographics.primary_address
-                                else None
-                            ),
-                            "zip": (
-                                demographics.primary_address.postal_code
-                                if demographics.primary_address
-                                else None
-                            ),
-                        }
-                        if demographics.primary_address
-                        else None
-                    ),
-                    "emergency_contact": (
-                        {
-                            "name": (
-                                demographics.emergency_contact.name
-                                if demographics.emergency_contact
-                                else None
-                            ),
-                            "relationship": (
-                                demographics.emergency_contact.relationship
-                                if demographics.emergency_contact
-                                else None
-                            ),
-                            "phone": (
-                                demographics.emergency_contact.phone
-                                if demographics.emergency_contact
-                                else None
-                            ),
-                        }
-                        if demographics.emergency_contact
-                        else None
-                    ),
-                    "flags": [
-                        {"name": flag.name, "high_risk": flag.is_high_risk}
-                        for flag in demographics.flags
-                    ],
-                },
-                "clinical_summary": {
-                    "vitals": {
-                        format_vital_type(type_name): {
-                            "value": vital.display_value,
-                            "date": vital.observed.isoformat(),
-                            "abnormal": vital.is_abnormal,
-                        }
-                        for type_name, vital in latest_vitals.items()
-                    },
-                    "abnormal_labs": [
-                        {
-                            "test": lab.type_name,
-                            "value": lab.display_value,
-                            "date": lab.observed.isoformat(),
-                            "critical": lab.is_critical,
-                            "interpretation": lab.interpretation_name,
-                        }
-                        for lab in abnormal_labs
-                    ],
-                    "active_consults": [
-                        {
-                            "service": format_service_name(consult.service),
-                            "status": format_status(consult.status_name),
-                            "urgency": format_urgency(consult.urgency),
-                            "ordered": consult.date_time.isoformat(),
-                            "overdue": consult.is_overdue,
-                            "reason": consult.reason,
-                        }
-                        for consult in active_consults
-                    ],
-                },
-                "data_summary": {
-                    "total_items": patient_data.total_items,
-                    "vital_signs": len(patient_data.vital_signs),
-                    "lab_results": len(patient_data.lab_results),
-                    "consults": len(patient_data.consults),
-                    "data_age_minutes": (
-                        datetime.now(patient_data.retrieved_at.tzinfo)
-                        - patient_data.retrieved_at
-                    ).total_seconds()
-                    / 60,
-                },
-                "metadata": build_metadata(
-                    station=station,
-                    rpc_name="get_patient_summary",
-                    duration_ms=int((time.time() - start_time) * 1000),
-                ),
-            }
-
-        except Exception as e:
-            logger.exception("Unexpected error in get_patient_summary")
             return {
                 "success": False,
                 "error": f"Unexpected error: {str(e)}",
@@ -781,29 +424,10 @@ def register_patient_tools(mcp: FastMCP, vista_client: BaseVistaClient):
             }
 
         try:
-            # Get patient data from cache
-            cache = await get_patient_cache()
-            cached_data = await cache.get_patient_data(station, patient_dfn, caller_duz)
-
-            if cached_data:
-                # Deserialize from cache
-                patient_data = PatientDataCollection(**cached_data)
-            else:
-                # Fetch from VistA
-                result = await vista_client.invoke_rpc(
-                    station=station,
-                    caller_duz=caller_duz,
-                    rpc_name="VPR GET PATIENT DATA JSON",
-                    context="VPR APPLICATION PROXY",
-                    parameters=[{"namedArray": {"patientId": patient_dfn}}],
-                    json_result=True,
-                )
-
-                # Parse and cache
-                patient_data = parse_vpr_patient_data(result, station, patient_dfn)
-                await cache.set_patient_data(
-                    station, patient_dfn, caller_duz, patient_data.model_dump()
-                )
+            # Get patient data (handles caching internally)
+            patient_data = await get_patient_data(
+                vista_client, station, patient_dfn, caller_duz
+            )
 
             # Filter consults
             consults = patient_data.consults
@@ -861,11 +485,19 @@ def register_patient_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                         for c in consults
                     ],
                 },
-                "metadata": build_metadata(
-                    station=station,
-                    rpc_name="get_patient_consults",
-                    duration_ms=int((time.time() - start_time) * 1000),
-                ),
+                "metadata": {
+                    **build_metadata(
+                        station=station,
+                        duration_ms=int((time.time() - start_time) * 1000),
+                    ),
+                    "rpc": {
+                        "rpc": "VPR GET PATIENT DATA JSON",
+                        "context": "LHS RPC CONTEXT",
+                        "jsonResult": True,
+                        "parameters": [{"namedArray": {"patientId": patient_dfn}}],
+                    },
+                    "duz": caller_duz,
+                },
             }
 
         except Exception as e:

@@ -69,7 +69,7 @@ Authorization: Bearer YOUR_TOKEN
 ### Get Patient Data (JSON)
 ```json
 {
-  "context": "VPR APPLICATION PROXY",
+  "context": "LHS RPC CONTEXT",
   "rpc": "VPR GET PATIENT DATA JSON",
   "jsonResult": true,
   "parameters": [
