@@ -7,9 +7,12 @@ into structured Pydantic models for easier consumption.
 import logging
 from typing import Any
 
+from jsonpath_ng import parse as jsonpath_parse  # type: ignore
+
 from ....models.patient import (
     Consult,
     LabResult,
+    Medication,
     PatientAddress,
     PatientDataCollection,
     PatientDemographics,
@@ -24,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 
 class PatientDataParser:
-    """Parser for VPR GET PATIENT DATA JSON response"""
+    """Parser for VPR GET PATIENT DATA JSON response using JSONPath"""
 
     def __init__(self, station: str, dfn: str):
         """
@@ -37,9 +40,26 @@ class PatientDataParser:
         self.station = station
         self.dfn = dfn
 
+        # Pre-compile JSONPath expressions for better performance
+        self._jsonpath_expressions = {
+            # Core data extraction
+            "items": jsonpath_parse("$.data.items[*]"),
+            "payload_items": jsonpath_parse("$.payload.data.items[*]"),
+            # Patient demographics
+            "patient_addresses": jsonpath_parse("$.addresses[*]"),
+            "patient_telecoms": jsonpath_parse("$.telecoms[*]"),
+            "patient_supports": jsonpath_parse("$.supports[*]"),
+            "patient_veteran": jsonpath_parse("$.veteran"),
+            "patient_flags": jsonpath_parse("$.flags[*]"),
+            # Medication specific
+            "med_orders": jsonpath_parse("$.orders[*]"),
+            "med_prescriber": jsonpath_parse("$.orders[0].providerName"),
+            "med_prescriber_uid": jsonpath_parse("$.orders[0].providerUid"),
+        }
+
     def parse(self, vpr_data: dict[str, Any]) -> PatientDataCollection:
         """
-        Parse VPR JSON into structured patient data collection.
+        Parse VPR JSON into structured patient data collection using JSONPath.
 
         Args:
             vpr_data: Raw VPR JSON response
@@ -57,23 +77,24 @@ class PatientDataParser:
         if "payload" in vpr_data and isinstance(vpr_data["payload"], dict):
             vpr_data = vpr_data["payload"]
 
-        # Get items array
-        items = vpr_data.get("data", {}).get("items", [])
+        # Get items using JSONPath
+        items = self._extract_items(vpr_data)
         if not items:
             raise ValueError("No items found in VPR data")
 
-        # Group items by type
-        grouped = self._group_items_by_type(items)
+        # Group items by type using UID pattern matching
+        grouped_items = self._group_items_by_uid_type(items)
 
         # Parse demographics (required)
-        demographics = self._parse_demographics(grouped.get("patient", []))
+        demographics = self._parse_demographics(grouped_items.get("patient", []))
         if not demographics:
             raise ValueError("Patient demographics not found in VPR data")
 
         # Parse clinical data
-        vital_signs = self._parse_vital_signs(grouped.get("vital", []))
-        lab_results = self._parse_lab_results(grouped.get("lab", []))
-        consults = self._parse_consults(grouped.get("consult", []))
+        vital_signs = self._parse_vital_signs(grouped_items.get("vital", []))
+        lab_results = self._parse_lab_results(grouped_items.get("lab", []))
+        consults = self._parse_consults(grouped_items.get("consult", []))
+        medications = self._parse_medications(grouped_items.get("med", []))
 
         # Create collection
         collection = PatientDataCollection(
@@ -81,6 +102,7 @@ class PatientDataParser:
             vital_signs=vital_signs,
             lab_results=lab_results,
             consults=consults,
+            medications=medications,
             source_station=self.station,
             source_dfn=self.dfn,
             total_items=len(items),
@@ -90,15 +112,29 @@ class PatientDataParser:
         logger.info(
             f"Parsed patient data for {collection.patient_name}: "
             f"{len(vital_signs)} vitals, {len(lab_results)} labs, "
-            f"{len(consults)} consults"
+            f"{len(consults)} consults, {len(medications)} medications"
         )
 
         return collection
 
-    def _group_items_by_type(
+    def _extract_items(self, vpr_data: dict[str, Any]) -> list[dict[str, Any]]:
+        """Extract items from VPR data using JSONPath"""
+        # Try standard format first
+        items_matches = self._jsonpath_expressions["items"].find(vpr_data)
+        if items_matches:
+            return [match.value for match in items_matches]
+
+        # Try payload format
+        payload_matches = self._jsonpath_expressions["payload_items"].find(vpr_data)
+        if payload_matches:
+            return [match.value for match in payload_matches]
+
+        return []
+
+    def _group_items_by_uid_type(
         self, items: list[dict[str, Any]]
     ) -> dict[str, list[dict[str, Any]]]:
-        """Group VPR items by their UID type"""
+        """Group VPR items by their UID type using Python filtering"""
         grouped: dict[str, list[dict[str, Any]]] = {}
 
         for item in items:
@@ -119,56 +155,65 @@ class PatientDataParser:
     def _parse_demographics(
         self, patient_items: list[dict[str, Any]]
     ) -> PatientDemographics | None:
-        """Parse patient demographics from patient items"""
+        """Parse patient demographics from patient items using JSONPath"""
         if not patient_items:
             return None
 
         # Take first patient item (should only be one)
         patient_data = patient_items[0]
 
-        # Parse addresses
+        # Parse addresses using JSONPath
         addresses = []
-        if "addresses" in patient_data:
-            for addr_data in patient_data["addresses"]:
-                try:
-                    addresses.append(PatientAddress(**addr_data))
-                except Exception as e:
-                    logger.warning(f"Failed to parse address: {e}")
-
-        # Parse telecoms
-        telecoms = []
-        if "telecoms" in patient_data:
-            for telecom_data in patient_data["telecoms"]:
-                try:
-                    telecoms.append(PatientTelecom(**telecom_data))
-                except Exception as e:
-                    logger.warning(f"Failed to parse telecom: {e}")
-
-        # Parse supports
-        supports = []
-        if "supports" in patient_data:
-            for support_data in patient_data["supports"]:
-                try:
-                    supports.append(PatientSupport(**support_data))
-                except Exception as e:
-                    logger.warning(f"Failed to parse support: {e}")
-
-        # Parse veteran info
-        veteran = None
-        if "veteran" in patient_data:
+        address_matches = self._jsonpath_expressions["patient_addresses"].find(
+            patient_data
+        )
+        for match in address_matches:
             try:
-                veteran = VeteranInfo(**patient_data["veteran"])
+                addresses.append(PatientAddress(**match.value))
+            except Exception as e:
+                logger.warning(f"Failed to parse address: {e}")
+
+        # Parse telecoms using JSONPath
+        telecoms = []
+        telecom_matches = self._jsonpath_expressions["patient_telecoms"].find(
+            patient_data
+        )
+        for match in telecom_matches:
+            try:
+                telecoms.append(PatientTelecom(**match.value))
+            except Exception as e:
+                logger.warning(f"Failed to parse telecom: {e}")
+
+        # Parse supports using JSONPath
+        supports = []
+        support_matches = self._jsonpath_expressions["patient_supports"].find(
+            patient_data
+        )
+        for match in support_matches:
+            try:
+                supports.append(PatientSupport(**match.value))
+            except Exception as e:
+                logger.warning(f"Failed to parse support: {e}")
+
+        # Parse veteran info using JSONPath
+        veteran = None
+        veteran_matches = self._jsonpath_expressions["patient_veteran"].find(
+            patient_data
+        )
+        if veteran_matches:
+            try:
+                veteran = VeteranInfo(**veteran_matches[0].value)
             except Exception as e:
                 logger.warning(f"Failed to parse veteran info: {e}")
 
-        # Parse flags
+        # Parse flags using JSONPath
         flags = []
-        if "flags" in patient_data:
-            for flag_data in patient_data["flags"]:
-                try:
-                    flags.append(PatientFlag(**flag_data))
-                except Exception as e:
-                    logger.warning(f"Failed to parse flag: {e}")
+        flag_matches = self._jsonpath_expressions["patient_flags"].find(patient_data)
+        for match in flag_matches:
+            try:
+                flags.append(PatientFlag(**match.value))
+            except Exception as e:
+                logger.warning(f"Failed to parse flag: {e}")
 
         # Build demographics
         try:
@@ -244,12 +289,76 @@ class PatientDataParser:
 
         return consults
 
+    def _parse_medications(self, med_items: list[dict[str, Any]]) -> list[Medication]:
+        """Parse medications from medication items using JSONPath for preprocessing"""
+        medications = []
+
+        for item in med_items:
+            try:
+                # Pre-process the medication data using JSONPath
+                processed_item = self._preprocess_medication_item(item)
+                medication = Medication(**processed_item)
+                medications.append(medication)
+            except Exception as e:
+                logger.warning(f"Failed to parse medication {item.get('uid')}: {e}")
+                logger.debug(f"Medication item data: {item}")
+
+        # Sort by start date (newest first)
+        medications.sort(key=lambda m: m.start_date, reverse=True)
+
+        return medications
+
+    def _preprocess_medication_item(self, item: dict[str, Any]) -> dict[str, Any]:
+        """Preprocess medication item using JSONPath for nested field extraction"""
+        processed = item.copy()
+
+        # Extract prescriber info using JSONPath
+        prescriber_matches = self._jsonpath_expressions["med_prescriber"].find(item)
+        if prescriber_matches:
+            processed["prescriber"] = prescriber_matches[0].value
+
+        prescriber_uid_matches = self._jsonpath_expressions["med_prescriber_uid"].find(
+            item
+        )
+        if prescriber_uid_matches:
+            processed["prescriber_uid"] = prescriber_uid_matches[0].value
+
+        # Handle SIG instructions - can be string or array
+        if "sig" in processed:
+            sig = processed["sig"]
+            if isinstance(sig, list):
+                processed["sig"] = " ".join(str(s) for s in sig if s)
+            elif not sig:
+                processed["sig"] = ""
+
+        # Ensure required fields have defaults
+        if "dosageForm" not in processed:
+            processed["dosageForm"] = "UNKNOWN"
+
+        if "vaStatus" not in processed:
+            processed["vaStatus"] = "ACTIVE"
+
+        # Handle product form name variations
+        if "productFormName" not in processed:
+            # Try alternative field names using JSONPath
+            alternative_fields = ["name", "medicationName", "drugName"]
+            for alt_field in alternative_fields:
+                alt_expr = jsonpath_parse(f"$.{alt_field}")
+                matches = alt_expr.find(processed)
+                if matches:
+                    processed["productFormName"] = matches[0].value
+                    break
+            else:
+                processed["productFormName"] = "UNKNOWN MEDICATION"
+
+        return processed
+
 
 def parse_vpr_patient_data(
     vpr_json: dict[str, Any], station: str, dfn: str
 ) -> PatientDataCollection:
     """
-    Convenience function to parse VPR patient data.
+    Convenience function to parse VPR patient data using JSONPath.
 
     Args:
         vpr_json: Raw VPR JSON response

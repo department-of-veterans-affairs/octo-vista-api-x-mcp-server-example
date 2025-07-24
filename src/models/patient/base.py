@@ -1,7 +1,7 @@
 """Base models and common types for patient data"""
 
 from enum import Enum
-from typing import Optional
+from typing import Optional, Protocol, runtime_checkable
 
 from pydantic import BaseModel, field_validator
 
@@ -17,6 +17,16 @@ class BasePatientModel(BaseModel):
         # Serialize datetime as ISO format
         "json_schema_serialization_defaults_required": True,
     }
+
+
+@runtime_checkable
+class StatusEnum(Protocol):
+    """Protocol for status enums that can be created from external values"""
+
+    @classmethod
+    def from_external_value(cls, value: str | None) -> "StatusEnum":
+        """Create enum from external string value"""
+        ...
 
 
 class Gender(str, Enum):
@@ -79,6 +89,29 @@ class InterpretationCode(str, Enum):
         return mapping.get(code)
 
 
+# Input validation enums for external data
+class ConsultStatusInput(str, Enum):
+    """Valid input values for consultation status"""
+
+    PENDING = "PENDING"
+    SCHEDULED = "SCHEDULED"
+    ACTIVE = "ACTIVE"
+    COMPLETED = "COMPLETED"
+    COMPLETE = "COMPLETE"  # Alternative form
+    CANCELLED = "CANCELLED"
+    CANCELED = "CANCELED"  # Alternative spelling
+    DISCONTINUED = "DISCONTINUED"
+
+
+class UrgencyInput(str, Enum):
+    """Valid input values for urgency levels"""
+
+    ROUTINE = "ROUTINE"
+    URGENT = "URGENT"
+    STAT = "STAT"
+    EMERGENCY = "EMERGENCY"
+
+
 class ConsultStatus(str, Enum):
     """Consultation status values"""
 
@@ -94,6 +127,36 @@ class ConsultStatus(str, Enum):
         """Check if status indicates active consult"""
         return status in [cls.PENDING, cls.SCHEDULED, cls.ACTIVE]
 
+    @classmethod
+    def from_external_value(cls, value: str | None) -> "ConsultStatus":
+        """Create from external status value with validation"""
+        if not value:
+            return cls.PENDING
+
+        # Try to match against valid input enum first
+        try:
+            input_status = ConsultStatusInput(value.upper())
+            # Map input enum to output enum
+            mapping = {
+                ConsultStatusInput.PENDING: cls.PENDING,
+                ConsultStatusInput.SCHEDULED: cls.SCHEDULED,
+                ConsultStatusInput.ACTIVE: cls.ACTIVE,
+                ConsultStatusInput.COMPLETED: cls.COMPLETED,
+                ConsultStatusInput.COMPLETE: cls.COMPLETED,  # Alternative form
+                ConsultStatusInput.CANCELLED: cls.CANCELLED,
+                ConsultStatusInput.CANCELED: cls.CANCELLED,  # Alternative spelling
+                ConsultStatusInput.DISCONTINUED: cls.DISCONTINUED,
+            }
+            return mapping[input_status]
+        except ValueError:
+            # Fallback for unknown values
+            return cls.PENDING
+
+    @classmethod
+    def from_name(cls, name: str) -> "ConsultStatus":
+        """Legacy method - delegates to from_external_value"""
+        return cls.from_external_value(name)
+
 
 class Urgency(str, Enum):
     """Consultation urgency levels"""
@@ -102,6 +165,32 @@ class Urgency(str, Enum):
     URGENT = "Urgent"
     STAT = "STAT"
     EMERGENCY = "Emergency"
+
+    @classmethod
+    def from_external_value(cls, value: str | None) -> "Urgency":
+        """Create from external urgency value with validation"""
+        if not value:
+            return cls.ROUTINE
+
+        # Try to match against valid input enum first
+        try:
+            input_urgency = UrgencyInput(value.upper())
+            # Map input enum to output enum
+            mapping = {
+                UrgencyInput.ROUTINE: cls.ROUTINE,
+                UrgencyInput.URGENT: cls.URGENT,
+                UrgencyInput.STAT: cls.STAT,
+                UrgencyInput.EMERGENCY: cls.EMERGENCY,
+            }
+            return mapping[input_urgency]
+        except ValueError:
+            # Fallback for unknown values
+            return cls.ROUTINE
+
+    @classmethod
+    def from_name(cls, name: str) -> "Urgency":
+        """Legacy method - delegates to from_external_value"""
+        return cls.from_external_value(name)
 
 
 class VitalType(str, Enum):
@@ -115,6 +204,24 @@ class VitalType(str, Enum):
     HEIGHT = "HEIGHT"
     PAIN = "PAIN"
     O2_SAT = "PULSE OXIMETRY"
+
+
+class StatusEnumFactory:
+    """Factory for creating status enums with type safety"""
+
+    @staticmethod
+    def create_consult_status(value: str | ConsultStatusInput | None) -> ConsultStatus:
+        """Create ConsultStatus with input validation"""
+        if isinstance(value, ConsultStatusInput):
+            return ConsultStatus.from_external_value(value.value)
+        return ConsultStatus.from_external_value(value)
+
+    @staticmethod
+    def create_urgency(value: str | UrgencyInput | None) -> Urgency:
+        """Create Urgency with input validation"""
+        if isinstance(value, UrgencyInput):
+            return Urgency.from_external_value(value.value)
+        return Urgency.from_external_value(value)
 
 
 class FacilityInfo(BasePatientModel):

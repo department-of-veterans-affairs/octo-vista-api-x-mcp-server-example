@@ -19,11 +19,7 @@ from ...services.formatters import (
 from ...services.parsers.vista import parse_patient_search
 from ...services.rpc import build_single_string_param, execute_rpc
 from ...services.validators import validate_dfn
-from ...utils import (
-    build_metadata,
-    get_default_duz,
-    get_default_station,
-)
+from ...utils import build_metadata, get_default_duz, get_default_station
 from ...vista.base import BaseVistaClient
 
 logger = logging.getLogger(__name__)
@@ -502,6 +498,218 @@ def register_patient_tools(mcp: FastMCP, vista_client: BaseVistaClient):
 
         except Exception as e:
             logger.exception("Unexpected error in get_patient_consults")
+            return {
+                "success": False,
+                "error": f"Unexpected error: {str(e)}",
+                "metadata": build_metadata(station=station),
+            }
+
+    @mcp.tool()
+    async def get_patient_medications(
+        patient_dfn: str,
+        station: str | None = None,
+        active_only: bool = True,
+        therapeutic_class: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        """
+        Retrieve current and historical medications for a specific patient
+
+        Provides comprehensive medication list including dosing instructions,
+        refill status, and potential drug interactions. Critical for medication
+        reconciliation and safety monitoring.
+
+        Args:
+            patient_dfn: Patient's unique identifier (DFN) in the Vista system
+            station: Vista station number for multi-site access (default: user's home station)
+            active_only: When True, returns only active medications;
+                        when False, includes discontinued and completed (default: True)
+            therapeutic_class: Filter by therapeutic class (optional), examples:
+                - "ANTIHYPERTENSIVE" - Blood pressure medications
+                - "DIABETES" - Diabetes medications
+                - "ANTICOAGULANT" - Blood thinners
+                - "ANTIDEPRESSANT" - Depression medications
+            limit: Maximum number of medications to return in all_medications array,
+                  range 1-200 (default: 50). Summary counts and groupings include all medications.
+
+        Returns:
+            Medication data including:
+            - Current active medications with dosing instructions
+            - Medication history and status changes
+            - Refill information and adherence tracking
+            - Potential drug interactions and alerts
+            - Therapeutic class groupings for medication review (includes all medications)
+            - Prescriber information and pharmacy details
+            - all_medications array limited by the limit parameter for performance
+        """
+        start_time = time.time()
+        station = station or get_default_station()
+        caller_duz = get_default_duz()
+
+        # Validate DFN
+        if not validate_dfn(patient_dfn):
+            return {
+                "success": False,
+                "error": "Invalid patient DFN format. DFN must be numeric.",
+                "metadata": build_metadata(station=station),
+            }
+
+        # Validate limit parameter
+        if limit < 1 or limit > 200:
+            return {
+                "success": False,
+                "error": "Limit must be between 1 and 200.",
+                "metadata": build_metadata(station=station),
+            }
+
+        try:
+            # Get patient data (handles caching internally)
+            patient_data = await get_patient_data(
+                vista_client, station, patient_dfn, caller_duz
+            )
+
+            # Filter medications
+            medications = patient_data.medications
+            if active_only:
+                medications = [m for m in medications if m.is_active]
+
+            # Filter by therapeutic class
+            if therapeutic_class:
+                medications = [
+                    m
+                    for m in medications
+                    if (
+                        m.therapeutic_class
+                        and therapeutic_class.upper() in m.therapeutic_class.upper()
+                    )
+                    or (m.va_class and therapeutic_class.upper() in m.va_class.upper())
+                ]
+
+            # Group medications by therapeutic class for better organization
+            medication_groups: dict[str, list[Any]] = {}
+            for med in medications:
+                group_key = med.therapeutic_class or med.va_class or "Other"
+                if group_key not in medication_groups:
+                    medication_groups[group_key] = []
+                medication_groups[group_key].append(med)
+
+            # Identify medications needing refills soon
+            refill_alerts = [m for m in medications if m.needs_refill_soon]
+
+            # Build response
+            return {
+                "success": True,
+                "patient": {
+                    "dfn": patient_dfn,
+                    "name": patient_data.patient_name,
+                    "age": patient_data.demographics.age,
+                },
+                "medications": {
+                    "total": len(patient_data.medications),
+                    "active": len([m for m in patient_data.medications if m.is_active]),
+                    "discontinued": len(
+                        [m for m in patient_data.medications if m.is_discontinued]
+                    ),
+                    "filtered_count": len(medications),
+                    "refill_alerts": len(refill_alerts),
+                    "filters": {
+                        "active_only": active_only,
+                        "therapeutic_class": therapeutic_class,
+                    },
+                    "refill_alerts_list": [
+                        {
+                            "name": med.display_name,
+                            "days_remaining": med.days_until_refill_needed,
+                            "last_filled": (
+                                med.last_filled.isoformat() if med.last_filled else None
+                            ),
+                            "prescriber": med.prescriber,
+                        }
+                        for med in refill_alerts
+                    ],
+                    "by_therapeutic_class": {
+                        group: {
+                            "count": len(meds),
+                            "medications": [
+                                {
+                                    "name": med.display_name,
+                                    "generic_name": med.generic_name,
+                                    "dosage": med.dosage,
+                                    "frequency": med.display_frequency,
+                                    "route": med.route,
+                                    "instructions": med.sig,
+                                    "status": med.status,
+                                    "started": med.start_date.isoformat(),
+                                    "ended": (
+                                        med.end_date.isoformat()
+                                        if med.end_date
+                                        else None
+                                    ),
+                                    "prescriber": med.prescriber,
+                                    "refills_remaining": med.refills_remaining,
+                                    "days_supply": med.days_supply,
+                                    "needs_refill": med.needs_refill_soon,
+                                }
+                                for med in meds
+                            ],
+                        }
+                        for group, meds in medication_groups.items()
+                    },
+                    "all_medications": [
+                        {
+                            "id": med.local_id,
+                            "name": med.display_name,
+                            "generic_name": med.generic_name,
+                            "brand_name": med.brand_name,
+                            "strength": med.strength,
+                            "dosage_form": med.dosage,
+                            "frequency": med.display_frequency,
+                            "route": med.route,
+                            "instructions": med.sig,
+                            "status": med.status,
+                            "active": med.is_active,
+                            "discontinued": med.is_discontinued,
+                            "start_date": med.start_date.isoformat(),
+                            "end_date": (
+                                med.end_date.isoformat() if med.end_date else None
+                            ),
+                            "last_filled": (
+                                med.last_filled.isoformat() if med.last_filled else None
+                            ),
+                            "prescriber": med.prescriber,
+                            "pharmacy": med.pharmacy,
+                            "quantity": med.quantity,
+                            "days_supply": med.days_supply,
+                            "refills_remaining": med.refills_remaining,
+                            "therapeutic_class": med.therapeutic_class,
+                            "va_class": med.va_class,
+                            "patient_instructions": med.patient_instructions,
+                            "needs_refill": med.needs_refill_soon,
+                            "days_until_refill": med.days_until_refill_needed,
+                        }
+                        for med in medications[:limit]  # Limit based on parameter
+                    ],
+                },
+                "metadata": {
+                    **build_metadata(
+                        station=station,
+                        duration_ms=int((time.time() - start_time) * 1000),
+                    ),
+                    "rpc": {
+                        "rpc": "VPR GET PATIENT DATA JSON",
+                        "context": "LHS RPC CONTEXT",
+                        "jsonResult": True,
+                        "parameters": [{"namedArray": {"patientId": patient_dfn}}],
+                    },
+                    "duz": caller_duz,
+                },
+            }
+
+        except Exception as e:
+            logger.error(
+                f"🩺 [DEBUG] Exception in get_patient_medications: {type(e).__name__}: {str(e)}"
+            )
+            logger.exception("Unexpected error in get_patient_medications")
             return {
                 "success": False,
                 "error": f"Unexpected error: {str(e)}",

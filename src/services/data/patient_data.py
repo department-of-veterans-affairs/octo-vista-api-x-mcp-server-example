@@ -1,10 +1,14 @@
 """Patient data access service with transparent caching."""
 
+import logging
+
 from ...models.patient.patient import PatientDataCollection
 from ...services.cache.factory import CacheFactory
 from ...services.parsers.patient.patient_parser import parse_vpr_patient_data
 from ...services.rpc import build_named_array_param, execute_rpc
 from ...vista.base import BaseVistaClient, VistaAPIError
+
+logger = logging.getLogger(__name__)
 
 # Module-level cache instance
 _cache_instance = None
@@ -44,6 +48,7 @@ async def get_patient_data(
     Raises:
         VistaAPIError: If the RPC call fails
     """
+
     # Get cache instance
     cache = await _get_cache()
 
@@ -69,7 +74,6 @@ async def get_patient_data(
             "metadata": metadata,
         },
     )
-
     # Check if this is an error response
     if "error" in rpc_result:
         raise VistaAPIError(
