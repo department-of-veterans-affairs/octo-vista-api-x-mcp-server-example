@@ -5,12 +5,14 @@ into structured Pydantic models for easier consumption.
 """
 
 import logging
+from datetime import datetime
 from typing import Any
 
 from jsonpath_ng import parse as jsonpath_parse  # type: ignore
 
 from ....models.patient import (
     Consult,
+    HealthFactor,
     LabResult,
     Medication,
     PatientAddress,
@@ -95,6 +97,7 @@ class PatientDataParser:
         lab_results = self._parse_lab_results(grouped_items.get("lab", []))
         consults = self._parse_consults(grouped_items.get("consult", []))
         medications = self._parse_medications(grouped_items.get("med", []))
+        health_factors = self._parse_health_factors(grouped_items.get("factor", []))
 
         # Create collection
         collection = PatientDataCollection(
@@ -103,6 +106,7 @@ class PatientDataParser:
             lab_results=lab_results,
             consults=consults,
             medications=medications,
+            health_factors=health_factors,
             source_station=self.station,
             source_dfn=self.dfn,
             total_items=len(items),
@@ -112,7 +116,8 @@ class PatientDataParser:
         logger.info(
             f"Parsed patient data for {collection.patient_name}: "
             f"{len(vital_signs)} vitals, {len(lab_results)} labs, "
-            f"{len(consults)} consults, {len(medications)} medications"
+            f"{len(consults)} consults, {len(medications)} medications, "
+            f"{len(health_factors)} health factors"
         )
 
         return collection
@@ -350,6 +355,63 @@ class PatientDataParser:
                     break
             else:
                 processed["productFormName"] = "UNKNOWN MEDICATION"
+
+        return processed
+
+    def _parse_health_factors(
+        self, factor_items: list[dict[str, Any]]
+    ) -> list[HealthFactor]:
+        """Parse health factors from factor items"""
+        health_factors = []
+
+        for item in factor_items:
+            try:
+                # Preprocess the health factor data
+                processed_item = self._preprocess_health_factor_item(item)
+                health_factor = HealthFactor(**processed_item)
+                health_factors.append(health_factor)
+            except Exception as e:
+                logger.warning(f"Failed to parse health factor {item.get('uid')}: {e}")
+                logger.debug(f"Health factor item data: {item}")
+
+        # Sort by recorded date (newest first)
+        health_factors.sort(key=lambda f: f.recorded_date, reverse=True)
+
+        return health_factors
+
+    def _preprocess_health_factor_item(self, item: dict[str, Any]) -> dict[str, Any]:
+        """Preprocess health factor item for field normalization"""
+        processed = item.copy()
+
+        # Ensure required fields have defaults
+        if "name" not in processed:
+            processed["name"] = "UNKNOWN HEALTH FACTOR"
+
+        if "categoryName" not in processed:
+            processed["categoryName"] = "GENERAL"
+
+        if "facilityCode" not in processed:
+            processed["facilityCode"] = "000"
+
+        if "facilityName" not in processed:
+            processed["facilityName"] = "UNKNOWN FACILITY"
+
+        if "entered" not in processed:
+            # Use current date if no date provided
+            processed["entered"] = datetime.now().strftime("%Y%m%d")
+
+        # Handle localId - ensure it's present
+        if "localId" not in processed:
+            # Extract from UID if possible
+            uid = processed.get("uid", "")
+            if uid:
+                parts = uid.split(":")
+                if len(parts) >= 4:
+                    processed["localId"] = parts[-1]  # Last part of UID
+                else:
+                    processed["localId"] = "0"
+            else:
+                processed["localId"] = "0"
 
         return processed
 

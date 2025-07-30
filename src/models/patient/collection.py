@@ -6,7 +6,7 @@ from typing import Any
 from pydantic import Field
 
 from .base import BasePatientModel
-from .clinical import Consult, LabResult, Medication, VitalSign
+from .clinical import Consult, HealthFactor, LabResult, Medication, VitalSign
 from .demographics import PatientDemographics
 
 
@@ -24,6 +24,7 @@ class PatientDataCollection(BasePatientModel):
     lab_results: list[LabResult] = Field(default_factory=list)
     consults: list[Consult] = Field(default_factory=list)
     medications: list[Medication] = Field(default_factory=list)
+    health_factors: list[HealthFactor] = Field(default_factory=list)
 
     # Future expansion (stubs for now)
     # problems: List[Problem] = Field(default_factory=list)

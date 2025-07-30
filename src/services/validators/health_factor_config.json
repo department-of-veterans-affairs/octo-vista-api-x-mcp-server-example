@@ -1,0 +1,142 @@
+{
+  "categories": {
+    "lifestyle": {
+      "keywords": [
+        "smoking",
+        "tobacco",
+        "nicotine",
+        "alcohol",
+        "substance",
+        "drug",
+        "exercise",
+        "activity",
+        "diet",
+        "nutrition",
+        "weight",
+        "obesity",
+        "sleep",
+        "stress",
+        "mental health",
+        "depression",
+        "anxiety"
+      ],
+      "priority": 1
+    },
+    "environmental": {
+      "keywords": [
+        "exposure",
+        "agent orange",
+        "ionizing radiation",
+        "combat",
+        "deployment",
+        "environmental",
+        "chemical",
+        "toxic",
+        "occupational",
+        "workplace",
+        "sw asia",
+        "gulf war",
+        "burn pit",
+        "contamination"
+      ],
+      "priority": 2
+    },
+    "genetic": {
+      "keywords": ["genetic", "hereditary", "family history", "congenital", "inherited", "chromosomal", "mutation", "syndrome"],
+      "priority": 3
+    },
+    "screening": {
+      "keywords": [
+        "screening",
+        "prevention",
+        "maintenance",
+        "monitoring",
+        "surveillance",
+        "exam",
+        "test",
+        "assessment",
+        "evaluation",
+        "checkup",
+        "cancer screening",
+        "lung cancer screening",
+        "lcs",
+        "mammogram",
+        "colonoscopy",
+        "pap smear",
+        "preventive",
+        "routine",
+        "annual",
+        "wellness"
+      ],
+      "priority": 4
+    },
+    "medical": {
+      "keywords": [
+        "diabetes",
+        "hypertension",
+        "cardiac",
+        "pulmonary",
+        "renal",
+        "hepatic",
+        "cancer",
+        "malignancy",
+        "tumor",
+        "disease",
+        "disorder",
+        "condition",
+        "covid",
+        "covid-19",
+        "virus",
+        "viral",
+        "infection",
+        "infectious",
+        "influenza",
+        "pneumonia",
+        "respiratory"
+      ],
+      "priority": 5
+    }
+  },
+  "severity": {
+    "severe": {
+      "keywords": ["severe", "critical", "emergency", "acute", "malignant", "advanced", "positive", "confirmed", "active", "current"],
+      "multiplier": 1.2
+    },
+    "moderate": {
+      "keywords": ["suspected", "probable", "moderate", "elevated", "abnormal", "concern", "risk", "exposure"],
+      "multiplier": 1.0
+    },
+    "mild": {
+      "keywords": ["mild", "minor", "screening", "prevention", "maintenance", "resolved", "history", "past"],
+      "multiplier": 0.7
+    }
+  },
+  "risk_scoring": {
+    "high": {
+      "keywords": [
+        "cancer",
+        "malignancy",
+        "cardiac",
+        "stroke",
+        "diabetes",
+        "renal failure",
+        "liver failure",
+        "severe",
+        "critical",
+        "emergency",
+        "positive"
+      ],
+      "base_score": 8
+    },
+    "moderate": {
+      "keywords": ["hypertension", "elevated", "suspected", "exposure", "screening", "abnormal", "concern", "risk"],
+      "base_score": 5
+    },
+    "low": {
+      "keywords": ["prevention", "maintenance", "resolved", "history", "mild", "minor", "screening", "education"],
+      "base_score": 2
+    }
+  },
+  "modifiable_indicators": ["lifestyle", "behavioral", "smoking", "alcohol", "exercise", "diet", "weight", "substance", "activity"],
+  "monitoring_indicators": ["suspected", "screening", "exposure", "risk", "elevated", "abnormal", "positive", "concern", "alert"]
+}

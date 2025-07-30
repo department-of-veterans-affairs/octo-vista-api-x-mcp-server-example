@@ -9,7 +9,7 @@ from .base import (
     InterpretationCode,
     Urgency,
 )
-from .clinical import Consult, LabResult, Medication, VitalSign
+from .clinical import Consult, HealthFactor, LabResult, Medication, VitalSign
 from .collection import PatientDataCollection
 from .demographics import (
     PatientAddress,
@@ -41,6 +41,7 @@ __all__ = [
     "LabResult",
     "Consult",
     "Medication",
+    "HealthFactor",
     # Collection
     "PatientDataCollection",
 ]
