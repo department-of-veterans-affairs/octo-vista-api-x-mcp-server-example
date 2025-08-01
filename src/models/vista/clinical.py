@@ -1,7 +1,10 @@
 """Vista clinical models"""
 
+from datetime import datetime
+
 from pydantic import Field, field_validator
 
+from ...services.parsers.patient.datetime_parser import parse_datetime
 from ..base import BaseVistaModel
 
 
@@ -99,3 +102,20 @@ class Allergy(BaseVistaModel):
     entered_by: str | None = None
     verified: bool = False
     comments: str | None = None
+
+
+class Clinician(BaseVistaModel):
+    """Clinician information for orders and consults"""
+
+    name: str
+    role: str  # e.g., "S" for Signer
+    signed_date_time: datetime = Field(alias="signedDateTime")
+    uid: str
+
+    @field_validator("signed_date_time", mode="before")
+    @classmethod
+    def parse_datetime(cls, v):
+        """Parse datetime format"""
+        if v is None or isinstance(v, datetime):
+            return v
+        return parse_datetime(v)

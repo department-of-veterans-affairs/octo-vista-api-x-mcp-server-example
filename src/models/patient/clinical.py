@@ -13,6 +13,7 @@ from ...services.parsers.patient.value_parser import (
     parse_blood_pressure,
     parse_numeric_result,
 )
+from ...utils import get_logger
 from .base import (
     BasePatientModel,
     CodedValue,
@@ -21,6 +22,8 @@ from .base import (
     Urgency,
     VitalType,
 )
+
+logger = get_logger()
 
 
 class VitalSign(BasePatientModel):

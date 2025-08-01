@@ -19,6 +19,7 @@ from .demographics import (
     PatientTelecom,
     VeteranInfo,
 )
+from .order import Order
 
 __all__ = [
     # Base types
@@ -42,6 +43,7 @@ __all__ = [
     "Consult",
     "Medication",
     "HealthFactor",
+    "Order",
     # Collection
     "PatientDataCollection",
 ]

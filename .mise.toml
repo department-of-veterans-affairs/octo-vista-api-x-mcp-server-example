@@ -31,7 +31,7 @@ run = [
     # Start mock server if needed
     "python scripts/start_mock_if_needed.py",
     # Run MCP server with dev inspector
-    "uv run mcp dev server.py:server"
+    "uv run mcp dev server.py:server",
 ]
 
 [tasks.dev]
@@ -41,7 +41,7 @@ run = [
     "python scripts/silent_setup.py",
     # Run MCP server
     "echo '🏃 Starting MCP server...'",
-    "uv run mcp dev server.py:server"
+    "uv run mcp dev server.py:server",
 ]
 
 # Utility tasks (optional)
@@ -51,11 +51,7 @@ run = "uv run pytest"
 
 [tasks.lint]
 description = "Check code quality (format + lint + type check)"
-run = [
-    "uv run black .",
-    "uv run ruff check --fix .",
-    "uv run mypy ."
-]
+run = ["uv run black .", "uv run ruff check --fix .", "uv run mypy ."]
 
 [tasks.logs]
 description = "View mock server logs"
@@ -81,7 +77,7 @@ run = [
     "echo '🔧 Configure your client with:'",
     "echo '  {\"url\": \"http://localhost:8000/sse\"}'",
     "echo ''",
-    "uv run python http_server.py"
+    "uv run python http_server.py",
 ]
 
 [tasks.dev-sse-with-mock]
@@ -100,5 +96,5 @@ run = [
     "echo '🔧 Configure your client with:'",
     "echo '  {\"url\": \"http://localhost:8000/sse\"}'",
     "echo ''",
-    "uv run python http_server.py"
+    "uv run python http_server.py",
 ]

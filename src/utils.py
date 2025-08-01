@@ -3,9 +3,18 @@
 import logging
 import os
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
-logger = logging.getLogger(__name__)
+
+def get_logger(name: str = "mcp-server") -> logging.Logger:
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+    logger.addHandler(logging.FileHandler(Path(f"logs/{name}.log", mode="a")))
+    return logger
+
+
+logger = get_logger()
 
 
 # Default configurations

@@ -4,7 +4,6 @@ This module parses the raw Patient Record (VPR) JSON response
 into structured Pydantic models for easier consumption.
 """
 
-import logging
 from datetime import datetime
 from typing import Any
 
@@ -15,6 +14,7 @@ from ....models.patient import (
     HealthFactor,
     LabResult,
     Medication,
+    Order,
     PatientAddress,
     PatientDataCollection,
     PatientDemographics,
@@ -24,8 +24,9 @@ from ....models.patient import (
     VeteranInfo,
     VitalSign,
 )
+from ....utils import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger()
 
 
 class PatientDataParser:
@@ -98,9 +99,11 @@ class PatientDataParser:
         consults = self._parse_consults(grouped_items.get("consult", []))
         medications = self._parse_medications(grouped_items.get("med", []))
         health_factors = self._parse_health_factors(grouped_items.get("factor", []))
+        orders = self._parse_orders(grouped_items.get("order", []))
 
         # Create collection
         collection = PatientDataCollection(
+            orders=orders,
             demographics=demographics,
             vital_signs=vital_signs,
             lab_results=lab_results,
@@ -117,7 +120,8 @@ class PatientDataParser:
             f"Parsed patient data for {collection.patient_name}: "
             f"{len(vital_signs)} vitals, {len(lab_results)} labs, "
             f"{len(consults)} consults, {len(medications)} medications, "
-            f"{len(health_factors)} health factors"
+            f"{len(health_factors)} health factors",
+            f"{len(orders)} orders",
         )
 
         return collection
@@ -414,6 +418,16 @@ class PatientDataParser:
                 processed["localId"] = "0"
 
         return processed
+
+    def _parse_orders(self, order_items: list[dict[str, Any]]) -> list[Order]:
+        """Parse orders from order items"""
+        try:
+            parsed = [Order(**order) for order in order_items]
+            logger.info(f"Parsed {len(parsed)} orders")
+            return parsed
+        except Exception as e:
+            logger.warning(f"Failed to parse orders: {e}")
+            return []
 
 
 def parse_vpr_patient_data(

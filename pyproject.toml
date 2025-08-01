@@ -54,16 +54,16 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = [
-    "E",    # pycodestyle errors
-    "F",    # pyflakes (including unused imports)
-    "I",    # isort
-    "N",    # pep8-naming
-    "UP",   # pyupgrade
-    "B",    # flake8-bugbear
-    "C4",   # flake8-comprehensions
-    "SIM",  # flake8-simplify
+    "E",   # pycodestyle errors
+    "F",   # pyflakes (including unused imports)
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
 ]
-ignore = ["E501"]  # Line too long - handled by black
+ignore = ["E501"] # Line too long - handled by black
 fixable = ["ALL"]
 unfixable = []
 
@@ -117,4 +117,4 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["scripts.*", "tests.*"]
-ignore_errors = true  # Be less strict with test/script files
+ignore_errors = true              # Be less strict with test/script files
