@@ -11,8 +11,8 @@ from jsonpath_ng import parse as jsonpath_parse  # type: ignore
 
 from ....models.patient import (
     Consult,
-    Document,
     Diagnosis,
+    Document,
     HealthFactor,
     LabResult,
     Medication,
