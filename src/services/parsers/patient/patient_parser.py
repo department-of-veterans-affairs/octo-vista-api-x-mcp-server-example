@@ -11,6 +11,7 @@ from jsonpath_ng import parse as jsonpath_parse  # type: ignore
 
 from ....models.patient import (
     Consult,
+    Document,
     Diagnosis,
     HealthFactor,
     LabResult,
@@ -101,6 +102,7 @@ class PatientDataParser:
         medications = self._parse_medications(grouped_items.get("med", []))
         health_factors = self._parse_health_factors(grouped_items.get("factor", []))
         orders = self._parse_orders(grouped_items.get("order", []))
+        documents = self._parse_documents(grouped_items.get("document", []))
 
         # Diagnoses can be in "problem" or "pov" (Purpose of Visit) groups
         problem_items = grouped_items.get("problem", [])
@@ -117,6 +119,7 @@ class PatientDataParser:
             consults=consults,
             medications=medications,
             health_factors=health_factors,
+            documents=documents,
             diagnoses=diagnoses,
             source_station=self.station,
             source_dfn=self.dfn,
@@ -128,6 +131,8 @@ class PatientDataParser:
             f"Parsed patient data for {collection.patient_name}: "
             f"{len(vital_signs)} vitals, {len(lab_results)} labs, "
             f"{len(consults)} consults, {len(medications)} medications, "
+            f"{len(health_factors)} health factors, {len(orders)} orders, "
+            f"{len(documents)} documents"
             f"{len(health_factors)} health factors, {len(diagnoses)} diagnoses, "
             f"{len(orders)} orders",
         )
@@ -550,6 +555,41 @@ class PatientDataParser:
         except Exception as e:
             logger.warning(f"Failed to parse orders: {e}")
             return []
+
+    def _parse_documents(self, document_items: list[dict[str, Any]]) -> list[Document]:
+        """Parse documents from document items"""
+        try:
+            # Preprocess each document item
+            processed_items = []
+            for item in document_items:
+                processed = self._preprocess_document_item(item)
+                processed_items.append(processed)
+
+            parsed = [Document(**doc) for doc in processed_items]
+            logger.info(f"Parsed {len(parsed)} documents")
+            return parsed
+        except Exception as e:
+            logger.warning(f"Failed to parse documents: {e}")
+            return []
+
+    def _preprocess_document_item(self, doc_data: dict[str, Any]) -> dict[str, Any]:
+        """Preprocess document item before creating Document model"""
+        processed = doc_data.copy()
+
+        # Ensure localId is present
+        if "localId" not in processed or processed["localId"] is None:
+            # Extract from UID if possible
+            uid = processed.get("uid", "")
+            if uid:
+                parts = uid.split(":")
+                if len(parts) >= 4:
+                    processed["localId"] = parts[-1]  # Last part of UID
+                else:
+                    processed["localId"] = "0"
+            else:
+                processed["localId"] = "0"
+
+        return processed
 
 
 def parse_vpr_patient_data(

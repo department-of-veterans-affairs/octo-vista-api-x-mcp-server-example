@@ -21,6 +21,7 @@ from .demographics import (
     VeteranInfo,
 )
 from .diagnosis import Diagnosis
+from .document import Document
 from .health_factor import HealthFactor
 from .medication import Medication
 from .order import Order
@@ -50,6 +51,7 @@ __all__ = [
     "HealthFactor",
     "Diagnosis",
     "Order",
+    "Document",
     # Collection
     "PatientDataCollection",
 ]

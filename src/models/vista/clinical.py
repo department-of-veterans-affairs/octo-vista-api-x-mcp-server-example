@@ -109,7 +109,8 @@ class Clinician(BaseVistaModel):
 
     name: str
     role: str  # e.g., "S" for Signer
-    signed_date_time: datetime = Field(alias="signedDateTime")
+    signature: str | None = Field(default=None)  # Electronic signature text
+    signed_date_time: datetime | None = Field(default=None, alias="signedDateTime")
     uid: str
 
     @field_validator("signed_date_time", mode="before")

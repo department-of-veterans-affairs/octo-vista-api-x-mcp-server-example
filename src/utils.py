@@ -10,7 +10,7 @@ from typing import Any
 def get_logger(name: str = "mcp-server") -> logging.Logger:
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
-    logger.addHandler(logging.FileHandler(Path(f"logs/{name}.log", mode="a")))
+    logger.addHandler(logging.FileHandler(Path(f"logs/{name}.log"), mode="a"))
     return logger
 
 

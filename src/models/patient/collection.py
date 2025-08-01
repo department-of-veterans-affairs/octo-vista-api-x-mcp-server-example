@@ -9,6 +9,7 @@ from .base import BasePatientModel
 from .clinical import Consult, LabResult, VitalSign
 from .demographics import PatientDemographics
 from .diagnosis import Diagnosis
+from .document import Document
 from .health_factor import HealthFactor
 from .medication import Medication
 from .order import Order
@@ -31,12 +32,12 @@ class PatientDataCollection(BasePatientModel):
     health_factors: list[HealthFactor] = Field(default_factory=list)
     diagnoses: list[Diagnosis] = Field(default_factory=list)
     orders: list[Order] = Field(default_factory=list)
+    documents: list[Document] = Field(default_factory=list)
 
     # Future expansion (stubs for now)
     # problems: List[Problem] = Field(default_factory=list)
     # allergies: List[Allergy] = Field(default_factory=list)
     # immunizations: List[Immunization] = Field(default_factory=list)
-    # documents: List[Document] = Field(default_factory=list)
     # appointments: List[Appointment] = Field(default_factory=list)
 
     # Metadata
@@ -93,6 +94,29 @@ class PatientDataCollection(BasePatientModel):
         """Get overdue consultation records"""
         return [consult for consult in self.consults if consult.is_overdue]
 
+    def get_completed_documents(self) -> list[Document]:
+        """Get completed document records"""
+        return [doc for doc in self.documents if doc.is_completed]
+
+    def get_recent_documents(self, days: int = 30) -> list[Document]:
+        """Get documents from the last N days"""
+        from datetime import datetime, timedelta
+
+        cutoff_date = datetime.now() - timedelta(days=days)
+        return [
+            doc
+            for doc in self.documents
+            if doc.reference_date_time and doc.reference_date_time >= cutoff_date
+        ]
+
+    def get_progress_notes(self) -> list[Document]:
+        """Get progress note documents"""
+        return [doc for doc in self.documents if doc.is_progress_note]
+
+    def get_consult_notes(self) -> list[Document]:
+        """Get consult note documents"""
+        return [doc for doc in self.documents if doc.is_consult_note]
+
     def to_summary(self) -> dict[str, Any]:
         """
         Generate a summary view of patient data.
@@ -122,6 +146,16 @@ class PatientDataCollection(BasePatientModel):
                 "total_count": len(self.consults),
                 "active_count": len(self.get_active_consults()),
                 "overdue_count": len(self.get_overdue_consults()),
+            },
+            "documents_summary": {
+                "total_count": len(self.documents),
+                "completed_count": len(self.get_completed_documents()),
+                "progress_notes_count": len(self.get_progress_notes()),
+                "consult_notes_count": len(self.get_consult_notes()),
+            },
+            "orders_summary": {
+                "total_count": len(self.orders),
+                "active_count": len(self.get_active_orders()),
             },
             "data_freshness": {
                 "retrieved_at": self.retrieved_at.isoformat(),
