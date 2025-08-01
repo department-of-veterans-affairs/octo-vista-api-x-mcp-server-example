@@ -138,5 +138,165 @@
     }
   },
   "modifiable_indicators": ["lifestyle", "behavioral", "smoking", "alcohol", "exercise", "diet", "weight", "substance", "activity"],
-  "monitoring_indicators": ["suspected", "screening", "exposure", "risk", "elevated", "abnormal", "positive", "concern", "alert"]
+  "monitoring_indicators": ["suspected", "screening", "exposure", "risk", "elevated", "abnormal", "positive", "concern", "alert"],
+  "diagnosis_body_systems": {
+    "cardiovascular": {
+      "icd_ranges": ["I00-I99", "390-459"],
+      "keywords": ["heart", "cardiac", "cardiovascular", "myocardial", "coronary", "arrhythmia", "hypertension", "blood pressure"]
+    },
+    "respiratory": {
+      "icd_ranges": ["J00-J99", "460-519"],
+      "keywords": ["lung", "pulmonary", "respiratory", "pneumonia", "asthma", "copd", "bronchitis", "emphysema"]
+    },
+    "endocrine": {
+      "icd_ranges": ["E00-E89", "240-279"],
+      "keywords": ["diabetes", "thyroid", "endocrine", "hormone", "metabolic", "insulin"]
+    },
+    "musculoskeletal": {
+      "icd_ranges": ["M00-M99", "710-739"],
+      "keywords": ["bone", "joint", "muscle", "arthritis", "fracture", "osteoporosis", "back pain"]
+    },
+    "neurological": {
+      "icd_ranges": ["G00-G99", "320-389"],
+      "keywords": ["brain", "neurological", "seizure", "stroke", "dementia", "alzheimer", "parkinson"]
+    },
+    "gastrointestinal": {
+      "icd_ranges": ["K00-K95", "520-579"],
+      "keywords": ["stomach", "intestinal", "liver", "gastro", "digestive", "ulcer", "colitis"]
+    },
+    "genitourinary": {
+      "icd_ranges": ["N00-N99", "580-629"],
+      "keywords": ["kidney", "bladder", "urinary", "renal", "prostate", "reproductive"]
+    },
+    "mental_health": {
+      "icd_ranges": ["F00-F99", "290-319"],
+      "keywords": ["depression", "anxiety", "mental", "psychiatric", "bipolar", "schizophrenia", "ptsd"]
+    },
+    "infectious": {
+      "icd_ranges": ["A00-B99", "001-139"],
+      "keywords": ["infection", "infectious", "viral", "bacterial", "covid", "pneumonia", "sepsis"]
+    },
+    "neoplasm": {
+      "icd_ranges": ["C00-D49", "140-239"],
+      "keywords": ["cancer", "tumor", "neoplasm", "malignant", "benign", "carcinoma", "lymphoma"]
+    },
+    "symptoms_signs": {
+      "icd_ranges": ["R00-R99", "780-799"],
+      "keywords": ["symptom", "sign", "abnormal", "finding", "fever", "pain", "headache", "fatigue"]
+    },
+    "external_causes": {
+      "icd_ranges": ["W00-W99", "X00-X99", "E800-E999"],
+      "keywords": ["injury", "accident", "fall", "struck", "burn", "poisoning", "external"]
+    },
+    "injury_poisoning": {
+      "icd_ranges": ["S00-T99", "800-959"],
+      "keywords": ["fracture", "wound", "laceration", "contusion", "sprain", "strain", "burn", "poisoning"]
+    },
+    "health_services": {
+      "icd_ranges": ["Z00-Z99", "V01-V91"],
+      "keywords": ["screening", "examination", "encounter", "follow-up", "preventive", "counseling"]
+    },
+    "blood_immune": {
+      "icd_ranges": ["D50-D89", "279-289"],
+      "keywords": [
+        "anemia",
+        "blood",
+        "immune",
+        "immunodeficiency",
+        "bleeding",
+        "coagulation",
+        "thrombocytopenia",
+        "neutropenia",
+        "lymphoma",
+        "leukemia"
+      ]
+    },
+    "eye_vision": {
+      "icd_ranges": ["H00-H59", "360-379"],
+      "keywords": ["vision", "eye", "blind", "cataract", "glaucoma", "retina", "macular", "visual", "ophthalmology", "diplopia"]
+    },
+    "ear_hearing": {
+      "icd_ranges": ["H60-H95", "380-389"],
+      "keywords": ["hearing", "deaf", "tinnitus", "ear", "auditory", "vertigo", "balance", "acoustic", "otitis", "mastoid"]
+    },
+    "skin_subcutaneous": {
+      "icd_ranges": ["L00-L99", "680-709"],
+      "keywords": ["skin", "dermatitis", "eczema", "psoriasis", "burn", "wound", "ulcer", "cellulitis", "abscess", "rash"]
+    },
+    "pregnancy_childbirth": {
+      "icd_ranges": ["O00-O9A", "630-679"],
+      "keywords": ["pregnancy", "pregnant", "childbirth", "delivery", "abortion", "miscarriage", "prenatal", "postpartum", "obstetric"]
+    },
+    "perinatal": {
+      "icd_ranges": ["P00-P96", "760-779"],
+      "keywords": ["newborn", "birth", "perinatal", "neonatal", "infant", "premature", "low birth weight", "jaundice"]
+    },
+    "congenital": {
+      "icd_ranges": ["Q00-Q99", "740-759"],
+      "keywords": ["congenital", "birth defect", "malformation", "chromosomal", "genetic", "hereditary", "syndrome", "anomaly"]
+    },
+    "transport_accidents": {
+      "icd_ranges": ["V00-V99"],
+      "keywords": ["vehicle", "car accident", "motorcycle", "pedestrian", "transport", "collision", "crash", "traffic"]
+    },
+    "military_external_causes": {
+      "icd_ranges": ["Y00-Y99", "E950-E999"],
+      "keywords": ["military", "war", "combat", "explosion", "blast", "gunshot", "violence", "assault", "suicide", "homicide", "terrorism"]
+    }
+  },
+  "chronic_conditions": [
+    "diabetes",
+    "hypertension",
+    "heart failure",
+    "copd",
+    "asthma",
+    "arthritis",
+    "chronic kidney disease",
+    "depression",
+    "anxiety",
+    "bipolar",
+    "cancer",
+    "stroke",
+    "dementia",
+    "alzheimer",
+    "parkinson",
+    "multiple sclerosis",
+    "ptsd",
+    "post-traumatic stress",
+    "traumatic brain injury",
+    "tbi",
+    "chronic pain",
+    "fibromyalgia",
+    "gulf war syndrome",
+    "agent orange",
+    "hearing loss",
+    "tinnitus",
+    "sleep apnea",
+    "chronic fatigue",
+    "inflammatory bowel",
+    "crohn",
+    "ulcerative colitis",
+    "rheumatoid arthritis",
+    "lupus",
+    "psoriasis",
+    "seizure disorder",
+    "epilepsy",
+    "chronic obstructive",
+    "emphysema",
+    "chronic bronchitis",
+    "hepatitis",
+    "cirrhosis",
+    "osteoporosis",
+    "osteoarthritis",
+    "migraine",
+    "neuropathy",
+    "peripheral neuropathy",
+    "chronic wound",
+    "substance use disorder",
+    "alcohol use disorder",
+    "schizophrenia",
+    "schizoaffective",
+    "personality disorder",
+    "eating disorder"
+  ]
 }

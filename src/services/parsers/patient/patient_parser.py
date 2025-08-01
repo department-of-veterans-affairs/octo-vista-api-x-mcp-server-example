@@ -11,6 +11,7 @@ from jsonpath_ng import parse as jsonpath_parse  # type: ignore
 
 from ....models.patient import (
     Consult,
+    Diagnosis,
     HealthFactor,
     LabResult,
     Medication,
@@ -101,6 +102,12 @@ class PatientDataParser:
         health_factors = self._parse_health_factors(grouped_items.get("factor", []))
         orders = self._parse_orders(grouped_items.get("order", []))
 
+        # Diagnoses can be in "problem" or "pov" (Purpose of Visit) groups
+        problem_items = grouped_items.get("problem", [])
+        pov_items = grouped_items.get("pov", [])
+        all_diagnosis_items = problem_items + pov_items
+        diagnoses = self._parse_diagnoses(all_diagnosis_items)
+
         # Create collection
         collection = PatientDataCollection(
             orders=orders,
@@ -110,6 +117,7 @@ class PatientDataParser:
             consults=consults,
             medications=medications,
             health_factors=health_factors,
+            diagnoses=diagnoses,
             source_station=self.station,
             source_dfn=self.dfn,
             total_items=len(items),
@@ -120,7 +128,7 @@ class PatientDataParser:
             f"Parsed patient data for {collection.patient_name}: "
             f"{len(vital_signs)} vitals, {len(lab_results)} labs, "
             f"{len(consults)} consults, {len(medications)} medications, "
-            f"{len(health_factors)} health factors",
+            f"{len(health_factors)} health factors, {len(diagnoses)} diagnoses, "
             f"{len(orders)} orders",
         )
 
@@ -304,7 +312,7 @@ class PatientDataParser:
 
         for item in med_items:
             try:
-                # Pre-process the medication data using JSONPath
+                # Preprocess the medication data using JSONPath
                 processed_item = self._preprocess_medication_item(item)
                 medication = Medication(**processed_item)
                 medications.append(medication)
@@ -359,6 +367,20 @@ class PatientDataParser:
                     break
             else:
                 processed["productFormName"] = "UNKNOWN MEDICATION"
+
+        # Handle missing overallStart (required for start_date)
+        if "overallStart" not in processed:
+            # Try alternative date fields
+            date_alternatives = ["start", "startDate", "prescribedDate", "entered"]
+            for alt_field in date_alternatives:
+                if alt_field in processed and processed[alt_field]:
+                    processed["overallStart"] = processed[alt_field]
+                    break
+            else:
+                # Default to current date if no start date found
+                from datetime import datetime
+
+                processed["overallStart"] = datetime.now().strftime("%Y%m%d")
 
         return processed
 
@@ -416,6 +438,106 @@ class PatientDataParser:
                     processed["localId"] = "0"
             else:
                 processed["localId"] = "0"
+
+        return processed
+
+    def _parse_diagnoses(self, problem_items: list[dict[str, Any]]) -> list[Diagnosis]:
+        """Parse diagnoses from problem items"""
+        diagnoses = []
+
+        for item in problem_items:
+            try:
+                # Preprocess the diagnosis data
+                processed_item = self._preprocess_diagnosis_item(item)
+                diagnosis = Diagnosis(**processed_item)
+                diagnoses.append(diagnosis)
+            except Exception as e:
+                logger.warning(f"Failed to parse diagnosis {item.get('uid')}: {e}")
+                logger.debug(f"Diagnosis item data: {item}")
+
+        # Sort by diagnosis date (newest first)
+        diagnoses.sort(key=lambda d: d.diagnosis_date, reverse=True)
+
+        return diagnoses
+
+    def _preprocess_diagnosis_item(self, item: dict[str, Any]) -> dict[str, Any]:
+        """Preprocess diagnosis item for field normalization"""
+        processed = item.copy()
+
+        # Ensure required fields have defaults
+        if "icdCode" not in processed:
+            processed["icdCode"] = ""
+
+        # Clean malformed ICD codes (remove URN:10D: prefix)
+        icd_code = processed.get("icdCode", "")
+        if icd_code.startswith("urn:10d:"):
+            processed["icdCode"] = icd_code[
+                8:
+            ]  # Remove "urn:10d:" prefix (8 chars, not 9)
+        elif icd_code.startswith("URN:10D:"):
+            processed["icdCode"] = icd_code[
+                8:
+            ]  # Remove "URN:10D:" prefix (8 chars, not 9)
+
+        if "icdName" not in processed:
+            # Try to get description from "name" field (common in POV data)
+            if "name" in processed:
+                processed["icdName"] = processed["name"]
+            else:
+                processed["icdName"] = "UNKNOWN DIAGNOSIS"
+
+        if "facilityCode" not in processed:
+            processed["facilityCode"] = "000"
+
+        if "facilityName" not in processed:
+            processed["facilityName"] = "UNKNOWN FACILITY"
+
+        if "entered" not in processed:
+            # Use current date if no date provided
+            from datetime import datetime
+
+            processed["entered"] = datetime.now().strftime("%Y%m%d")
+
+        # Handle localId - ensure it's present
+        if "localId" not in processed:
+            # Extract from UID if possible
+            uid = processed.get("uid", "")
+            if uid:
+                parts = uid.split(":")
+                if len(parts) >= 4:
+                    processed["localId"] = parts[-1]  # Last part of UID
+                else:
+                    processed["localId"] = "0"
+            else:
+                processed["localId"] = "0"
+
+        # Determine ICD version from code format
+        icd_code = processed.get("icdCode", "")
+        if icd_code:
+            # ICD-10 codes start with letters, ICD-9 codes are numeric
+            if any(c.isalpha() for c in icd_code):
+                processed["icd_version"] = "ICD-10"
+            else:
+                processed["icd_version"] = "ICD-9"
+
+        # Set default diagnosis type based on VistA problem type or POV type
+        problem_status = processed.get("problemStatus", "").lower()
+        pov_type = processed.get("type", "").upper()
+
+        if "primary" in problem_status or pov_type == "P":
+            processed["diagnosis_type"] = "primary"
+        elif pov_type == "S":
+            processed["diagnosis_type"] = "secondary"
+        else:
+            processed["diagnosis_type"] = "secondary"  # Default
+
+        # Map problem status to diagnosis status
+        if problem_status in ["active", "chronic"]:
+            processed["status"] = "active"
+        elif problem_status in ["resolved", "inactive"]:
+            processed["status"] = "resolved"
+        else:
+            processed["status"] = "active"  # Default
 
         return processed
 

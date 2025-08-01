@@ -19,7 +19,7 @@
     ".ruff_cache": true
   },
   // Python interpreter
-  "python.defaultInterpreterPath": "/Users/jwishnie/.local/share/mise/installs/python/3.12.11/bin/python",
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
   // Terminal settings for mise
   "terminal.integrated.env.osx": {
     "PATH": "${env:PATH}:${workspaceFolder}/.venv/bin"

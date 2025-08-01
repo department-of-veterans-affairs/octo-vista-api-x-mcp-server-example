@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from src.models.patient.clinical import HealthFactor
+from src.models.patient.health_factor import HealthFactor
 from src.services.parsers.patient.patient_parser import PatientDataParser
 from src.services.validators.clinical_validators import (
     calculate_health_factor_risk_score,

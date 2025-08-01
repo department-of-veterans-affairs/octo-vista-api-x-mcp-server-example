@@ -4,9 +4,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from src.models.patient.clinical import HealthFactor
 from src.models.patient.collection import PatientDataCollection
 from src.models.patient.demographics import PatientDemographics
+from src.models.patient.health_factor import HealthFactor
 
 
 @pytest.fixture

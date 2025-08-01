@@ -2,7 +2,7 @@
 
 from datetime import datetime, timedelta
 
-from src.models.patient.clinical import Medication
+from src.models.patient.medication import Medication
 from src.services.parsers.patient.value_parser import (
     extract_medication_instructions,
     normalize_medication_frequency,

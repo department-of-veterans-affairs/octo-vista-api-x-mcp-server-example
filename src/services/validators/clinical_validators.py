@@ -5,6 +5,10 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+# =============================================================================
+# HEALTH FACTOR VALIDATION FUNCTIONS
+# =============================================================================
+
 
 # Cache the config to avoid repeated file reads
 @lru_cache(maxsize=1)
@@ -266,3 +270,364 @@ def add_custom_keywords(category_type: str, level: str, keywords: list[str]) -> 
     # This is a placeholder for future dynamic keyword management
     # Would require config persistence mechanism
     pass
+
+
+# =============================================================================
+# DIAGNOSIS-SPECIFIC VALIDATION FUNCTIONS
+# =============================================================================
+
+
+def validate_icd_code(icd_code: str, icd_version: str) -> bool:
+    """
+    Validate ICD code format (ICD-9 or ICD-10).
+
+    Args:
+        icd_code: The ICD code to validate
+        icd_version: "ICD-9" or "ICD-10"
+
+    Returns:
+        True if code format is valid
+    """
+    import re
+
+    if not icd_code or not icd_version:
+        return False
+
+    icd_code = icd_code.strip().upper()
+
+    if icd_version.upper() == "ICD-10":
+        # ICD-10 format: Letter + 2-3 digits + optional decimal + alphanumeric extensions
+        # Examples: A01, B95.1, C78.00, Z51.11, W21.00XD, S72.001A
+        pattern = r"^[A-Z]\d{2,3}(\.[0-9A-Z]{1,4})?$"
+        return re.match(pattern, icd_code) is not None
+
+    elif icd_version.upper() == "ICD-9":
+        # ICD-9 format: 3-5 digits with optional decimal, or V/E codes with 2-5 digits
+        # Examples: 250, 250.0, 401.9, V58.69 (V + 2 digits), E879.3 (E + 3 digits)
+        pattern = r"^([VE]\d{2,5}|\d{3,5})(\.\d{1,2})?$"
+        return re.match(pattern, icd_code) is not None
+
+    return False
+
+
+def classify_diagnosis_body_system(icd_code: str, description: str) -> str:
+    """
+    Classify diagnosis by body system using ICD ranges and keywords.
+
+    Args:
+        icd_code: The ICD code
+        description: The diagnosis description
+
+    Returns:
+        Body system classification
+    """
+    config = _load_health_factor_config()
+    body_systems = config.get("diagnosis_body_systems", {})
+
+    if not icd_code and not description:
+        return "unclassified"
+
+    # First check for strong keyword matches in description (prioritize clear clinical descriptions)
+    combined_text = f"{icd_code} {description}".lower()
+    strong_keyword_systems = []
+
+    for system_name, system_config in body_systems.items():
+        keywords = system_config.get("keywords", [])
+        # Count how many keywords match for this system
+        matches = sum(1 for keyword in keywords if keyword in combined_text)
+        if matches > 0:
+            strong_keyword_systems.append((system_name, matches))
+
+    # If we have strong keyword matches, use the one with most matches
+    if strong_keyword_systems:
+        # Sort by number of matches (descending)
+        strong_keyword_systems.sort(key=lambda x: x[1], reverse=True)
+        best_match = strong_keyword_systems[0]
+        # If the best match has 2+ keywords or is clearly medical, use it
+        if best_match[1] >= 2 or any(
+            keyword in combined_text
+            for keyword in [
+                "heart",
+                "cardiac",
+                "myocardial",
+                "diabetes",
+                "depression",
+                "anxiety",
+            ]
+        ):
+            return best_match[0]
+
+    # Then try to match by ICD code ranges
+    for system_name, system_config in body_systems.items():
+        icd_ranges = system_config.get("icd_ranges", [])
+
+        for icd_range in icd_ranges:
+            if _is_icd_in_range(icd_code, icd_range):
+                return system_name
+
+    # Fall back to any keyword matching
+    for system_name, system_config in body_systems.items():
+        keywords = system_config.get("keywords", [])
+        if any(keyword in combined_text for keyword in keywords):
+            return system_name
+
+    return "other"
+
+
+def _is_icd_in_range(icd_code: str, icd_range: str) -> bool:
+    """
+    Check if ICD code falls within a specified range.
+
+    Args:
+        icd_code: The ICD code to check
+        icd_range: Range like "I00-I99" or "390-459" or "C00-D49"
+
+    Returns:
+        True if code is in range
+    """
+    if not icd_code or not icd_range:
+        return False
+
+    # Determine if this is an ICD-10 code (starts with letter) or ICD-9 (numeric/V/E)
+    is_icd10_code = len(icd_code) > 0 and icd_code[0].isalpha()
+    is_icd10_range = any(c.isalpha() for c in icd_range)
+
+    # Only match ICD-10 codes with ICD-10 ranges, and ICD-9 codes with ICD-9 ranges
+    if is_icd10_code != is_icd10_range:
+        return False
+
+    try:
+        # Handle ICD-10 ranges (letter + numbers)
+        if is_icd10_range and "-" in icd_range:
+            start_code, end_code = icd_range.split("-")
+            start_letter = start_code[0]
+            end_letter = end_code[0]
+
+            if not is_icd10_code:
+                return False
+
+            # Skip invalid patterns like "XXX.XX" (not valid ICD-10 format)
+            if len(icd_code) > 1 and not icd_code[1].isdigit():
+                return False
+
+            code_letter = icd_code[0]
+
+            # Check if letter is in range
+            if start_letter <= code_letter <= end_letter:
+                # Extract the numeric parts for more precise checking
+                # For ICD-10, we need to handle the full code comparison
+                code_parts = icd_code[1:].split(".")
+                code_base = code_parts[0]
+
+                start_base = start_code[1:]
+                end_base = end_code[1:]
+
+                # If same letter, compare numeric parts directly
+                if start_letter == end_letter == code_letter:
+                    code_num = int(code_base) if code_base.isdigit() else 0
+                    start_num = int(start_base) if start_base.isdigit() else 0
+                    end_num = int(end_base) if end_base.isdigit() else 999
+                    return start_num <= code_num <= end_num
+
+                # For cross-letter ranges (like C00-D49), check boundaries
+                elif start_letter < code_letter < end_letter:
+                    return True  # Any code in between letters is included
+                elif code_letter == start_letter:
+                    # Check if >= start numeric part
+                    code_num = int(code_base) if code_base.isdigit() else 0
+                    start_num = int(start_base) if start_base.isdigit() else 0
+                    return code_num >= start_num
+                elif code_letter == end_letter:
+                    # Check if <= end numeric part
+                    code_num = int(code_base) if code_base.isdigit() else 0
+                    end_num = int(end_base) if end_base.isdigit() else 999
+                    return code_num <= end_num
+
+        # Handle ICD-9 ranges (numeric only)
+        elif not is_icd10_range and "-" in icd_range:
+            if is_icd10_code:  # ICD-10 code shouldn't match ICD-9 range
+                return False
+
+            start_num, end_num = map(int, icd_range.split("-"))
+            # For ICD-9, extract all digits before decimal
+            code_parts = icd_code.split(".")
+            # Handle V and E codes by extracting just the numeric part
+            numeric_part = "".join(filter(str.isdigit, code_parts[0]))
+            if numeric_part:
+                code_num = int(numeric_part)
+                return start_num <= code_num <= end_num
+
+    except (ValueError, IndexError):
+        pass
+
+    return False
+
+
+def is_chronic_diagnosis(icd_code: str, description: str) -> bool:
+    """
+    Determine if diagnosis represents a chronic condition.
+
+    Args:
+        icd_code: The ICD code
+        description: The diagnosis description
+
+    Returns:
+        True if condition is chronic
+    """
+    config = _load_health_factor_config()
+    chronic_conditions = config.get("chronic_conditions", [])
+
+    combined_text = f"{icd_code} {description}".lower()
+
+    # Check against known chronic conditions
+    for condition in chronic_conditions:
+        if condition.lower() in combined_text:
+            return True
+
+    # Additional keyword-based checks
+    chronic_keywords = [
+        "chronic",
+        "diabetes",
+        "hypertension",
+        "heart failure",
+        "copd",
+        "asthma",
+        "arthritis",
+        "depression",
+        "anxiety",
+        "cancer",
+        "kidney disease",
+        "liver disease",
+        "dementia",
+        "alzheimer",
+    ]
+
+    return any(keyword in combined_text for keyword in chronic_keywords)
+
+
+def assess_diagnosis_severity(
+    icd_code: str, description: str, diagnosis_type: str
+) -> str:
+    """
+    Assess severity level of diagnosis.
+
+    Args:
+        icd_code: The ICD code
+        description: The diagnosis description
+        diagnosis_type: primary, secondary, etc.
+
+    Returns:
+        Severity level: "mild", "moderate", "severe"
+    """
+    combined_text = f"{icd_code} {description}".lower()
+
+    # High severity indicators
+    severe_keywords = [
+        "acute",
+        "severe",
+        "critical",
+        "emergency",
+        "malignant",
+        "metastatic",
+        "failure",
+        "arrest",
+        "stroke",
+        "infarction",
+        "sepsis",
+        "shock",
+        "exacerbation",
+    ]
+
+    # Moderate severity indicators
+    moderate_keywords = [
+        "chronic",
+        "moderate",
+        "uncontrolled",
+        "complicated",
+        "secondary",
+        "progressive",
+        "active",
+        "copd",
+        "diabetes",
+        "hypertension",
+    ]
+
+    # Low severity indicators
+    mild_keywords = [
+        "mild",
+        "controlled",
+        "stable",
+        "resolved",
+        "history",
+        "screening",
+        "routine",
+        "preventive",
+    ]
+
+    # Check severity based on keywords (order matters - check severe first)
+    if any(keyword in combined_text for keyword in severe_keywords):
+        return "severe"
+    elif any(keyword in combined_text for keyword in moderate_keywords):
+        return "moderate"
+    elif any(keyword in combined_text for keyword in mild_keywords):
+        return "mild"
+
+    # Default based on diagnosis type
+    if diagnosis_type.lower() == "primary":
+        return "moderate"  # Primary diagnoses are typically more significant
+    else:
+        return "mild"  # Secondary diagnoses are typically less severe
+
+
+def get_diagnosis_trends(diagnoses: list[Any], icd_code: str) -> dict[str, Any]:
+    """
+    Analyze trends for a specific diagnosis over time.
+
+    Args:
+        diagnoses: List of Diagnosis objects
+        icd_code: ICD code to analyze
+
+    Returns:
+        Dictionary with trend analysis
+    """
+    matching_diagnoses = [
+        d for d in diagnoses if d.icd_code.upper() == icd_code.upper()
+    ]
+
+    if not matching_diagnoses:
+        return {"trend": "no_data", "count": 0}
+
+    # Sort by date
+    matching_diagnoses.sort(key=lambda d: d.diagnosis_date)
+
+    # Basic trend analysis
+    count = len(matching_diagnoses)
+    first_date = matching_diagnoses[0].diagnosis_date
+    last_date = matching_diagnoses[-1].diagnosis_date
+
+    # Check if it's recurring
+    is_recurring = count > 1
+
+    # Analyze severity progression
+    severity_levels = [d.severity_level for d in matching_diagnoses]
+    severity_scores = {"mild": 1, "moderate": 2, "severe": 3}
+    numeric_progression = [severity_scores.get(s, 2) for s in severity_levels]
+
+    trend = "stable"
+    if len(numeric_progression) > 1:
+        if numeric_progression[-1] > numeric_progression[0]:
+            trend = "worsening"
+        elif numeric_progression[-1] < numeric_progression[0]:
+            trend = "improving"
+
+    return {
+        "trend": trend,
+        "count": count,
+        "first_diagnosed": first_date.isoformat(),
+        "last_diagnosed": last_date.isoformat(),
+        "is_recurring": is_recurring,
+        "severity_progression": severity_levels,
+        "current_severity": matching_diagnoses[-1].severity_level,
+        "is_chronic": matching_diagnoses[-1].is_chronic,
+        "body_system": matching_diagnoses[-1].body_system,
+    }
