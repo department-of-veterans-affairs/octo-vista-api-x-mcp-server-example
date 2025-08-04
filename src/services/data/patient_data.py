@@ -1,5 +1,6 @@
 """Patient data access service with transparent caching."""
 
+import asyncio
 import logging
 
 from ...models.patient.patient import PatientDataCollection
@@ -10,15 +11,22 @@ from ...vista.base import BaseVistaClient, VistaAPIError
 
 logger = logging.getLogger(__name__)
 
-# Module-level cache instance
+# Module-level cache instance and lock for thread safety
 _cache_instance = None
+_cache_lock = asyncio.Lock()
 
 
 async def _get_cache():
-    """Get or create singleton cache instance."""
+    """Get or create singleton cache instance with thread safety."""
     global _cache_instance
+
+    # Double-checked locking pattern for async
     if _cache_instance is None:
-        _cache_instance = await CacheFactory.create_patient_cache()
+        async with _cache_lock:
+            # Check again after acquiring lock
+            if _cache_instance is None:
+                _cache_instance = await CacheFactory.create_patient_cache()
+
     return _cache_instance
 
 

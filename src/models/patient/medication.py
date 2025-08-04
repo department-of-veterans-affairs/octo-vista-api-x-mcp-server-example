@@ -36,9 +36,9 @@ class Medication(BasePatientModel):
     route: str | None = None  # "PO", "IV", "IM"
 
     # Dates
-    start_date: datetime = Field(alias="overallStart")
-    end_date: datetime | None = Field(None, alias="overallStop")
-    last_filled: datetime | None = Field(None, alias="lastFilled")
+    start_date: datetime | None = Field(default=None, alias="overallStart")
+    end_date: datetime | None = Field(default=None, alias="overallStop")
+    last_filled: datetime | None = Field(default=None, alias="lastFilled")
 
     # Status and supply information
     status: str = Field(alias="vaStatus")  # "ACTIVE", "DISCONTINUED", "COMPLETED"

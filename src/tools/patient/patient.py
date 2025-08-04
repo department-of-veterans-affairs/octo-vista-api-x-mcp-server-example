@@ -640,7 +640,11 @@ def register_patient_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                                     "route": med.route,
                                     "instructions": med.sig,
                                     "status": med.status,
-                                    "started": med.start_date.isoformat(),
+                                    "started": (
+                                        med.start_date.isoformat()
+                                        if med.start_date
+                                        else None
+                                    ),
                                     "ended": (
                                         med.end_date.isoformat()
                                         if med.end_date
@@ -670,7 +674,9 @@ def register_patient_tools(mcp: FastMCP, vista_client: BaseVistaClient):
                             "status": med.status,
                             "active": med.is_active,
                             "discontinued": med.is_discontinued,
-                            "start_date": med.start_date.isoformat(),
+                            "start_date": (
+                                med.start_date.isoformat() if med.start_date else None
+                            ),
                             "end_date": (
                                 med.end_date.isoformat() if med.end_date else None
                             ),

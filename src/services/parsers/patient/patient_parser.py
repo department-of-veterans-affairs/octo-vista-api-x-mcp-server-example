@@ -104,7 +104,11 @@ class PatientDataParser:
         orders = self._parse_orders(grouped_items.get("order", []))
         documents = self._parse_documents(grouped_items.get("document", []))
 
-        # Diagnoses can be in "problem" or "pov" (Purpose of Visit) groups
+        problem_items = grouped_items.get("problem", [])
+        pov_items = grouped_items.get("pov", [])
+        all_diagnosis_items = problem_items + pov_items
+        diagnoses = self._parse_diagnoses(all_diagnosis_items)
+
         problem_items = grouped_items.get("problem", [])
         pov_items = grouped_items.get("pov", [])
         all_diagnosis_items = problem_items + pov_items
@@ -312,12 +316,12 @@ class PatientDataParser:
         return consults
 
     def _parse_medications(self, med_items: list[dict[str, Any]]) -> list[Medication]:
-        """Parse medications from medication items using JSONPath for preprocessing"""
+        """Parse medications from med items"""
         medications = []
 
         for item in med_items:
             try:
-                # Preprocess the medication data using JSONPath
+                # Preprocess the medication data
                 processed_item = self._preprocess_medication_item(item)
                 medication = Medication(**processed_item)
                 medications.append(medication)
@@ -325,8 +329,8 @@ class PatientDataParser:
                 logger.warning(f"Failed to parse medication {item.get('uid')}: {e}")
                 logger.debug(f"Medication item data: {item}")
 
-        # Sort by start date (newest first)
-        medications.sort(key=lambda m: m.start_date, reverse=True)
+        # Sort by start date (newest first), handling None dates
+        medications.sort(key=lambda m: m.start_date or datetime.min, reverse=True)
 
         return medications
 
@@ -399,6 +403,11 @@ class PatientDataParser:
             try:
                 # Preprocess the health factor data
                 processed_item = self._preprocess_health_factor_item(item)
+
+                # Skip malformed items that return None
+                if processed_item is None:
+                    continue
+
                 health_factor = HealthFactor(**processed_item)
                 health_factors.append(health_factor)
             except Exception as e:
@@ -410,9 +419,19 @@ class PatientDataParser:
 
         return health_factors
 
-    def _preprocess_health_factor_item(self, item: dict[str, Any]) -> dict[str, Any]:
+    def _preprocess_health_factor_item(
+        self, item: dict[str, Any]
+    ) -> dict[str, Any] | None:
         """Preprocess health factor item for field normalization"""
         processed = item.copy()
+
+        if (
+            "uid" not in processed
+            or not processed["uid"]
+            or processed.get("invalid") == "data"
+        ):
+            logger.warning(f"Skipping malformed health factor data: {item}")
+            return None
 
         # Ensure required fields have defaults
         if "name" not in processed:
