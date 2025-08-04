@@ -36,28 +36,7 @@ def register_patient_tools(mcp: FastMCP, vista_client: BaseVistaClient):
         station: str | None = None,
         limit: int = 10,
     ) -> dict[str, Any]:
-        """
-        Search for patients across the Vista system using partial name or SSN matching
-
-        Performs case-insensitive prefix search on patient names or exact match on SSN
-        fragments. Useful for finding patients when full details aren't known.
-
-        Args:
-            search_term: Either:
-                - Name prefix of 2+ characters (e.g., "SMI" finds Smith, Smithson)
-                - Last 4 digits of SSN for exact matching
-                - Full last name for broader results
-            station: Vista station number for facility-specific search (default: user's home station)
-            limit: Maximum results to return, range 1-100 (default: 10)
-
-        Returns:
-            List of matching patients with:
-            - Full name, DOB, SSN (masked)
-            - DFN (patient's unique identifier) for subsequent data retrieval
-            - Age and gender
-            - Station where patient record exists
-            Results sorted by name alphabetically
-        """
+        """Search patients by partial name or SSN last-4."""
         station = station or get_default_station()
         caller_duz = get_default_duz()
 
@@ -110,34 +89,7 @@ def register_patient_tools(mcp: FastMCP, vista_client: BaseVistaClient):
         vital_type: str | None = None,
         days_back: int = 30,
     ) -> dict[str, Any]:
-        """
-        Retrieve recent vital sign measurements for a specific patient
-
-        Fetches vital signs including blood pressure, temperature, pulse, respiration,
-        weight, height, BMI, pain score, and oxygen saturation. Data is cached for
-        performance and includes trend analysis.
-
-        Args:
-            patient_dfn: Patient's unique identifier (DFN) in the Vista system
-            station: Vista station number for multi-site access (default: user's home station)
-            vital_type: Filter by specific vital type (optional):
-                - "BLOOD PRESSURE" - Systolic/diastolic readings
-                - "TEMPERATURE" - Body temperature
-                - "PULSE" - Heart rate
-                - "RESPIRATION" - Breathing rate
-                - "WEIGHT" - Patient weight
-                - "HEIGHT" - Patient height
-                - "PAIN" - Pain score (0-10)
-                - "PULSE OXIMETRY" - Oxygen saturation
-            days_back: Number of days of history to retrieve, range 1-365 (default: 30)
-
-        Returns:
-            Vital signs data including:
-            - Latest reading for each vital type with timestamps
-            - Historical readings for trend analysis
-            - Abnormal/critical flags based on reference ranges
-            - Measurement units and location where taken
-        """
+        """Get patient vital signs with latest values and history."""
         start_time = time.time()
         station = station or get_default_station()
         caller_duz = get_default_duz()
@@ -233,33 +185,7 @@ def register_patient_tools(mcp: FastMCP, vista_client: BaseVistaClient):
         lab_type: str | None = None,
         days_back: int = 90,
     ) -> dict[str, Any]:
-        """
-        Retrieve laboratory test results and trends for a specific patient
-
-        Fetches comprehensive lab results including chemistry panels, hematology,
-        microbiology, and specialized tests. Results include reference ranges,
-        abnormal flags, and historical trends for monitoring changes over time.
-
-        Args:
-            patient_dfn: Patient's unique identifier (DFN) in the Vista system
-            station: Vista station number for multi-site access (default: user's home station)
-            abnormal_only: Return only abnormal/critical results when True (default: False)
-            lab_type: Filter by specific test name (optional), examples:
-                - "GLUCOSE" - Blood sugar levels
-                - "HEMOGLOBIN" - Red blood cell count
-                - "CREATININE" - Kidney function
-                - "TSH" - Thyroid function
-                - "CHOLESTEROL" - Lipid panel
-            days_back: Number of days of history to retrieve, range 1-730 (default: 90)
-
-        Returns:
-            Laboratory data including:
-            - Grouped results by test type with latest values
-            - Historical trends for each test (up to 5 most recent)
-            - Abnormal/critical flags with reference ranges
-            - Test metadata (specimen type, collection date, verified date)
-            - Interpretation codes when available
-        """
+        """Get patient laboratory test results with values and reference ranges."""
         start_time = time.time()
         station = station or get_default_station()
         caller_duz = get_default_duz()
@@ -387,27 +313,7 @@ def register_patient_tools(mcp: FastMCP, vista_client: BaseVistaClient):
         station: str | None = None,
         active_only: bool = True,
     ) -> dict[str, Any]:
-        """
-        Retrieve consultation requests and referrals for a specific patient
-
-        Tracks inter-specialty consultations including cardiology, neurology,
-        mental health, and other specialties. Monitors consultation lifecycle
-        from request through completion, helping identify delays in care.
-
-        Args:
-            patient_dfn: Patient's unique identifier (DFN) in the Vista system
-            station: Vista station number for multi-site access (default: user's home station)
-            active_only: When True, returns only pending/active consultations;
-                        when False, includes completed and cancelled (default: True)
-
-        Returns:
-            Consultation data including:
-            - Summary counts (total, active, overdue)
-            - Overdue consultations with days elapsed
-            - Detailed list with service, urgency, status, and dates
-            - Requesting and consulting provider information
-            - Reason for consultation and provisional diagnosis
-        """
+        """Get patient consultation requests and referrals."""
         start_time = time.time()
         station = station or get_default_station()
         caller_duz = get_default_duz()
@@ -513,36 +419,7 @@ def register_patient_tools(mcp: FastMCP, vista_client: BaseVistaClient):
         therapeutic_class: str | None = None,
         limit: int = 50,
     ) -> dict[str, Any]:
-        """
-        Retrieve current and historical medications for a specific patient
-
-        Provides comprehensive medication list including dosing instructions,
-        refill status, and potential drug interactions. Critical for medication
-        reconciliation and safety monitoring.
-
-        Args:
-            patient_dfn: Patient's unique identifier (DFN) in the Vista system
-            station: Vista station number for multi-site access (default: user's home station)
-            active_only: When True, returns only active medications;
-                        when False, includes discontinued and completed (default: True)
-            therapeutic_class: Filter by therapeutic class (optional), examples:
-                - "ANTIHYPERTENSIVE" - Blood pressure medications
-                - "DIABETES" - Diabetes medications
-                - "ANTICOAGULANT" - Blood thinners
-                - "ANTIDEPRESSANT" - Depression medications
-            limit: Maximum number of medications to return in all_medications array,
-                  range 1-200 (default: 50). Summary counts and groupings include all medications.
-
-        Returns:
-            Medication data including:
-            - Current active medications with dosing instructions
-            - Medication history and status changes
-            - Refill information and adherence tracking
-            - Potential drug interactions and alerts
-            - Therapeutic class groupings for medication review (includes all medications)
-            - Prescriber information and pharmacy details
-            - all_medications array limited by the limit parameter for performance
-        """
+        """Get patient medications with dosing and refill information."""
         start_time = time.time()
         station = station or get_default_station()
         caller_duz = get_default_duz()
@@ -732,44 +609,7 @@ def register_patient_tools(mcp: FastMCP, vista_client: BaseVistaClient):
         severity_filter: str | None = None,
         limit: int = 50,
     ) -> dict[str, Any]:
-        """
-        Retrieve health factors and risk factors for a specific patient
-
-        Provides comprehensive health factor analysis including lifestyle, environmental,
-        and genetic risk factors. Essential for risk assessment, preventive care planning,
-        and health maintenance tracking.
-
-        Args:
-            patient_dfn: Patient's unique identifier (DFN) in the Vista system
-            station: Vista station number for multi-site access (default: user's home station)
-            category_filter: Filter by specific category (optional), examples:
-                - "COVID-19" - COVID-related factors
-                - "CANCER SCREENING" - Cancer screening factors
-                - "SUBSTANCE" - Substance use factors
-                - "EXPOSURE" - Environmental exposure factors
-            risk_category: Filter by risk type (optional):
-                - "lifestyle" - Modifiable lifestyle factors (smoking, diet, exercise)
-                - "environmental" - Environmental exposures (agent orange, radiation)
-                - "genetic" - Genetic/hereditary factors
-                - "medical" - Medical conditions and diagnoses
-                - "screening" - Screening and preventive measures
-            severity_filter: Filter by severity level (optional):
-                - "mild" - Low-risk factors
-                - "moderate" - Moderate-risk factors
-                - "severe" - High-risk factors
-            limit: Maximum number of health factors to return in all_health_factors array,
-                  range 1-200 (default: 50). Summary counts and groupings include all factors.
-
-        Returns:
-            Health factor data including:
-            - Current active health factors with risk assessment
-            - Categorized factors by type (lifestyle, environmental, genetic)
-            - Risk scores and severity levels for clinical decision support
-            - Health factor trends and progression over time
-            - Modifiable vs non-modifiable risk factor identification
-            - Health maintenance and screening recommendations
-            - all_health_factors array limited by the limit parameter for performance
-        """
+        """Get patient health factors and risk assessments."""
         start_time = time.time()
         station = station or get_default_station()
         caller_duz = get_default_duz()
@@ -974,47 +814,7 @@ def register_patient_tools(mcp: FastMCP, vista_client: BaseVistaClient):
         icd_version: str | None = None,
         limit: int = 50,
     ) -> dict[str, Any]:
-        """
-        Retrieve diagnoses and problem list for a specific patient
-
-        Provides comprehensive diagnosis information including ICD codes, body system
-        classification, and diagnosis history. Essential for clinical decision support,
-        treatment planning, and care coordination.
-
-        Args:
-            patient_dfn: Patient's unique identifier (DFN) in the Vista system
-            station: Vista station number for multi-site access (default: user's home station)
-            body_system: Filter by body system (optional), examples:
-                - "cardiovascular" - Heart and circulatory system
-                - "respiratory" - Lung and breathing disorders
-                - "endocrine" - Hormone and metabolic conditions
-                - "neurological" - Brain and nervous system
-                - "mental_health" - Psychiatric conditions
-            diagnosis_type: Filter by diagnosis type (optional):
-                - "primary" - Primary diagnoses (main conditions)
-                - "secondary" - Secondary diagnoses
-                - "admitting" - Admission diagnoses
-                - "discharge" - Discharge diagnoses
-            status_filter: Filter by status (optional):
-                - "active" - Currently active diagnoses
-                - "resolved" - Resolved conditions
-                - "chronic" - Chronic conditions
-            icd_version: Filter by ICD version (optional):
-                - "ICD-9" - ICD-9 codes only
-                - "ICD-10" - ICD-10 codes only
-            limit: Maximum number of diagnoses to return in all_diagnoses array,
-                  range 1-200 (default: 50). Summary counts include all diagnoses.
-
-        Returns:
-            Diagnosis data including:
-            - Current active diagnoses with ICD codes and descriptions
-            - Primary vs secondary diagnosis designation
-            - Body system classification for clinical organization
-            - Diagnosis history and progression tracking
-            - ICD code validation and version information
-            - Chronic condition identification
-            - all_diagnoses array limited by the limit parameter for performance
-        """
+        """Get patient diagnoses with ICD codes."""
         start_time = time.time()
         station = station or get_default_station()
         caller_duz = get_default_duz()

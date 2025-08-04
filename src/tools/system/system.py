@@ -34,16 +34,7 @@ def register_system_tools(mcp: FastMCP, vista_client: BaseVistaClient):
         user_duz: str | None = None,
         station: str | None = None,
     ) -> dict[str, Any]:
-        """
-        Get detailed user profile information
-
-        Args:
-            user_duz: DUZ of user to look up (default: current user)
-            station: Vista station number (default: configured default)
-
-        Returns:
-            User profile with name, title, service, and contact information
-        """
+        """Get Vista user profile information."""
         station = station or get_default_station()
         caller_duz = get_default_duz()
         target_duz = user_duz or caller_duz
@@ -128,15 +119,7 @@ def register_system_tools(mcp: FastMCP, vista_client: BaseVistaClient):
     async def heartbeat(
         station: str | None = None,
     ) -> dict[str, Any]:
-        """
-        Check Vista connection status (heartbeat/keep-alive)
-
-        Args:
-            station: Vista station number (default: configured default)
-
-        Returns:
-            Connection status
-        """
+        """Check Vista connection status."""
         station = station or get_default_station()
         caller_duz = get_default_duz()
 
@@ -181,16 +164,7 @@ def register_system_tools(mcp: FastMCP, vista_client: BaseVistaClient):
         station: str | None = None,
         format: str = "NOW",
     ) -> dict[str, Any]:
-        """
-        Get Vista server date and time
-
-        Args:
-            station: Vista station number (default: configured default)
-            format: Time format - "NOW" (current time) or "TODAY" (today's date)
-
-        Returns:
-            Server date/time in ISO format
-        """
+        """Get Vista server date and time."""
         station = station or get_default_station()
         caller_duz = get_default_duz()
 
@@ -238,15 +212,7 @@ def register_system_tools(mcp: FastMCP, vista_client: BaseVistaClient):
     async def get_intro_message(
         station: str | None = None,
     ) -> dict[str, Any]:
-        """
-        Get Vista system introduction message
-
-        Args:
-            station: Vista station number (default: configured default)
-
-        Returns:
-            System introduction message and version information
-        """
+        """Get Vista system introduction message."""
         station = station or get_default_station()
         caller_duz = get_default_duz()
 
@@ -293,15 +259,7 @@ def register_system_tools(mcp: FastMCP, vista_client: BaseVistaClient):
     async def get_server_version(
         station: str | None = None,
     ) -> dict[str, Any]:
-        """
-        Get Vista server version information
-
-        Args:
-            station: Vista station number (default: configured default)
-
-        Returns:
-            Server version information
-        """
+        """Get Vista server version information."""
         station = station or get_default_station()
         caller_duz = get_default_duz()
 

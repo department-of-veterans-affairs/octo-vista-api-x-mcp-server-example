@@ -22,22 +22,7 @@ def register_get_patient_documents_tool(mcp: FastMCP, vista_client: BaseVistaCli
         completed_only: bool = True,
         days_back: int = 180,
     ) -> dict:
-        """
-        Get patient documents from VistA.
-
-        Args:
-            patient_dfn: Patient's unique identifier (DFN) in the Vista system
-            station: Vista station number for multi-site access (default: user's home station)
-            completed_only: Filter to only completed documents (default: True)
-            days_back: Number of days of history to retrieve, range 1-365 (default: 30)
-
-        Returns:
-            Patient documents data including:
-            - Document metadata (type, class, title, status)
-            - Document content and text
-            - Author and signature information
-            - Timestamps and encounter details
-        """
+        """Get patient clinical documents and notes."""
         station = station or get_default_station()
         caller_duz = get_default_duz()
 

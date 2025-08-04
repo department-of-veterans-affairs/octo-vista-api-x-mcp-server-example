@@ -22,35 +22,7 @@ def register_get_patient_orders_tool(mcp: FastMCP, vista_client: BaseVistaClient
         station: str | None = None,
         active_only: bool = True,
     ) -> dict[str, Any]:
-        """
-        Retrieve orders for a specific patient
-
-        Orders include medications, labs, procedures, and consults
-
-        Args:
-            patient_dfn: Patient's unique identifier (DFN) in the Vista system
-            station: Vista station number for multi-site access (default: user's home station)
-            active_only: When True, returns only pending/active/scheduled orders;
-                        when False, includes complete and discontinued orders (default: True)
-
-        Returns:
-            Order data including:
-            - type of order: medication, lab, or consult
-            - order status: pending, active, complete, discontinued
-            - for lab orders
-            -- name of lab
-            -- VA orderable item (OI) code
-            -- URNs of lab results if available
-            - for medication orders
-            -- medication name and dosage in a single string 'content'
-            -- URN of medication item if available
-            -- VA orderable item (OI) code
-            -- A flag 'nonVA' indicating if the order is from a non-VA pharmacy
-            - for consult orders
-            -- Description of the consult purpose as 'content'
-            -- Consulting clinicians
-            - for all orders, requesting and consulting provider information
-        """
+        """Get patient orders including medications, labs, and procedures."""
         start_time = time.time()
         station = station or get_default_station()
         caller_duz = get_default_duz()
