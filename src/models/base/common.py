@@ -25,6 +25,7 @@ class VprDomain(str, Enum):
     APPOINTMENT = "appointment"
     DOCUMENT = "document"
     PROCEDURE = "procedure"
+    CPT = "cpt"
     CONSULT = "consult"
     ORDER = "order"
     VISIT = "visit"

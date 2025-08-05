@@ -12,6 +12,7 @@ from .base import (
 )
 from .clinical import Consult, LabResult, VitalSign
 from .collection import PatientDataCollection
+from .cpt_code import CPTCode
 from .demographics import (
     PatientAddress,
     PatientDemographics,
@@ -54,4 +55,5 @@ __all__ = [
     "Document",
     # Collection
     "PatientDataCollection",
+    "CPTCode",
 ]

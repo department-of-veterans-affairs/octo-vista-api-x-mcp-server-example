@@ -22,6 +22,7 @@ from ...utils import build_metadata, get_default_duz, get_default_station, get_l
 from ...vista.base import BaseVistaClient
 from .get_patient_documents import register_get_patient_documents_tool
 from .get_patient_orders import register_get_patient_orders_tool
+from .get_patient_procedures import register_get_patient_procedures_tool
 
 logger = get_logger(__name__)
 
@@ -1119,3 +1120,4 @@ def register_patient_tools(mcp: FastMCP, vista_client: BaseVistaClient):
     # Register additional patient tools
     register_get_patient_orders_tool(mcp, vista_client)
     register_get_patient_documents_tool(mcp, vista_client)
+    register_get_patient_procedures_tool(mcp, vista_client)

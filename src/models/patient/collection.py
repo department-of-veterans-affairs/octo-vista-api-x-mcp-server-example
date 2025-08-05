@@ -7,6 +7,7 @@ from pydantic import Field
 
 from .base import BasePatientModel
 from .clinical import Consult, LabResult, VitalSign
+from .cpt_code import CPTCode
 from .demographics import PatientDemographics
 from .diagnosis import Diagnosis
 from .document import Document
@@ -33,6 +34,7 @@ class PatientDataCollection(BasePatientModel):
     diagnoses: list[Diagnosis] = Field(default_factory=list)
     orders: list[Order] = Field(default_factory=list)
     documents: list[Document] = Field(default_factory=list)
+    cpt_codes: list[CPTCode] = Field(default_factory=list)
 
     # Future expansion (stubs for now)
     # problems: List[Problem] = Field(default_factory=list)
@@ -117,6 +119,24 @@ class PatientDataCollection(BasePatientModel):
         """Get consult note documents"""
         return [doc for doc in self.documents if doc.is_consult_note]
 
+    def get_surgical_procedures(self) -> list[CPTCode]:
+        """Get surgical procedures from CPT codes"""
+        return [cpt for cpt in self.cpt_codes if cpt.is_surgical]
+
+    def get_diagnostic_procedures(self) -> list[CPTCode]:
+        """Get diagnostic procedures from CPT codes"""
+        return [cpt for cpt in self.cpt_codes if cpt.is_diagnostic]
+
+    def get_procedures_by_encounter(self) -> dict[str, list[CPTCode]]:
+        """Group procedures by encounter"""
+        encounters: dict[str, list[CPTCode]] = {}
+        for cpt in self.cpt_codes:
+            encounter_key = cpt.associated_visit_uid or "no_encounter"
+            if encounter_key not in encounters:
+                encounters[encounter_key] = []
+            encounters[encounter_key].append(cpt)
+        return encounters
+
     def to_summary(self) -> dict[str, Any]:
         """
         Generate a summary view of patient data.
@@ -156,6 +176,12 @@ class PatientDataCollection(BasePatientModel):
             "orders_summary": {
                 "total_count": len(self.orders),
                 "active_count": len(self.get_active_orders()),
+            },
+            "procedures_summary": {
+                "total_count": len(self.cpt_codes),
+                "surgical_count": len(self.get_surgical_procedures()),
+                "diagnostic_count": len(self.get_diagnostic_procedures()),
+                "encounters_count": len(self.get_procedures_by_encounter()),
             },
             "data_freshness": {
                 "retrieved_at": self.retrieved_at.isoformat(),

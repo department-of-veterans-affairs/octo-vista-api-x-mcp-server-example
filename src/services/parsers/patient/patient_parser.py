@@ -11,6 +11,7 @@ from jsonpath_ng import parse as jsonpath_parse  # type: ignore
 
 from ....models.patient import (
     Consult,
+    CPTCode,
     Diagnosis,
     Document,
     HealthFactor,
@@ -103,6 +104,7 @@ class PatientDataParser:
         health_factors = self._parse_health_factors(grouped_items.get("factor", []))
         orders = self._parse_orders(grouped_items.get("order", []))
         documents = self._parse_documents(grouped_items.get("document", []))
+        cpt_codes = self._parse_cpt_codes(grouped_items.get("cpt", []))
 
         problem_items = grouped_items.get("problem", [])
         pov_items = grouped_items.get("pov", [])
@@ -116,15 +118,16 @@ class PatientDataParser:
 
         # Create collection
         collection = PatientDataCollection(
-            orders=orders,
             demographics=demographics,
             vital_signs=vital_signs,
             lab_results=lab_results,
             consults=consults,
             medications=medications,
             health_factors=health_factors,
-            documents=documents,
             diagnoses=diagnoses,
+            orders=orders,
+            documents=documents,
+            cpt_codes=cpt_codes,
             source_station=self.station,
             source_dfn=self.dfn,
             total_items=len(items),
@@ -135,10 +138,9 @@ class PatientDataParser:
             f"Parsed patient data for {collection.patient_name}: "
             f"{len(vital_signs)} vitals, {len(lab_results)} labs, "
             f"{len(consults)} consults, {len(medications)} medications, "
-            f"{len(health_factors)} health factors, {len(orders)} orders, "
-            f"{len(documents)} documents"
             f"{len(health_factors)} health factors, {len(diagnoses)} diagnoses, "
-            f"{len(orders)} orders",
+            f"{len(orders)} orders, {len(documents)} documents, "
+            f"{len(cpt_codes)} CPT codes"
         )
 
         return collection
@@ -607,6 +609,82 @@ class PatientDataParser:
                     processed["localId"] = "0"
             else:
                 processed["localId"] = "0"
+
+        return processed
+
+    def _parse_cpt_codes(self, cpt_items: list[dict[str, Any]]) -> list[CPTCode]:
+        """Parse CPT codes from cpt items"""
+        cpt_codes = []
+
+        for item in cpt_items:
+            try:
+                # Preprocess the CPT code data
+                processed_item = self._preprocess_cpt_code_item(item)
+
+                # Skip malformed items that return None
+                if processed_item is None:
+                    continue
+
+                cpt_code = CPTCode(**processed_item)
+                cpt_codes.append(cpt_code)
+            except Exception as e:
+                logger.warning(f"Failed to parse CPT code {item.get('uid')}: {e}")
+                logger.debug(f"CPT code item data: {item}")
+
+        # Sort by procedure date (newest first)
+        cpt_codes.sort(key=lambda c: c.procedure_date, reverse=True)
+
+        return cpt_codes
+
+    def _preprocess_cpt_code_item(self, item: dict[str, Any]) -> dict[str, Any] | None:
+        """Preprocess CPT code item for model creation"""
+        if not item:
+            return None
+
+        processed = item.copy()
+
+        # Handle required fields
+        if "uid" not in processed:
+            logger.warning("CPT code item missing UID")
+            return None
+
+        # Extract CPT code from URN format if needed
+        if "cptCode" in processed:
+            cpt_code = processed["cptCode"]
+            if isinstance(cpt_code, str) and cpt_code.startswith("urn:cpt:"):
+                processed["cptCode"] = cpt_code.split(":")[-1]
+
+        # Set defaults for missing fields
+        if "localId" not in processed:
+            processed["localId"] = processed.get("uid", "").split(":")[-1]
+
+        if "name" not in processed:
+            processed["name"] = ""
+
+        if "dateTime" not in processed:
+            # Try to extract from other date fields
+            if "performed" in processed:
+                processed["dateTime"] = processed["performed"]
+            elif "entered" in processed:
+                processed["dateTime"] = processed["entered"]
+            else:
+                logger.warning(
+                    f"CPT code item missing dateTime: {processed.get('uid')}"
+                )
+                return None
+
+        # Ensure facility code and name are present
+        if "facilityCode" not in processed:
+            processed["facilityCode"] = self.station
+
+        if "facilityName" not in processed:
+            processed["facilityName"] = f"Station {self.station}"
+
+        # Handle modifiers if present
+        if "modifiers" in processed and isinstance(processed["modifiers"], str):
+            from ...validators.cpt_validators import parse_cpt_modifiers
+
+            processed["modifiers"] = parse_cpt_modifiers(processed["modifiers"])
 
         return processed
 
