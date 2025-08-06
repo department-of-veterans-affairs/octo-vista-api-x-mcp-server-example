@@ -14,6 +14,7 @@ from .document import Document
 from .health_factor import HealthFactor
 from .medication import Medication
 from .order import Order
+from .visits import Visit
 
 
 class PatientDataCollection(BasePatientModel):
@@ -30,6 +31,7 @@ class PatientDataCollection(BasePatientModel):
     lab_results: list[LabResult] = Field(default_factory=list)
     consults: list[Consult] = Field(default_factory=list)
     medications: list[Medication] = Field(default_factory=list)
+    visits: list[Visit] = Field(default_factory=list)
     health_factors: list[HealthFactor] = Field(default_factory=list)
     diagnoses: list[Diagnosis] = Field(default_factory=list)
     orders: list[Order] = Field(default_factory=list)
@@ -65,7 +67,9 @@ class PatientDataCollection(BasePatientModel):
     @property
     def has_clinical_data(self) -> bool:
         """Check if any clinical data is present"""
-        return bool(self.vital_signs or self.lab_results or self.consults)
+        return bool(
+            self.vital_signs or self.lab_results or self.consults or self.visits
+        )
 
     def get_latest_vitals(self) -> dict[str, VitalSign]:
         """Get most recent vital sign of each type"""
@@ -95,6 +99,18 @@ class PatientDataCollection(BasePatientModel):
     def get_overdue_consults(self) -> list[Consult]:
         """Get overdue consultation records"""
         return [consult for consult in self.consults if consult.is_overdue]
+
+    def get_active_visits(self) -> list[Visit]:
+        """Get active visit records"""
+        return [visit for visit in self.visits if visit.is_active]
+
+    def get_inpatient_visits(self) -> list[Visit]:
+        """Get inpatient visit records"""
+        return [visit for visit in self.visits if visit.is_inpatient]
+
+    def get_emergency_visits(self) -> list[Visit]:
+        """Get emergency visit records"""
+        return [visit for visit in self.visits if visit.is_emergency]
 
     def get_completed_documents(self) -> list[Document]:
         """Get completed document records"""
@@ -166,6 +182,12 @@ class PatientDataCollection(BasePatientModel):
                 "total_count": len(self.consults),
                 "active_count": len(self.get_active_consults()),
                 "overdue_count": len(self.get_overdue_consults()),
+            },
+            "visits_summary": {
+                "total_count": len(self.visits),
+                "active_count": len(self.get_active_visits()),
+                "inpatient_count": len(self.get_inpatient_visits()),
+                "emergency_count": len(self.get_emergency_visits()),
             },
             "documents_summary": {
                 "total_count": len(self.documents),

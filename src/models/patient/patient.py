@@ -23,6 +23,10 @@ from .demographics import (
     PatientTelecom,
     VeteranInfo,
 )
+from .visits import (
+    Visit,
+    VisitType,
+)
 
 __all__ = [
     # Base types
@@ -44,6 +48,8 @@ __all__ = [
     "VitalSign",
     "LabResult",
     "Consult",
+    "Visit",
+    "VisitType",
     # Collection
     "PatientDataCollection",
 ]

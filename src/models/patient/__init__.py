@@ -26,6 +26,7 @@ from .document import Document
 from .health_factor import HealthFactor
 from .medication import Medication
 from .order import Order
+from .visits import Visit, VisitSummary, VisitType
 
 __all__ = [
     # Base types
@@ -49,6 +50,10 @@ __all__ = [
     "LabResult",
     "Consult",
     "Medication",
+    # Visits
+    "Visit",
+    "VisitType",
+    "VisitSummary",
     "HealthFactor",
     "Diagnosis",
     "Order",

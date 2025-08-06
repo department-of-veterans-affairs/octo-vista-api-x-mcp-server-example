@@ -1120,4 +1120,7 @@ def register_patient_tools(mcp: FastMCP, vista_client: BaseVistaClient):
     # Register additional patient tools
     register_get_patient_orders_tool(mcp, vista_client)
     register_get_patient_documents_tool(mcp, vista_client)
+    from .visit_tool import register_get_patient_visits_tool
+
+    register_get_patient_visits_tool(mcp, vista_client)
     register_get_patient_procedures_tool(mcp, vista_client)

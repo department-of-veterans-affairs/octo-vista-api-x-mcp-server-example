@@ -25,6 +25,7 @@ from ....models.patient import (
     PatientSupport,
     PatientTelecom,
     VeteranInfo,
+    Visit,
     VitalSign,
 )
 from ....utils import get_logger
@@ -101,15 +102,11 @@ class PatientDataParser:
         lab_results = self._parse_lab_results(grouped_items.get("lab", []))
         consults = self._parse_consults(grouped_items.get("consult", []))
         medications = self._parse_medications(grouped_items.get("med", []))
+        visits = self._parse_visits(grouped_items.get("visit", []))
         health_factors = self._parse_health_factors(grouped_items.get("factor", []))
         orders = self._parse_orders(grouped_items.get("order", []))
         documents = self._parse_documents(grouped_items.get("document", []))
         cpt_codes = self._parse_cpt_codes(grouped_items.get("cpt", []))
-
-        problem_items = grouped_items.get("problem", [])
-        pov_items = grouped_items.get("pov", [])
-        all_diagnosis_items = problem_items + pov_items
-        diagnoses = self._parse_diagnoses(all_diagnosis_items)
 
         problem_items = grouped_items.get("problem", [])
         pov_items = grouped_items.get("pov", [])
@@ -123,6 +120,7 @@ class PatientDataParser:
             lab_results=lab_results,
             consults=consults,
             medications=medications,
+            visits=visits,
             health_factors=health_factors,
             diagnoses=diagnoses,
             orders=orders,
@@ -138,9 +136,9 @@ class PatientDataParser:
             f"Parsed patient data for {collection.patient_name}: "
             f"{len(vital_signs)} vitals, {len(lab_results)} labs, "
             f"{len(consults)} consults, {len(medications)} medications, "
-            f"{len(health_factors)} health factors, {len(diagnoses)} diagnoses, "
-            f"{len(orders)} orders, {len(documents)} documents, "
-            f"{len(cpt_codes)} CPT codes"
+            f"{len(visits)} visits, {len(health_factors)} health factors, "
+            f"{len(diagnoses)} diagnoses, {len(orders)} orders, "
+            f"{len(documents)} documents, {len(cpt_codes)} CPT codes"
         )
 
         return collection
@@ -335,6 +333,25 @@ class PatientDataParser:
         medications.sort(key=lambda m: m.start_date or datetime.min, reverse=True)
 
         return medications
+
+    def _parse_visits(self, visit_items: list[dict[str, Any]]) -> list[Visit]:
+        """Parse visits from visit items"""
+        visits = []
+
+        for item in visit_items:
+            try:
+                # Pre-process visit data
+                processed_item = self._preprocess_visit_item(item)
+                visit = Visit(**processed_item)
+                visits.append(visit)
+            except Exception as e:
+                logger.warning(f"Failed to parse visit {item.get('uid')}: {e}")
+                logger.debug(f"Visit item data: {item}")
+
+        # Sort by visit date (newest first)
+        visits.sort(key=lambda v: v.visit_date, reverse=True)
+
+        return visits
 
     def _preprocess_medication_item(self, item: dict[str, Any]) -> dict[str, Any]:
         """Preprocess medication item using JSONPath for nested field extraction"""
@@ -609,6 +626,44 @@ class PatientDataParser:
                     processed["localId"] = "0"
             else:
                 processed["localId"] = "0"
+
+        return processed
+
+    def _preprocess_visit_item(self, item: dict[str, Any]) -> dict[str, Any]:
+        """Preprocess visit item data"""
+        processed = item.copy()
+
+        # Ensure required fields have defaults
+        if "visitDate" not in processed and "admissionDate" in processed:
+            processed["visitDate"] = processed["admissionDate"]
+        elif "visitDate" not in processed:
+            processed["visitDate"] = processed.get("scheduledDate") or processed.get(
+                "dateTime"
+            )
+
+        if "statusCode" not in processed:
+            processed["statusCode"] = "ACTIVE"
+
+        if "statusName" not in processed:
+            processed["statusName"] = "ACTIVE"
+
+        # Handle location information
+        if "locationCode" not in processed:
+            processed["locationCode"] = processed.get("locationId") or "UNKNOWN"
+
+        if "locationName" not in processed:
+            processed["locationName"] = processed.get("location") or "UNKNOWN LOCATION"
+
+        # Handle provider information
+        if "providerName" not in processed and "attendingProvider" in processed:
+            processed["providerName"] = processed["attendingProvider"]
+
+        # Handle facility information
+        if "facilityCode" not in processed:
+            processed["facilityCode"] = self.station
+
+        if "facilityName" not in processed:
+            processed["facilityName"] = "UNKNOWN FACILITY"
 
         return processed
 
