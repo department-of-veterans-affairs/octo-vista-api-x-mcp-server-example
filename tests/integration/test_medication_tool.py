@@ -112,7 +112,9 @@ class TestMedicationTool:
         self, mock_vista_client, sample_patient_data
     ):
         """Test successful medication retrieval"""
-        with patch("src.tools.patient.patient.get_patient_data") as mock_get_data:
+        with patch(
+            "src.tools.patient.get_patient_medications_tool.get_patient_data"
+        ) as mock_get_data:
             mock_get_data.return_value = sample_patient_data
 
             # Import the medication tool module and create the function
@@ -134,14 +136,21 @@ class TestMedicationTool:
             # Mock the utility functions
             with (
                 patch(
-                    "src.tools.patient.patient.get_default_station",
+                    "src.tools.patient.get_patient_medications_tool.get_default_station",
                     return_value=station,
                 ),
                 patch(
-                    "src.tools.patient.patient.get_default_duz", return_value=caller_duz
+                    "src.tools.patient.get_patient_medications_tool.get_default_duz",
+                    return_value=caller_duz,
                 ),
-                patch("src.tools.patient.patient.validate_dfn", return_value=True),
-                patch("src.tools.patient.patient.build_metadata", return_value={}),
+                patch(
+                    "src.tools.patient.get_patient_medications_tool.validate_dfn",
+                    return_value=True,
+                ),
+                patch(
+                    "src.tools.patient.get_patient_medications_tool.build_metadata",
+                    return_value={},
+                ),
                 patch("time.time", return_value=start_time),
             ):
 
