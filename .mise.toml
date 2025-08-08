@@ -24,23 +24,54 @@ env = { COMPOSE_PROJECT_NAME = "vista-mock" }
 run = ["docker-compose down", "echo '✅ Mock server stopped'"]
 
 [tasks.dev-with-mock]
-description = "Start development with mock server (handles all setup)"
+description = "Start ALL transports with mock server (stdio + HTTP + SSE) - comprehensive testing"
 run = [
     # Auto-setup if needed
     "python scripts/silent_setup.py",
     # Start mock server if needed
     "python scripts/start_mock_if_needed.py",
-    # Run MCP server with dev inspector
+    "echo '🚀 Starting ALL MCP transports for comprehensive testing...'",
+    "echo ''",
+    "echo '📍 Available endpoints:'",
+    "echo '  📡 stdio: mcp dev server (for Claude Desktop)'", 
+    "echo '  🌐 HTTP: http://localhost:8000/mcp'",
+    "echo '  📡 SSE:  http://localhost:8001/sse (deprecated)'",
+    "echo ''",
+    "echo '🎯 Starting servers in background...'",
+    # Start HTTP server in background
+    "mkdir -p logs",
+    "VISTA_MCP_TRANSPORT=streamable-http VISTA_MCP_HTTP_PORT=8000 uv run python http_server.py > logs/http.log 2>&1 &",
+    # Start SSE server in background  
+    "VISTA_MCP_TRANSPORT=sse VISTA_MCP_HTTP_PORT=8001 uv run python http_server.py > logs/sse.log 2>&1 &",
+    # Wait for servers to start
+    "sleep 3",
+    "echo '✅ Background servers started (logs in logs/ directory)'",
+    "echo '🏃 Starting stdio MCP dev server (main)...'",
+    "echo '   Use Ctrl+C to stop all servers'",
+    # Run stdio server in foreground (this one you can Ctrl+C to stop all)
     "uv run mcp dev server.py:server",
 ]
 
 [tasks.dev]
-description = "Start development server"
+description = "Start development server (stdio only)"
 run = [
     # Auto-setup if needed
     "python scripts/silent_setup.py",
     # Run MCP server
-    "echo '🏃 Starting MCP server...'",
+    "echo '🏃 Starting MCP server (stdio transport)...'",
+    "echo '📡 Connect via Claude Desktop or MCP dev tools'", 
+    "uv run mcp dev server.py:server",
+]
+
+[tasks.dev-stdio-only-with-mock]
+description = "Start stdio server only with mock (simple setup)"
+run = [
+    # Auto-setup if needed
+    "python scripts/silent_setup.py",
+    # Start mock server if needed
+    "python scripts/start_mock_if_needed.py",
+    "echo '🏃 Starting MCP server (stdio transport only)...'",
+    "echo '📡 Connect via Claude Desktop or MCP dev tools'",
     "uv run mcp dev server.py:server",
 ]
 
@@ -144,7 +175,7 @@ run = [
 # === DEPRECATED SSE TASKS ===
 [tasks.dev-sse]
 description = "⚠️  DEPRECATED: Start SSE server for development (use dev-http instead)"
-env = { VISTA_MCP_TRANSPORT = "sse" }
+env = { VISTA_MCP_TRANSPORT = "sse", VISTA_MCP_HTTP_PORT = "8001" }
 run = [
     # Auto-setup if needed
     "python scripts/silent_setup.py",
@@ -155,18 +186,18 @@ run = [
     "echo ''",
     # Run SSE server
     "echo '🌐 Starting SSE server...'",
-    "echo '📍 SSE endpoint: http://localhost:8000/sse'",
-    "echo '📝 Message endpoint: http://localhost:8000/messages/'",
+    "echo '📍 SSE endpoint: http://localhost:8001/sse'",
+    "echo '📝 Message endpoint: http://localhost:8001/messages/'",
     "echo ''",
     "echo '🔧 Configure your client with:'",
-    "echo '  {\"url\": \"http://localhost:8000/sse\"}'",
+    "echo '  {\"url\": \"http://localhost:8001/sse\"}'",
     "echo ''",
     "uv run python http_server.py",
 ]
 
 [tasks.dev-sse-with-mock]
 description = "⚠️  DEPRECATED: Start SSE server with mock Vista API (use dev-http-with-mock instead)"
-env = { VISTA_MCP_TRANSPORT = "sse" }
+env = { VISTA_MCP_TRANSPORT = "sse", VISTA_MCP_HTTP_PORT = "8001" }
 run = [
     # Auto-setup if needed
     "python scripts/silent_setup.py",
@@ -179,11 +210,72 @@ run = [
     "echo ''",
     # Run SSE server
     "echo '🌐 Starting SSE server with mock...'",
-    "echo '📍 SSE endpoint: http://localhost:8000/sse'",
-    "echo '📝 Message endpoint: http://localhost:8000/messages/'",
+    "echo '📍 SSE endpoint: http://localhost:8001/sse'",
+    "echo '📝 Message endpoint: http://localhost:8001/messages/'",
     "echo ''",
     "echo '🔧 Configure your client with:'",
-    "echo '  {\"url\": \"http://localhost:8000/sse\"}'",
+    "echo '  {\"url\": \"http://localhost:8001/sse\"}'",
     "echo ''",
     "uv run python http_server.py",
+]
+
+# === MULTI-TRANSPORT TASKS ===
+[tasks.dev-stdio-http-with-mock] 
+description = "Start stdio + HTTP transports with mock (recommended for testing)"
+run = [
+    # Auto-setup if needed
+    "python scripts/silent_setup.py",
+    # Start mock server if needed
+    "python scripts/start_mock_if_needed.py",
+    "echo '🚀 Starting stdio + HTTP transports...'",
+    "echo ''",
+    "echo '📍 Available endpoints:'",
+    "echo '  📡 stdio: mcp dev server (for Claude Desktop)'", 
+    "echo '  🌐 HTTP: http://localhost:8000/mcp'",
+    "echo ''",
+    "echo '🎯 Starting HTTP server in background...'",
+    # Start HTTP server in background
+    "mkdir -p logs",
+    "VISTA_MCP_TRANSPORT=streamable-http VISTA_MCP_HTTP_PORT=8000 uv run python http_server.py > logs/http.log 2>&1 &",
+    # Wait for server to start
+    "sleep 3",
+    "echo '✅ HTTP server started (log in logs/http.log)'",
+    "echo '🏃 Starting stdio MCP dev server...'",
+    # Run stdio server in foreground
+    "uv run mcp dev server.py:server",
+]
+
+[tasks.dev-stdio-sse-with-mock]
+description = "Start stdio + SSE transports with mock (for legacy testing)"
+run = [
+    # Auto-setup if needed
+    "python scripts/silent_setup.py",
+    # Start mock server if needed
+    "python scripts/start_mock_if_needed.py",
+    "echo '🚀 Starting stdio + SSE transports...'",
+    "echo ''", 
+    "echo '📍 Available endpoints:'",
+    "echo '  📡 stdio: mcp dev server (for Claude Desktop)'",
+    "echo '  📡 SSE:  http://localhost:8001/sse'",
+    "echo ''",
+    "echo '🎯 Starting SSE server in background...'",
+    # Start SSE server in background
+    "mkdir -p logs",
+    "VISTA_MCP_TRANSPORT=sse VISTA_MCP_HTTP_PORT=8001 uv run python http_server.py > logs/sse.log 2>&1 &",
+    # Wait for server to start
+    "sleep 3", 
+    "echo '✅ SSE server started (log in logs/sse.log)'",
+    "echo '🏃 Starting stdio MCP dev server...'",
+    # Run stdio server in foreground
+    "uv run mcp dev server.py:server",
+]
+
+# === UTILITY TASKS ===
+[tasks.stop-servers]
+description = "Stop any background MCP servers"
+run = [
+    "echo '🛑 Stopping background MCP servers...'",
+    "pkill -f 'http_server.py' || echo '   (no http_server.py processes found)'",
+    "pkill -f 'server.py:server' || echo '   (no mcp dev processes found)'", 
+    "echo '✅ Background servers stopped'",
 ]
