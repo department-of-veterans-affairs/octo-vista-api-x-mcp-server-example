@@ -63,12 +63,96 @@ run = "docker-compose logs -f"
 description = "Set up Claude Desktop configuration"
 run = "python scripts/setup_claude_desktop.py"
 
+# === NEW STREAMABLE HTTP TASKS ===
+[tasks.dev-http]
+description = "Start Streamable HTTP server for development (RECOMMENDED)"
+env = { VISTA_MCP_TRANSPORT = "streamable-http" }
+run = [
+    # Auto-setup if needed
+    "python scripts/silent_setup.py",
+    # Start HTTP server in background and open inspector
+    "echo '🚀 Starting Streamable HTTP server...'",
+    "echo '📍 MCP endpoint: http://localhost:8000/mcp'",
+    "echo '🎯 Opening MCP Inspector in 3 seconds...'",
+    "echo ''",
+    "echo '🔧 Configure your client with:'",
+    "echo '  Transport: streamable-http'", 
+    "echo '  URL: http://localhost:8000/mcp'",
+    "echo ''",
+    # Start server in background and then open inspector
+    "uv run python http_server.py &",
+    "sleep 3",
+    "echo '🎭 Opening MCP Inspector...'",
+    "npx @modelcontextprotocol/inspector",
+]
+
+[tasks.dev-http-with-mock]
+description = "Start Streamable HTTP server with mock Vista API (RECOMMENDED)"
+env = { VISTA_MCP_TRANSPORT = "streamable-http" }
+run = [
+    # Auto-setup if needed
+    "python scripts/silent_setup.py",
+    # Start mock server if needed
+    "python scripts/start_mock_if_needed.py",
+    # Start HTTP server in background and open inspector
+    "echo '🚀 Starting Streamable HTTP server with mock...'",
+    "echo '📍 MCP endpoint: http://localhost:8000/mcp'",
+    "echo '🎯 Opening MCP Inspector in 5 seconds...'",
+    "echo ''",
+    "echo '🔧 Configure your client with:'",
+    "echo '  Transport: streamable-http'",
+    "echo '  URL: http://localhost:8000/mcp'",
+    "echo ''",
+    # Start server in background and then open inspector
+    "uv run python http_server.py &",
+    "sleep 5", 
+    "echo '⏳ Waiting for server to be ready...'",
+    "echo '🎭 Opening MCP Inspector...'",
+    "npx @modelcontextprotocol/inspector",
+]
+
+# Raw server tasks (without inspector)
+[tasks.dev-http-server]
+description = "Start Streamable HTTP server only (no inspector)"
+env = { VISTA_MCP_TRANSPORT = "streamable-http" }
+run = [
+    "python scripts/silent_setup.py",
+    "echo '🚀 Starting Streamable HTTP server...'",
+    "echo '📍 MCP endpoint: http://localhost:8000/mcp'",
+    "echo '🔧 Connect manually with MCP Inspector:'",
+    "echo '  npx @modelcontextprotocol/inspector'",
+    "echo '  Transport: http, URL: http://localhost:8000/mcp'",
+    "echo ''",
+    "uv run python http_server.py",
+]
+
+[tasks.dev-http-server-with-mock]
+description = "Start Streamable HTTP server with mock (no inspector)" 
+env = { VISTA_MCP_TRANSPORT = "streamable-http" }
+run = [
+    "python scripts/silent_setup.py",
+    "python scripts/start_mock_if_needed.py",
+    "echo '🚀 Starting Streamable HTTP server with mock...'",
+    "echo '📍 MCP endpoint: http://localhost:8000/mcp'",
+    "echo '🔧 Connect manually with MCP Inspector:'",
+    "echo '  npx @modelcontextprotocol/inspector'",
+    "echo '  Transport: http, URL: http://localhost:8000/mcp'",
+    "echo ''",
+    "uv run python http_server.py",
+]
+
+# === DEPRECATED SSE TASKS ===
 [tasks.dev-sse]
-description = "Start SSE server for development"
+description = "⚠️  DEPRECATED: Start SSE server for development (use dev-http instead)"
 env = { VISTA_MCP_TRANSPORT = "sse" }
 run = [
     # Auto-setup if needed
     "python scripts/silent_setup.py",
+    # Show deprecation warning
+    "echo '⚠️  WARNING: SSE transport is DEPRECATED!'",
+    "echo '⚠️  Please use \"mise run dev-http\" for better performance.'",
+    "echo '⚠️  SSE support will be removed on 2025-06-01'",
+    "echo ''",
     # Run SSE server
     "echo '🌐 Starting SSE server...'",
     "echo '📍 SSE endpoint: http://localhost:8000/sse'",
@@ -81,13 +165,18 @@ run = [
 ]
 
 [tasks.dev-sse-with-mock]
-description = "Start SSE server with mock Vista API"
+description = "⚠️  DEPRECATED: Start SSE server with mock Vista API (use dev-http-with-mock instead)"
 env = { VISTA_MCP_TRANSPORT = "sse" }
 run = [
     # Auto-setup if needed
     "python scripts/silent_setup.py",
     # Start mock server if needed
     "python scripts/start_mock_if_needed.py",
+    # Show deprecation warning
+    "echo '⚠️  WARNING: SSE transport is DEPRECATED!'",
+    "echo '⚠️  Please use \"mise run dev-http-with-mock\" for better performance.'",
+    "echo '⚠️  SSE support will be removed on 2025-06-01'",
+    "echo ''",
     # Run SSE server
     "echo '🌐 Starting SSE server with mock...'",
     "echo '📍 SSE endpoint: http://localhost:8000/sse'",

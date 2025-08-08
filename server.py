@@ -27,8 +27,6 @@ logger = logging.getLogger(__name__)
 # Initialize MCP server (global for mcp dev)
 mcp = FastMCP(
     name="VistA API X MCP Server",
-    version="1.0.0",
-    description="Access VistA healthcare data through natural language. Provides tools for patient search, clinical data retrieval, and administrative functions.",
 )
 
 # Store as 'server' for mcp dev compatibility
@@ -78,11 +76,24 @@ initialize_server()
 
 
 if __name__ == "__main__":
-    # Run the server with stdio transport (for mcp dev)
-    try:
-        mcp.run()
-    except KeyboardInterrupt:
-        print("\nServer stopped by user")
-    except Exception as e:
-        print(f"\nServer error: {e}")
-        sys.exit(1)
+    # Check if we should run with streamable HTTP transport
+    transport = os.getenv("VISTA_MCP_TRANSPORT", "stdio")
+
+    if transport in ["http", "streamable-http", "streamable_http"]:
+        # Run with streamable HTTP transport
+        try:
+            mcp.run(transport="streamable-http")
+        except KeyboardInterrupt:
+            print("\nServer stopped by user")
+        except Exception as e:
+            print(f"\nServer error: {e}")
+            sys.exit(1)
+    else:
+        # Run the server with stdio transport (for mcp dev)
+        try:
+            mcp.run()
+        except KeyboardInterrupt:
+            print("\nServer stopped by user")
+        except Exception as e:
+            print(f"\nServer error: {e}")
+            sys.exit(1)

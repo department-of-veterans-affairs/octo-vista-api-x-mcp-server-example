@@ -5,14 +5,25 @@ MCP (Model Context Protocol) server that provides natural language access to Vis
 ## Quick Start
 
 ### Option 1: stdio Transport (Local Development)
+
 ```bash
 # Traditional stdio mode with MCP inspector
 mise run dev-with-mock
 ```
 
-### Option 2: SSE Transport (Remote Access)
+### Option 2: HTTP Transport (Remote Access) - RECOMMENDED
+
 ```bash
-# SSE server mode accessible via URL
+# Modern Streamable HTTP server mode accessible via URL
+mise run dev-http-with-mock
+```
+
+Then connect via URL: `http://localhost:8000/mcp`
+
+### Option 3: SSE Transport (DEPRECATED)
+
+```bash
+# ⚠️ DEPRECATED: Use Option 2 instead for better performance
 mise run dev-sse-with-mock
 ```
 
@@ -22,7 +33,8 @@ Then connect via URL: `http://localhost:8000/sse`
 
 - **VistA Tools**: Patient search and data retrieval, system utilities
 - **Mock Server Included**: Full Vista API X mock for development
-- **Dual Transport**: stdio for local dev, SSE for remote access
+- **Multiple Transports**: stdio for local dev, Streamable HTTP for remote access
+- **Modern Architecture**: Uses latest MCP Streamable HTTP transport for better performance
 - **LLM Client Ready**: Works with any MCP-compatible client
 - **Type-Safe**: Full type hints and validation
 - **Production Ready**: Docker support for easy deployment
@@ -43,22 +55,28 @@ python scripts/setup_claude_desktop.py
 ```
 
 Example config files are included:
+
 - `claude_desktop_config.example.json` - Claude Desktop template
 - `.cursorrules.example` - Cursor IDE template
 
 ## Docker Deployment
 
 ### Production
+
 ```bash
 # Set your production Vista API endpoint
 export VISTA_API_BASE_URL=https://your-vista-api.va.gov
 export VISTA_API_KEY=your-production-api-key
 
-# Run the SSE server
-docker-compose up -d
+# Run the HTTP server (recommended)
+VISTA_MCP_TRANSPORT=http docker-compose up -d
+
+# Or use the deprecated SSE server (will be removed 2025-06-01)
+VISTA_MCP_TRANSPORT=sse docker-compose up -d
 ```
 
 ### Local Development with Mock
+
 ```bash
 # Run with the included development override
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
@@ -81,6 +99,7 @@ VISTA_API_KEY=your-api-key                     # Your Vista API key
 - If any are missing, it falls back to the mock server at localhost:8888
 
 To verify your configuration:
+
 ```bash
 python scripts/test_config.py
 ```
