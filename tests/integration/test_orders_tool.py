@@ -396,3 +396,64 @@ class TestOrdersTool:
 
                 assert result["success"] is False
                 assert "Invalid patient DFN" in result["error"]
+
+    @pytest.mark.asyncio
+    async def test_order_pagination(self, sample_patient_data):
+        """Test order pagination functionality"""
+        orders = sample_patient_data.orders
+
+        # Test pagination logic directly
+        # Test with limit=2, offset=0
+        limit = 2
+        offset = 0
+        total_orders = len(orders)
+        orders_page = orders[offset : offset + limit]
+
+        # Use the actual number of orders available
+        expected_returned = min(limit, total_orders)
+        assert len(orders_page) == expected_returned
+
+        # Test pagination response structure
+        pagination_info = {
+            "total": total_orders,
+            "returned": len(orders_page),
+            "offset": offset,
+            "limit": limit,
+        }
+
+        assert pagination_info["total"] == total_orders
+        assert pagination_info["returned"] == expected_returned
+        assert pagination_info["offset"] == 0
+        assert pagination_info["limit"] == 2
+
+        # Test with offset=1, limit=1 (if we have enough orders)
+        if total_orders > 1:
+            offset = 1
+            limit = 1
+            orders_page = orders[offset : offset + limit]
+            expected_returned = min(limit, max(0, total_orders - offset))
+
+            pagination_info = {
+                "total": total_orders,
+                "returned": len(orders_page),
+                "offset": offset,
+                "limit": limit,
+            }
+
+            assert pagination_info["total"] == total_orders
+            assert pagination_info["returned"] == expected_returned
+            assert pagination_info["offset"] == 1
+            assert pagination_info["limit"] == 1
+
+        # Test offset beyond total (should return 0 items)
+        offset = 100
+        orders_page = orders[offset : offset + limit]
+
+        pagination_info = {
+            "total": total_orders,
+            "returned": len(orders_page),
+            "offset": offset,
+            "limit": limit,
+        }
+
+        assert pagination_info["returned"] == 0

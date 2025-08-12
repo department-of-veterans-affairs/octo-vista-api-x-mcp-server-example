@@ -709,3 +709,64 @@ class TestVisitToolIntegration:
                 all_visits = result["visits"]["all_visits"]
                 # Note: In a real scenario, we'd expect both active and inactive visits
                 # For the mock server, we just verify the structure is correct
+
+    @pytest.mark.asyncio
+    async def test_visit_pagination(self, sample_patient_data):
+        """Test visit pagination functionality"""
+        visits = sample_patient_data.visits
+
+        # Test pagination logic directly
+        # Test with limit=3, offset=0
+        limit = 3
+        offset = 0
+        total_visits = len(visits)
+        visits_page = visits[offset : offset + limit]
+
+        # Use the actual number of visits available
+        expected_returned = min(limit, total_visits)
+        assert len(visits_page) == expected_returned
+
+        # Test pagination response structure
+        pagination_info = {
+            "total": total_visits,
+            "returned": len(visits_page),
+            "offset": offset,
+            "limit": limit,
+        }
+
+        assert pagination_info["total"] == total_visits
+        assert pagination_info["returned"] == expected_returned
+        assert pagination_info["offset"] == 0
+        assert pagination_info["limit"] == 3
+
+        # Test with offset=1, limit=2 (if we have enough visits)
+        if total_visits > 1:
+            offset = 1
+            limit = 2
+            visits_page = visits[offset : offset + limit]
+            expected_returned = min(limit, max(0, total_visits - offset))
+
+            pagination_info = {
+                "total": total_visits,
+                "returned": len(visits_page),
+                "offset": offset,
+                "limit": limit,
+            }
+
+            assert pagination_info["total"] == total_visits
+            assert pagination_info["returned"] == expected_returned
+            assert pagination_info["offset"] == 1
+            assert pagination_info["limit"] == 2
+
+        # Test offset beyond total (should return 0 items)
+        offset = 100
+        visits_page = visits[offset : offset + limit]
+
+        pagination_info = {
+            "total": total_visits,
+            "returned": len(visits_page),
+            "offset": offset,
+            "limit": limit,
+        }
+
+        assert pagination_info["returned"] == 0

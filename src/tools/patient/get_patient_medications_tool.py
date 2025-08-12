@@ -5,9 +5,16 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from ...models.responses.tool_responses import PatientInfo, PatientMedicationsResponse
 from ...services.data import get_patient_data
 from ...services.validators import validate_dfn
-from ...utils import build_metadata, get_default_duz, get_default_station, get_logger
+from ...utils import (
+    build_metadata,
+    build_pagination_metadata,
+    get_default_duz,
+    get_default_station,
+    get_logger,
+)
 from ...vista.base import BaseVistaClient
 
 logger = get_logger(__name__)
@@ -22,8 +29,9 @@ def register_get_patient_medications_tool(mcp: FastMCP, vista_client: BaseVistaC
         station: str | None = None,
         active_only: bool = True,
         therapeutic_class: str | None = None,
-        limit: int = 50,
-    ) -> dict[str, Any]:
+        limit: int = 100,
+        offset: int = 0,
+    ) -> PatientMedicationsResponse | dict[str, Any]:
         """Get patient medications with dosing and refill information."""
         start_time = time.time()
         station = station or get_default_station()
@@ -68,32 +76,36 @@ def register_get_patient_medications_tool(mcp: FastMCP, vista_client: BaseVistaC
                     or (m.va_class and therapeutic_class.upper() in m.va_class.upper())
                 ]
 
-            # Group medications by therapeutic class for better organization
+            # Apply pagination
+            total_medications = len(medications)
+            medications_page = medications[offset : offset + limit]
+
+            # Group medications by therapeutic class for better organization (use paginated results)
             medication_groups: dict[str, list[Any]] = {}
-            for med in medications:
+            for med in medications_page:
                 group_key = med.therapeutic_class or med.va_class or "Other"
                 if group_key not in medication_groups:
                     medication_groups[group_key] = []
                 medication_groups[group_key].append(med)
 
-            # Identify medications needing refills soon
-            refill_alerts = [m for m in medications if m.needs_refill_soon]
+            # Identify medications needing refills soon (from paginated results)
+            refill_alerts = [m for m in medications_page if m.needs_refill_soon]
 
             # Build response
-            return {
-                "success": True,
-                "patient": {
-                    "dfn": patient_dfn,
-                    "name": patient_data.patient_name,
-                    "age": patient_data.demographics.calculate_age(),
-                },
-                "medications": {
+            return PatientMedicationsResponse(
+                success=True,
+                patient=PatientInfo(
+                    dfn=patient_dfn,
+                    name=patient_data.patient_name,
+                    age=patient_data.demographics.calculate_age(),
+                ),
+                medications={
                     "total": len(patient_data.medications),
                     "active": len([m for m in patient_data.medications if m.is_active]),
                     "discontinued": len(
                         [m for m in patient_data.medications if m.is_discontinued]
                     ),
-                    "filtered_count": len(medications),
+                    "filtered_count": len(medications_page),
                     "refill_alerts": len(refill_alerts),
                     "filters": {
                         "active_only": active_only,
@@ -176,10 +188,21 @@ def register_get_patient_medications_tool(mcp: FastMCP, vista_client: BaseVistaC
                             "needs_refill": med.needs_refill_soon,
                             "days_until_refill": med.days_until_refill_needed,
                         }
-                        for med in medications[:limit]  # Limit based on parameter
+                        for med in medications_page
                     ],
                 },
-                "metadata": {
+                pagination=build_pagination_metadata(
+                    total_items=total_medications,
+                    returned_items=len(medications_page),
+                    offset=offset,
+                    limit=limit,
+                    tool_name="get_patient_medications",
+                    patient_dfn=patient_dfn,
+                    station=station,
+                    active_only=active_only,
+                    therapeutic_class=therapeutic_class,
+                ),
+                metadata={
                     **build_metadata(
                         station=station,
                         duration_ms=int((time.time() - start_time) * 1000),
@@ -192,7 +215,7 @@ def register_get_patient_medications_tool(mcp: FastMCP, vista_client: BaseVistaC
                     },
                     "duz": caller_duz,
                 },
-            }
+            )
 
         except Exception as e:
             logger.error(

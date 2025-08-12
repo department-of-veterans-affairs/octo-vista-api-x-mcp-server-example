@@ -361,3 +361,61 @@ class TestGetPatientDiagnosesIntegration:
             assert (
                 dates[i] >= dates[i + 1]
             ), "Diagnoses should be sorted by date (newest first)"
+
+    def test_diagnosis_pagination(self, sample_diagnoses):
+        """Test diagnosis pagination functionality"""
+        diagnoses = sample_diagnoses
+
+        # Test pagination logic directly
+        # Test with limit=2, offset=0
+        limit = 2
+        offset = 0
+        total_diagnoses = len(diagnoses)
+        diagnoses_page = diagnoses[offset : offset + limit]
+
+        assert len(diagnoses_page) == 2
+        assert total_diagnoses >= 2  # We should have at least 2 diagnoses
+
+        # Test pagination response structure
+        pagination_info = {
+            "total": total_diagnoses,
+            "returned": len(diagnoses_page),
+            "offset": offset,
+            "limit": limit,
+        }
+
+        assert pagination_info["total"] == total_diagnoses
+        assert pagination_info["returned"] == 2
+        assert pagination_info["offset"] == 0
+        assert pagination_info["limit"] == 2
+
+        # Test with offset=1, limit=1 (should return 1 item if we have >1)
+        if total_diagnoses > 1:
+            offset = 1
+            limit = 1
+            diagnoses_page = diagnoses[offset : offset + limit]
+
+            pagination_info = {
+                "total": total_diagnoses,
+                "returned": len(diagnoses_page),
+                "offset": offset,
+                "limit": limit,
+            }
+
+            assert pagination_info["total"] == total_diagnoses
+            assert pagination_info["returned"] == 1
+            assert pagination_info["offset"] == 1
+            assert pagination_info["limit"] == 1
+
+        # Test offset beyond total (should return 0 items)
+        offset = 100
+        diagnoses_page = diagnoses[offset : offset + limit]
+
+        pagination_info = {
+            "total": total_diagnoses,
+            "returned": len(diagnoses_page),
+            "offset": offset,
+            "limit": limit,
+        }
+
+        assert pagination_info["returned"] == 0

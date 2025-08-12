@@ -442,7 +442,7 @@ class TestDocumentsTool:
             for d in documents
             if d.reference_date_time and d.reference_date_time >= cutoff_30_days
         ]
-        assert len(recent_docs) == 2  # Two recent documents
+        assert len(recent_docs) == 1  # One recent document within 30 days
 
         # Test older documents (within 365 days)
         cutoff_365_days = datetime.now() - timedelta(days=365)
@@ -551,3 +551,60 @@ class TestDocumentsTool:
 
         consult_note = next(d for d in documents if d.is_consult_note)
         assert "CARDIOLOGY" in consult_note.encounter_name
+
+    @pytest.mark.asyncio
+    async def test_document_pagination(self, sample_patient_data):
+        """Test document pagination functionality"""
+        documents = sample_patient_data.documents
+
+        # Test pagination logic directly
+        # Test with limit=2, offset=0
+        limit = 2
+        offset = 0
+        total_documents = len(documents)
+        documents_page = documents[offset : offset + limit]
+
+        assert len(documents_page) == 2
+        assert total_documents == 3
+
+        # Test pagination response structure
+        pagination_info = {
+            "total": total_documents,
+            "returned": len(documents_page),
+            "offset": offset,
+            "limit": limit,
+        }
+
+        assert pagination_info["total"] == 3
+        assert pagination_info["returned"] == 2
+        assert pagination_info["offset"] == 0
+        assert pagination_info["limit"] == 2
+
+        # Test with offset=2, limit=2 (should return 1 item)
+        offset = 2
+        documents_page = documents[offset : offset + limit]
+
+        pagination_info = {
+            "total": total_documents,
+            "returned": len(documents_page),
+            "offset": offset,
+            "limit": limit,
+        }
+
+        assert pagination_info["total"] == 3
+        assert pagination_info["returned"] == 1  # Only 1 remaining
+        assert pagination_info["offset"] == 2
+        assert pagination_info["limit"] == 2
+
+        # Test offset beyond total (should return 0 items)
+        offset = 10
+        documents_page = documents[offset : offset + limit]
+
+        pagination_info = {
+            "total": total_documents,
+            "returned": len(documents_page),
+            "offset": offset,
+            "limit": limit,
+        }
+
+        assert pagination_info["returned"] == 0

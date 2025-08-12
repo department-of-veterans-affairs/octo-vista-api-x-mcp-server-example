@@ -5,9 +5,16 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from ...models.responses.tool_responses import PatientDiagnosesResponse
 from ...services.data import get_patient_data
 from ...services.validators import validate_dfn
-from ...utils import build_metadata, get_default_duz, get_default_station, get_logger
+from ...utils import (
+    build_metadata,
+    build_pagination_metadata,
+    get_default_duz,
+    get_default_station,
+    get_logger,
+)
 from ...vista.base import BaseVistaClient
 
 logger = get_logger(__name__)
@@ -24,8 +31,9 @@ def register_get_patient_diagnoses_tool(mcp: FastMCP, vista_client: BaseVistaCli
         diagnosis_type: str | None = None,
         status_filter: str | None = None,
         icd_version: str | None = None,
-        limit: int = 50,
-    ) -> dict[str, Any]:
+        limit: int = 100,
+        offset: int = 0,
+    ) -> PatientDiagnosesResponse | dict[str, Any]:
         """Get patient diagnoses with ICD codes."""
         start_time = time.time()
         station = station or get_default_station()
@@ -87,40 +95,59 @@ def register_get_patient_diagnoses_tool(mcp: FastMCP, vista_client: BaseVistaCli
                     d for d in diagnoses if d.icd_version.upper() == icd_version.upper()
                 ]
 
-            # Group diagnoses by body system
+            # Apply pagination
+            total_diagnoses = len(diagnoses)
+            diagnoses_page = diagnoses[offset : offset + limit]
+
+            # Group diagnoses by body system (use paginated results)
             from ...services.validators.clinical_validators import get_diagnosis_trends
 
             diagnosis_groups: dict[str, list[Any]] = {}
-            for diagnosis in diagnoses:
+            for diagnosis in diagnoses_page:
                 group_key = diagnosis.body_system
                 if group_key not in diagnosis_groups:
                     diagnosis_groups[group_key] = []
                 diagnosis_groups[group_key].append(diagnosis)
 
-            # Identify primary diagnoses
-            primary_diagnoses = [d for d in diagnoses if d.is_primary]
+            # Identify primary diagnoses (from paginated results)
+            primary_diagnoses = [d for d in diagnoses_page if d.is_primary]
 
-            # Identify chronic conditions
-            chronic_diagnoses = [d for d in diagnoses if d.is_chronic]
+            # Identify chronic conditions (from paginated results)
+            chronic_diagnoses = [d for d in diagnoses_page if d.is_chronic]
 
-            # Get active diagnoses
-            active_diagnoses = [d for d in diagnoses if d.status.lower() == "active"]
+            # Get active diagnoses (from paginated results)
+            active_diagnoses = [
+                d for d in diagnoses_page if d.status.lower() == "active"
+            ]
 
-            # Calculate trending for common diagnoses
+            # Calculate trending for common diagnoses (from paginated results)
             trending_data = {}
-            common_icd_codes = list({d.icd_code for d in diagnoses if d.icd_code})[
+            common_icd_codes = list({d.icd_code for d in diagnoses_page if d.icd_code})[
                 :10
             ]  # Top 10
             for icd_code in common_icd_codes:
-                trending_data[icd_code] = get_diagnosis_trends(diagnoses, icd_code)
+                trending_data[icd_code] = get_diagnosis_trends(diagnoses_page, icd_code)
 
-            return {
-                "success": True,
-                "data": {
+            return PatientDiagnosesResponse(
+                success=True,
+                data={
                     "patient_dfn": patient_dfn,
                     "patient_name": patient_data.patient_name,
                     "total_diagnoses": len(patient_data.diagnoses),
-                    "filtered_count": len(diagnoses),
+                    "filtered_count": len(diagnoses_page),
+                    "pagination": build_pagination_metadata(
+                        total_items=total_diagnoses,
+                        returned_items=len(diagnoses_page),
+                        offset=offset,
+                        limit=limit,
+                        tool_name="get_patient_diagnoses",
+                        patient_dfn=patient_dfn,
+                        station=station,
+                        body_system=body_system,
+                        diagnosis_type=diagnosis_type,
+                        status_filter=status_filter,
+                        icd_version=icd_version,
+                    ),
                     "summary": {
                         "primary_count": len(primary_diagnoses),
                         "chronic_count": len(chronic_diagnoses),
@@ -207,10 +234,10 @@ def register_get_patient_diagnoses_tool(mcp: FastMCP, vista_client: BaseVistaCli
                             "is_valid_icd": diagnosis.is_valid_icd,
                             "summary": diagnosis.summary,
                         }
-                        for diagnosis in diagnoses[:limit]  # Limit based on parameter
+                        for diagnosis in diagnoses_page
                     ],
                 },
-                "metadata": {
+                metadata={
                     **build_metadata(
                         station=station,
                         duration_ms=int((time.time() - start_time) * 1000),
@@ -223,7 +250,7 @@ def register_get_patient_diagnoses_tool(mcp: FastMCP, vista_client: BaseVistaCli
                     },
                     "duz": caller_duz,
                 },
-            }
+            )
 
         except Exception as e:
             logger.error(

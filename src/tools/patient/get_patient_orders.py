@@ -5,9 +5,16 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from ...models.responses.tool_responses import PatientInfo, PatientOrdersResponse
 from ...services.data import get_patient_data
 from ...services.validators import validate_dfn
-from ...utils import build_metadata, get_default_duz, get_default_station, get_logger
+from ...utils import (
+    build_metadata,
+    build_pagination_metadata,
+    get_default_duz,
+    get_default_station,
+    get_logger,
+)
 from ...vista.base import BaseVistaClient
 
 logger = get_logger(__name__)
@@ -21,7 +28,9 @@ def register_get_patient_orders_tool(mcp: FastMCP, vista_client: BaseVistaClient
         patient_dfn: str,
         station: str | None = None,
         active_only: bool = True,
-    ) -> dict[str, Any]:
+        limit: int = 100,
+        offset: int = 0,
+    ) -> PatientOrdersResponse | dict[str, Any]:
         """Get patient orders including medications, labs, and procedures."""
         start_time = time.time()
         station = station or get_default_station()
@@ -49,15 +58,33 @@ def register_get_patient_orders_tool(mcp: FastMCP, vista_client: BaseVistaClient
             if active_only:
                 orders = [o for o in orders if o.is_active]
 
+            # Apply pagination
+            total_orders = len(orders)
+            orders_page = orders[offset : offset + limit]
+
             # Build response
-            return {
-                "success": True,
-                "patient": {
-                    "dfn": patient_dfn,
-                    "name": patient_data.patient_name,
+            return PatientOrdersResponse(
+                success=True,
+                patient=PatientInfo(
+                    dfn=patient_dfn,
+                    name=patient_data.patient_name,
+                ),
+                orders={
+                    "count": len(orders_page),
+                    "total_filtered": total_orders,
+                    "items": orders_page,
                 },
-                "orders": orders,
-                "metadata": {
+                pagination=build_pagination_metadata(
+                    total_items=total_orders,
+                    returned_items=len(orders_page),
+                    offset=offset,
+                    limit=limit,
+                    tool_name="get_patient_orders",
+                    patient_dfn=patient_dfn,
+                    station=station,
+                    active_only=active_only,
+                ),
+                metadata={
                     **build_metadata(
                         station=station,
                         duration_ms=int((time.time() - start_time) * 1000),
@@ -70,7 +97,7 @@ def register_get_patient_orders_tool(mcp: FastMCP, vista_client: BaseVistaClient
                     },
                     "duz": caller_duz,
                 },
-            }
+            )
 
         except Exception as e:
             logger.exception("Unexpected error in get_patient_orders")

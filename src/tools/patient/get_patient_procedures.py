@@ -4,10 +4,17 @@ from datetime import datetime
 from typing import Any
 
 from ...models.patient.cpt_code import CPTCode
+from ...models.responses.tool_responses import PatientInfo, PatientProceduresResponse
 from ...services.data.patient_data import get_patient_data
 from ...services.validators import validate_dfn
 from ...services.validators.cpt_validators import get_procedure_complexity
-from ...utils import build_metadata, get_default_duz, get_default_station, get_logger
+from ...utils import (
+    build_metadata,
+    build_pagination_metadata,
+    get_default_duz,
+    get_default_station,
+    get_logger,
+)
 from ...vista.base import BaseVistaClient, VistaAPIError
 
 logger = get_logger(__name__)
@@ -23,8 +30,9 @@ async def get_patient_procedures_impl(
     date_to: str | None = None,
     include_modifiers: bool = True,
     group_by_encounter: bool = False,
-    limit: int = 50,
-) -> dict[str, Any]:
+    limit: int = 100,
+    offset: int = 0,
+) -> PatientProceduresResponse | dict[str, Any]:
     """
     Implementation for getting patient procedures/CPT codes
 
@@ -65,8 +73,13 @@ async def get_patient_procedures_impl(
             date_to=date_to,
         )
 
-        # Limit results
-        limited_codes = filtered_codes[:limit] if limit > 0 else filtered_codes
+        # Apply pagination
+        total_filtered = len(filtered_codes)
+        limited_codes = (
+            filtered_codes[offset : offset + limit]
+            if limit > 0
+            else filtered_codes[offset:]
+        )
 
         # Build response
         procedures_data: dict[str, Any] | list[dict[str, Any]]
@@ -80,27 +93,41 @@ async def get_patient_procedures_impl(
         # Build summary statistics
         summary_stats = _build_procedure_summary(all_cpt_codes, filtered_codes)
 
-        return {
-            "success": True,
-            "patient": {
-                "name": patient_data.patient_name,
-                "dfn": patient_data.patient_dfn,
-            },
-            "procedures": procedures_data,
-            "summary": summary_stats,
-            "filters_applied": {
+        return PatientProceduresResponse(
+            success=True,
+            patient=PatientInfo(
+                dfn=patient_data.patient_dfn,
+                name=patient_data.patient_name,
+            ),
+            procedures=procedures_data,
+            summary=summary_stats,
+            filters_applied={
                 "category": procedure_category,
                 "date_from": date_from,
                 "date_to": date_to,
                 "limit": limit,
                 "grouped_by_encounter": group_by_encounter,
             },
-            "metadata": {
+            pagination=build_pagination_metadata(
+                total_items=total_filtered,
+                returned_items=len(limited_codes),
+                offset=offset,
+                limit=limit,
+                tool_name="get_patient_procedures",
+                patient_dfn=patient_dfn,
+                station=station,
+                procedure_category=procedure_category,
+                date_from=date_from,
+                date_to=date_to,
+                include_modifiers=include_modifiers,
+                group_by_encounter=group_by_encounter,
+            ),
+            metadata={
                 **build_metadata(station=station),
                 "total_found": len(filtered_codes),
                 "returned_count": len(limited_codes),
             },
-        }
+        )
 
     except VistaAPIError as e:
         logger.error(
@@ -314,8 +341,9 @@ def register_get_patient_procedures_tool(mcp, vista_client: BaseVistaClient):
         date_to: str | None = None,
         include_modifiers: bool = True,
         group_by_encounter: bool = False,
-        limit: int = 50,
-    ) -> dict[str, Any]:
+        limit: int = 100,
+        offset: int = 0,
+    ) -> PatientProceduresResponse | dict[str, Any]:
         """Get patient CPT procedure codes and billing information."""
         # Validate DFN
         if not validate_dfn(patient_dfn):
@@ -385,4 +413,5 @@ def register_get_patient_procedures_tool(mcp, vista_client: BaseVistaClient):
             include_modifiers=include_modifiers,
             group_by_encounter=group_by_encounter,
             limit=limit,
+            offset=offset,
         )

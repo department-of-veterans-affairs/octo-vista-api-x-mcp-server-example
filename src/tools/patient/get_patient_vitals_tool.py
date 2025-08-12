@@ -6,10 +6,17 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from ...models.responses.tool_responses import PatientInfo, PatientVitalsResponse
 from ...services.data import get_patient_data
 from ...services.formatters import format_vital_type
 from ...services.validators import validate_dfn
-from ...utils import build_metadata, get_default_duz, get_default_station, get_logger
+from ...utils import (
+    build_metadata,
+    build_pagination_metadata,
+    get_default_duz,
+    get_default_station,
+    get_logger,
+)
 from ...vista.base import BaseVistaClient
 
 logger = get_logger(__name__)
@@ -24,7 +31,9 @@ def register_get_patient_vitals_tool(mcp: FastMCP, vista_client: BaseVistaClient
         station: str | None = None,
         vital_type: str | None = None,
         days_back: int = 30,
-    ) -> dict[str, Any]:
+        limit: int = 100,
+        offset: int = 0,
+    ) -> PatientVitalsResponse | dict[str, Any]:
         """Get patient vital signs with latest values and history."""
         start_time = time.time()
         station = station or get_default_station()
@@ -54,19 +63,23 @@ def register_get_patient_vitals_tool(mcp: FastMCP, vista_client: BaseVistaClient
                     v for v in vitals if v.type_name.upper() == vital_type.upper()
                 ]
 
+            # Apply pagination
+            total_vitals = len(vitals)
+            vitals_page = vitals[offset : offset + limit]
+
             # Get latest of each type
             latest_vitals = patient_data.get_latest_vitals()
 
             # Build response
-            return {
-                "success": True,
-                "patient": {
-                    "dfn": patient_dfn,
-                    "name": patient_data.patient_name,
-                    "age": patient_data.demographics.calculate_age(),
-                },
-                "vitals": {
-                    "count": len(vitals),
+            return PatientVitalsResponse(
+                success=True,
+                patient=PatientInfo(
+                    dfn=patient_dfn,
+                    name=patient_data.patient_name,
+                    age=patient_data.demographics.calculate_age(),
+                ),
+                vitals={
+                    "count": len(vitals_page),
                     "days_back": days_back,
                     "filtered_type": vital_type,
                     "latest": {
@@ -87,10 +100,21 @@ def register_get_patient_vitals_tool(mcp: FastMCP, vista_client: BaseVistaClient
                             "critical": v.is_critical,
                             "location": v.location_name,
                         }
-                        for v in vitals
+                        for v in vitals_page
                     ],
                 },
-                "metadata": {
+                pagination=build_pagination_metadata(
+                    total_items=total_vitals,
+                    returned_items=len(vitals_page),
+                    offset=offset,
+                    limit=limit,
+                    tool_name="get_patient_vitals",
+                    patient_dfn=patient_dfn,
+                    station=station,
+                    vital_type=vital_type,
+                    days_back=days_back,
+                ),
+                metadata={
                     **build_metadata(
                         station=station,
                         duration_ms=int((time.time() - start_time) * 1000),
@@ -103,7 +127,7 @@ def register_get_patient_vitals_tool(mcp: FastMCP, vista_client: BaseVistaClient
                     },
                     "duz": caller_duz,
                 },
-            }
+            )
 
         except Exception as e:
             logger.exception("Unexpected error in get_patient_vitals")

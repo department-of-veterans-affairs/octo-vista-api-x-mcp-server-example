@@ -6,10 +6,17 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from ...models.responses.tool_responses import PatientConsultsResponse, PatientInfo
 from ...services.data import get_patient_data
 from ...services.formatters import format_service_name, format_status, format_urgency
 from ...services.validators import validate_dfn
-from ...utils import build_metadata, get_default_duz, get_default_station, get_logger
+from ...utils import (
+    build_metadata,
+    build_pagination_metadata,
+    get_default_duz,
+    get_default_station,
+    get_logger,
+)
 from ...vista.base import BaseVistaClient
 
 logger = get_logger(__name__)
@@ -23,7 +30,9 @@ def register_get_patient_consults_tool(mcp: FastMCP, vista_client: BaseVistaClie
         patient_dfn: str,
         station: str | None = None,
         active_only: bool = True,
-    ) -> dict[str, Any]:
+        limit: int = 100,
+        offset: int = 0,
+    ) -> PatientConsultsResponse | dict[str, Any]:
         """Get patient consultation requests and referrals."""
         start_time = time.time()
         station = station or get_default_station()
@@ -48,17 +57,21 @@ def register_get_patient_consults_tool(mcp: FastMCP, vista_client: BaseVistaClie
             if active_only:
                 consults = [c for c in consults if c.is_active]
 
-            # Get overdue consults
-            overdue_consults = [c for c in consults if c.is_overdue]
+            # Apply pagination
+            total_consults = len(consults)
+            consults_page = consults[offset : offset + limit]
+
+            # Get overdue consults (from paginated results)
+            overdue_consults = [c for c in consults_page if c.is_overdue]
 
             # Build response
-            return {
-                "success": True,
-                "patient": {
-                    "dfn": patient_dfn,
-                    "name": patient_data.patient_name,
-                },
-                "consults": {
+            return PatientConsultsResponse(
+                success=True,
+                patient=PatientInfo(
+                    dfn=patient_dfn,
+                    name=patient_data.patient_name,
+                ),
+                consults={
                     "total": len(patient_data.consults),
                     "active": len([c for c in patient_data.consults if c.is_active]),
                     "overdue": len(overdue_consults),
@@ -96,10 +109,20 @@ def register_get_patient_consults_tool(mcp: FastMCP, vista_client: BaseVistaClie
                             "reason": c.reason,
                             "overdue": c.is_overdue,
                         }
-                        for c in consults
+                        for c in consults_page
                     ],
                 },
-                "metadata": {
+                pagination=build_pagination_metadata(
+                    total_items=total_consults,
+                    returned_items=len(consults_page),
+                    offset=offset,
+                    limit=limit,
+                    tool_name="get_patient_consults",
+                    patient_dfn=patient_dfn,
+                    station=station,
+                    active_only=active_only,
+                ),
+                metadata={
                     **build_metadata(
                         station=station,
                         duration_ms=int((time.time() - start_time) * 1000),
@@ -112,7 +135,7 @@ def register_get_patient_consults_tool(mcp: FastMCP, vista_client: BaseVistaClie
                     },
                     "duz": caller_duz,
                 },
-            }
+            )
 
         except Exception as e:
             logger.exception("Unexpected error in get_patient_consults")

@@ -7,7 +7,12 @@ from mcp.server.fastmcp import FastMCP
 from ...models.responses import PatientSearchResponse
 from ...services.parsers.vista import parse_patient_search
 from ...services.rpc import build_single_string_param, execute_rpc
-from ...utils import get_default_duz, get_default_station, get_logger
+from ...utils import (
+    build_pagination_metadata,
+    get_default_duz,
+    get_default_station,
+    get_logger,
+)
 from ...vista.base import BaseVistaClient
 
 logger = get_logger(__name__)
@@ -20,8 +25,9 @@ def register_search_patients_tool(mcp: FastMCP, vista_client: BaseVistaClient):
     async def search_patients(
         search_term: str,
         station: str | None = None,
-        limit: int = 10,
-    ) -> dict[str, Any]:
+        limit: int = 100,
+        offset: int = 0,
+    ) -> PatientSearchResponse | dict[str, Any]:
         """Search patients by partial name or SSN last-4."""
         station = station or get_default_station()
         caller_duz = get_default_duz()
@@ -52,18 +58,29 @@ def register_search_patients_tool(mcp: FastMCP, vista_client: BaseVistaClient):
         for patient in patients:
             patient.station = station
 
-        # Limit results
-        if limit and len(patients) > limit:
-            patients = patients[:limit]
+        # Apply pagination
+        total_patients = len(patients)
+        patients_page = patients[offset : offset + limit]
 
         # Build response
         response = PatientSearchResponse(
             success=True,
             search_term=search_term,
             station=station,
-            count=len(patients),
-            patients=patients,
+            count=len(patients_page),
+            total_found=total_patients,
+            patients=patients_page,
+            pagination=build_pagination_metadata(
+                total_items=total_patients,
+                returned_items=len(patients_page),
+                offset=offset,
+                limit=limit,
+                tool_name="search_patients",
+                patient_dfn="",
+                search_term=search_term,
+                station=station,
+            ),
             metadata=metadata,
         )
 
-        return response.model_dump()
+        return response

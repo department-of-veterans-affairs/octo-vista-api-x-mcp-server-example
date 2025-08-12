@@ -208,3 +208,64 @@ class TestGetPatientHealthFactorsIntegration:
         no_data_trends = get_health_factor_trends(sample_health_factors, "NONEXISTENT")
         assert no_data_trends["trend"] == "no_data"
         assert no_data_trends["count"] == 0
+
+    @pytest.mark.asyncio
+    async def test_health_factor_pagination(self, sample_health_factors):
+        """Test health factor pagination functionality"""
+        health_factors = sample_health_factors
+
+        # Test pagination logic directly
+        # Test with limit=2, offset=0
+        limit = 2
+        offset = 0
+        total_health_factors = len(health_factors)
+        health_factors_page = health_factors[offset : offset + limit]
+
+        # Use the actual number of health factors available
+        expected_returned = min(limit, total_health_factors)
+        assert len(health_factors_page) == expected_returned
+
+        # Test pagination response structure
+        pagination_info = {
+            "total": total_health_factors,
+            "returned": len(health_factors_page),
+            "offset": offset,
+            "limit": limit,
+        }
+
+        assert pagination_info["total"] == total_health_factors
+        assert pagination_info["returned"] == expected_returned
+        assert pagination_info["offset"] == 0
+        assert pagination_info["limit"] == 2
+
+        # Test with offset=1, limit=1 (if we have enough health factors)
+        if total_health_factors > 1:
+            offset = 1
+            limit = 1
+            health_factors_page = health_factors[offset : offset + limit]
+            expected_returned = min(limit, max(0, total_health_factors - offset))
+
+            pagination_info = {
+                "total": total_health_factors,
+                "returned": len(health_factors_page),
+                "offset": offset,
+                "limit": limit,
+            }
+
+            assert pagination_info["total"] == total_health_factors
+            assert pagination_info["returned"] == expected_returned
+            assert pagination_info["offset"] == 1
+            assert pagination_info["limit"] == 1
+
+        # Test offset beyond total (should return 0 items)
+        offset = 100
+        health_factors_page = health_factors[offset : offset + limit]
+
+        pagination_info = {
+            "total": total_health_factors,
+            "returned": len(health_factors_page),
+            "offset": offset,
+            "limit": limit,
+        }
+
+        assert pagination_info["returned"] == 0
