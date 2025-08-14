@@ -8,12 +8,7 @@ from mcp.server.fastmcp import FastMCP
 
 from ...services.data import get_patient_data
 from ...services.validators import validate_dfn
-from ...utils import (
-    build_metadata,
-    get_default_duz,
-    get_default_station,
-    get_logger,
-)
+from ...utils import build_metadata, get_default_duz, get_default_station, get_logger
 from ...vista.base import BaseVistaClient
 
 logger = get_logger(__name__)

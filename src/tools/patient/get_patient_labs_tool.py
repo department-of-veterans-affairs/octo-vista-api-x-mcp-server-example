@@ -6,17 +6,10 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from ...models.responses.tool_responses import PatientInfo, PatientLabsResponse
 from ...services.data import get_patient_data
 from ...services.formatters import format_lab_type
 from ...services.validators import validate_dfn
-from ...utils import (
-    build_metadata,
-    build_pagination_metadata,
-    get_default_duz,
-    get_default_station,
-    get_logger,
-)
+from ...utils import build_metadata, get_default_duz, get_default_station, get_logger
 from ...vista.base import BaseVistaClient
 
 logger = get_logger(__name__)
@@ -32,9 +25,7 @@ def register_get_patient_labs_tool(mcp: FastMCP, vista_client: BaseVistaClient):
         abnormal_only: bool = False,
         lab_type: str | None = None,
         days_back: int = 90,
-        limit: int = 100,
-        offset: int = 0,
-    ) -> PatientLabsResponse | dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get patient laboratory test results with values and reference ranges."""
         start_time = time.time()
         station = station or get_default_station()
@@ -70,33 +61,25 @@ def register_get_patient_labs_tool(mcp: FastMCP, vista_client: BaseVistaClient):
                     lab for lab in labs if lab_type.upper() in lab.type_name.upper()
                 ]
 
-            # Apply pagination to all results
-            total_labs = len(labs)
-            labs_page = labs[offset : offset + limit]
-
-            # Group by test type (use paginated results)
+            # Group by test type
             lab_groups: dict[str, list[Any]] = {}
-            for lab in labs_page:
+            for lab in labs:
                 if lab.type_name not in lab_groups:
                     lab_groups[lab.type_name] = []
                 lab_groups[lab.type_name].append(lab)
 
             # Build response
-            return PatientLabsResponse(
-                success=True,
-                patient=PatientInfo(
-                    dfn=patient_dfn,
-                    name=patient_data.patient_name,
-                    age=patient_data.demographics.calculate_age(),
-                ),
-                labs={
-                    "count": len(labs_page),
-                    "abnormal_count": len(
-                        [lab for lab in labs_page if lab.is_abnormal]
-                    ),
-                    "critical_count": len(
-                        [lab for lab in labs_page if lab.is_critical]
-                    ),
+            return {
+                "success": True,
+                "patient": {
+                    "dfn": patient_dfn,
+                    "name": patient_data.patient_name,
+                    "age": patient_data.demographics.calculate_age(),
+                },
+                "labs": {
+                    "count": len(labs),
+                    "abnormal_count": len([lab for lab in labs if lab.is_abnormal]),
+                    "critical_count": len([lab for lab in labs if lab.is_critical]),
                     "days_back": days_back,
                     "filters": {
                         "abnormal_only": abnormal_only,
@@ -139,22 +122,10 @@ def register_get_patient_labs_tool(mcp: FastMCP, vista_client: BaseVistaClient):
                             "specimen": lab.specimen,
                             "group": lab.group_name,
                         }
-                        for lab in labs_page
+                        for lab in labs[:100]  # Limit to 100 results
                     ],
                 },
-                pagination=build_pagination_metadata(
-                    total_items=total_labs,
-                    returned_items=len(labs_page),
-                    offset=offset,
-                    limit=limit,
-                    tool_name="get_patient_labs",
-                    patient_dfn=patient_dfn,
-                    station=station,
-                    abnormal_only=abnormal_only,
-                    lab_type=lab_type,
-                    days_back=days_back,
-                ),
-                metadata={
+                "metadata": {
                     **build_metadata(
                         station=station,
                         duration_ms=int((time.time() - start_time) * 1000),
@@ -167,7 +138,7 @@ def register_get_patient_labs_tool(mcp: FastMCP, vista_client: BaseVistaClient):
                     },
                     "duz": caller_duz,
                 },
-            )
+            }
 
         except Exception as e:
             logger.exception("Unexpected error in get_patient_labs")

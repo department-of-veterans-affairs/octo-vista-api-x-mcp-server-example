@@ -66,18 +66,6 @@ class LabResultFlag(str, Enum):
     NORMAL = ""
 
 
-class PaginationMetadata(BaseModel):
-    """Enhanced pagination metadata with LLM guidance"""
-
-    total: int
-    returned: int
-    offset: int
-    limit: int
-    has_more: bool
-    next_offset: int | None = None
-    suggested_next_call: str | None = None
-
-
 class BaseVistaModel(BaseModel):
     """Base model for all Vista data models"""
 

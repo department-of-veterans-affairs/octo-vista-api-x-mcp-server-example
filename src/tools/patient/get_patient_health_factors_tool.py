@@ -5,16 +5,9 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from ...models.responses.tool_responses import PatientHealthFactorsResponse
 from ...services.data import get_patient_data
 from ...services.validators import validate_dfn
-from ...utils import (
-    build_metadata,
-    build_pagination_metadata,
-    get_default_duz,
-    get_default_station,
-    get_logger,
-)
+from ...utils import build_metadata, get_default_duz, get_default_station, get_logger
 from ...vista.base import BaseVistaClient
 
 logger = get_logger(__name__)
@@ -32,9 +25,8 @@ def register_get_patient_health_factors_tool(
         category_filter: str | None = None,
         risk_category: str | None = None,
         severity_filter: str | None = None,
-        limit: int = 100,
-        offset: int = 0,
-    ) -> PatientHealthFactorsResponse | dict[str, Any]:
+        limit: int = 50,
+    ) -> dict[str, Any]:
         """Get patient health factors and risk assessments."""
         start_time = time.time()
         station = station or get_default_station()
@@ -89,73 +81,55 @@ def register_get_patient_health_factors_tool(
                     if f.severity_level.lower() == severity_filter.lower()
                 ]
 
-            # Apply pagination
-            total_health_factors = len(health_factors)
-            health_factors_page = health_factors[offset : offset + limit]
-
-            # Group factors by risk category (use paginated results)
+            # Group factors by risk category
             from ...services.validators.clinical_validators import (
                 get_health_factor_trends,
             )
 
             factor_groups: dict[str, list[Any]] = {}
-            for factor in health_factors_page:
+            for factor in health_factors:
                 group_key = factor.risk_category
                 if group_key not in factor_groups:
                     factor_groups[group_key] = []
                 factor_groups[group_key].append(factor)
 
-            # Identify high-risk factors (from paginated results)
-            high_risk_factors = [f for f in health_factors_page if f.risk_score >= 7]
+            # Identify high-risk factors
+            high_risk_factors = [f for f in health_factors if f.risk_score >= 7]
 
-            # Identify modifiable factors (from paginated results)
-            modifiable_factors = [f for f in health_factors_page if f.is_modifiable]
+            # Identify modifiable factors
+            modifiable_factors = [f for f in health_factors if f.is_modifiable]
 
-            # Get factors requiring monitoring (from paginated results)
-            monitoring_factors = [
-                f for f in health_factors_page if f.requires_monitoring
-            ]
+            # Get factors requiring monitoring
+            monitoring_factors = [f for f in health_factors if f.requires_monitoring]
 
-            # Calculate trending for common factors (from paginated results)
+            # Calculate trending for common factors
             trending_data = {}
-            common_factor_names = list({f.factor_name for f in health_factors_page})[
+            common_factor_names = list({f.factor_name for f in health_factors})[
                 :10
             ]  # Top 10
             for factor_name in common_factor_names:
                 trending_data[factor_name] = get_health_factor_trends(
-                    health_factors_page, factor_name
+                    health_factors, factor_name
                 )
 
-            return PatientHealthFactorsResponse(
-                success=True,
-                data={
+            return {
+                "success": True,
+                "data": {
                     "patient_dfn": patient_dfn,
                     "patient_name": patient_data.patient_name,
                     "total_health_factors": len(patient_data.health_factors),
-                    "filtered_count": len(health_factors_page),
-                    "pagination": build_pagination_metadata(
-                        total_items=total_health_factors,
-                        returned_items=len(health_factors_page),
-                        offset=offset,
-                        limit=limit,
-                        tool_name="get_patient_health_factors",
-                        patient_dfn=patient_dfn,
-                        station=station,
-                        category_filter=category_filter,
-                        risk_category=risk_category,
-                        severity_filter=severity_filter,
-                    ),
+                    "filtered_count": len(health_factors),
                     "summary": {
                         "high_risk_count": len(high_risk_factors),
                         "modifiable_count": len(modifiable_factors),
                         "monitoring_required_count": len(monitoring_factors),
                         "average_risk_score": (
                             round(
-                                sum(f.risk_score for f in health_factors_page)
-                                / len(health_factors_page),
+                                sum(f.risk_score for f in health_factors)
+                                / len(health_factors),
                                 1,
                             )
-                            if health_factors_page
+                            if health_factors
                             else 0.0
                         ),
                     },
@@ -219,10 +193,10 @@ def register_get_patient_health_factors_tool(
                             "requires_monitoring": factor.requires_monitoring,
                             "summary": factor.summary,
                         }
-                        for factor in health_factors_page
+                        for factor in health_factors[:limit]  # Limit based on parameter
                     ],
                 },
-                metadata={
+                "metadata": {
                     **build_metadata(
                         station=station,
                         duration_ms=int((time.time() - start_time) * 1000),
@@ -235,7 +209,7 @@ def register_get_patient_health_factors_tool(
                     },
                     "duz": caller_duz,
                 },
-            )
+            }
 
         except Exception as e:
             logger.error(

@@ -4,10 +4,7 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from .models.base.common import PaginationMetadata
+from typing import Any
 
 
 def get_logger(name: str = "mcp-server") -> logging.Logger:
@@ -249,63 +246,3 @@ def log_rpc_call(
         logger.info(f"RPC call completed: {rpc_name}", extra=log_data)
     else:
         logger.error(f"RPC call failed: {rpc_name}", extra=log_data)
-
-
-def build_pagination_metadata(
-    total_items: int,
-    returned_items: int,
-    offset: int,
-    limit: int,
-    tool_name: str,
-    patient_dfn: str,
-    **additional_params: Any,
-) -> "PaginationMetadata":
-    """
-    Build enhanced pagination metadata with LLM guidance
-
-    Args:
-        total_items: Total number of items available (after filtering)
-        returned_items: Number of items in current response
-        offset: Current offset position
-        limit: Current limit value
-        tool_name: Name of the tool (for suggested_next_call)
-        patient_dfn: Patient DFN
-        **additional_params: Additional parameters to include in suggested call
-
-    Returns:
-        Enhanced pagination metadata dictionary
-    """
-    has_more = returned_items == limit and (offset + limit) < total_items
-    next_offset = offset + limit if has_more else None
-
-    # Build parameter string for suggested next call
-    params = [f'patient_dfn="{patient_dfn}"']
-    params.append(f"limit={limit}")
-    if next_offset is not None:
-        params.append(f"offset={next_offset}")
-
-    # Add any additional parameters
-    for key, value in additional_params.items():
-        if value is not None:
-            if isinstance(value, str):
-                params.append(f'{key}="{value}"')
-            elif isinstance(value, bool):
-                params.append(f"{key}={str(value).lower()}")
-            else:
-                params.append(f"{key}={value}")
-
-    param_string = ", ".join(params)
-    suggested_next_call = f"{tool_name}({param_string})" if has_more else None
-
-    # Import here to avoid circular import
-    from .models.base.common import PaginationMetadata
-
-    return PaginationMetadata(
-        total=total_items,
-        returned=returned_items,
-        offset=offset,
-        limit=limit,
-        has_more=has_more,
-        next_offset=next_offset,
-        suggested_next_call=suggested_next_call,
-    )

@@ -128,13 +128,13 @@ class TestCPTProceduresImplementation:
                 caller_duz="456",
             )
 
-            assert result.success is True
-            assert result.patient.dfn == "123"
-            assert len(result.procedures) == 3
-            assert result.summary["total_procedures"] == 3
+            assert result["success"] is True
+            assert result["patient"]["dfn"] == "123"
+            assert len(result["procedures"]) == 3
+            assert result["summary"]["total_procedures"] == 3
 
             # Check procedure data
-            procedures = result.procedures
+            procedures = result["procedures"]
             assert any(p["cpt_code"] == "99213" for p in procedures)
             assert any(p["cpt_code"] == "71020" for p in procedures)
             assert any(p["cpt_code"] == "12001" for p in procedures)
@@ -156,8 +156,8 @@ class TestCPTProceduresImplementation:
                 procedure_category="radiology",
             )
 
-            assert result.success is True
-            procedures = result.procedures
+            assert result["success"] is True
+            procedures = result["procedures"]
             assert len(procedures) == 1
             assert procedures[0]["cpt_code"] == "71020"
             assert procedures[0]["category"] == "radiology"
@@ -178,8 +178,8 @@ class TestCPTProceduresImplementation:
                 group_by_encounter=True,
             )
 
-            assert result.success is True
-            procedures_data = result.procedures
+            assert result["success"] is True
+            procedures_data = result["procedures"]
 
             # Should have encounters grouping
             assert "encounters" in procedures_data
@@ -366,70 +366,9 @@ class TestCPTErrorHandling:
                 patient_dfn="123",
             )
 
-            assert result.success is True
-            assert len(result.procedures) == 0
-            assert result.summary["total_procedures"] == 0
-
-    @pytest.mark.asyncio
-    async def test_cpt_pagination(self, sample_cpt_codes):
-        """Test CPT procedure pagination functionality"""
-        cpt_codes = sample_cpt_codes
-
-        # Test pagination logic directly
-        # Test with limit=2, offset=0
-        limit = 2
-        offset = 0
-        total_cpt_codes = len(cpt_codes)
-        cpt_codes_page = cpt_codes[offset : offset + limit]
-
-        # Use the actual number of CPT codes available
-        expected_returned = min(limit, total_cpt_codes)
-        assert len(cpt_codes_page) == expected_returned
-
-        # Test pagination response structure
-        pagination_info = {
-            "total": total_cpt_codes,
-            "returned": len(cpt_codes_page),
-            "offset": offset,
-            "limit": limit,
-        }
-
-        assert pagination_info["total"] == total_cpt_codes
-        assert pagination_info["returned"] == expected_returned
-        assert pagination_info["offset"] == 0
-        assert pagination_info["limit"] == 2
-
-        # Test with offset=1, limit=1 (if we have enough CPT codes)
-        if total_cpt_codes > 1:
-            offset = 1
-            limit = 1
-            cpt_codes_page = cpt_codes[offset : offset + limit]
-            expected_returned = min(limit, max(0, total_cpt_codes - offset))
-
-            pagination_info = {
-                "total": total_cpt_codes,
-                "returned": len(cpt_codes_page),
-                "offset": offset,
-                "limit": limit,
-            }
-
-            assert pagination_info["total"] == total_cpt_codes
-            assert pagination_info["returned"] == expected_returned
-            assert pagination_info["offset"] == 1
-            assert pagination_info["limit"] == 1
-
-        # Test offset beyond total (should return 0 items)
-        offset = 100
-        cpt_codes_page = cpt_codes[offset : offset + limit]
-
-        pagination_info = {
-            "total": total_cpt_codes,
-            "returned": len(cpt_codes_page),
-            "offset": offset,
-            "limit": limit,
-        }
-
-        assert pagination_info["returned"] == 0
+            assert result["success"] is True
+            assert len(result["procedures"]) == 0
+            assert result["summary"]["total_procedures"] == 0
 
 
 if __name__ == "__main__":

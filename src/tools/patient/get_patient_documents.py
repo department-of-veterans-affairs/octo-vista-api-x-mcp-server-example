@@ -4,16 +4,9 @@ from datetime import datetime, timedelta
 
 from mcp.server.fastmcp import FastMCP
 
-from ...models.responses.tool_responses import PatientDocumentsResponse, PatientInfo
 from ...services.data import get_patient_data
 from ...services.validators import validate_dfn
-from ...utils import (
-    build_metadata,
-    build_pagination_metadata,
-    get_default_duz,
-    get_default_station,
-    get_logger,
-)
+from ...utils import build_metadata, get_default_duz, get_default_station, get_logger
 from ...vista.base import BaseVistaClient
 
 logger = get_logger()
@@ -28,9 +21,7 @@ def register_get_patient_documents_tool(mcp: FastMCP, vista_client: BaseVistaCli
         station: str = "",
         completed_only: bool = True,
         days_back: int = 180,
-        limit: int = 100,
-        offset: int = 0,
-    ) -> PatientDocumentsResponse | dict:
+    ) -> dict:
         """Get patient clinical documents and notes."""
         station = station or get_default_station()
         caller_duz = get_default_duz()
@@ -61,38 +52,19 @@ def register_get_patient_documents_tool(mcp: FastMCP, vista_client: BaseVistaCli
             if completed_only:
                 documents = [d for d in documents if d.is_completed]
 
-            # Apply pagination
-            total_documents = len(documents)
-            documents_page = documents[offset : offset + limit]
-
             # Build response
-            return PatientDocumentsResponse(
-                success=True,
-                patient=PatientInfo(
-                    dfn=patient_dfn,
-                    name=patient_data.patient_name,
-                    age=patient_data.demographics.calculate_age(),
-                ),
-                documents={
-                    "total": len(documents_page),
-                    "completed": len([d for d in documents_page if d.is_completed]),
-                    "progress_notes": len(
-                        [d for d in documents_page if d.is_progress_note]
-                    ),
-                    "consult_notes": len(
-                        [d for d in documents_page if d.is_consult_note]
-                    ),
-                    "pagination": build_pagination_metadata(
-                        total_items=total_documents,
-                        returned_items=len(documents_page),
-                        offset=offset,
-                        limit=limit,
-                        tool_name="get_patient_documents",
-                        patient_dfn=patient_dfn,
-                        station=station,
-                        completed_only=completed_only,
-                        days_back=days_back,
-                    ),
+            return {
+                "success": True,
+                "patient": {
+                    "dfn": patient_dfn,
+                    "name": patient_data.patient_name,
+                    "age": patient_data.demographics.calculate_age(),
+                },
+                "documents": {
+                    "total": len(documents),
+                    "completed": len([d for d in documents if d.is_completed]),
+                    "progress_notes": len([d for d in documents if d.is_progress_note]),
+                    "consult_notes": len([d for d in documents if d.is_consult_note]),
                     "items": [
                         {
                             "uid": doc.uid,
@@ -121,22 +93,11 @@ def register_get_patient_documents_tool(mcp: FastMCP, vista_client: BaseVistaCli
                             "content_summary": doc.content_summary,
                             "text_items": len(doc.text),
                         }
-                        for doc in documents_page
+                        for doc in documents
                     ],
                 },
-                pagination=build_pagination_metadata(
-                    total_items=total_documents,
-                    returned_items=len(documents_page),
-                    offset=offset,
-                    limit=limit,
-                    tool_name="get_patient_documents",
-                    patient_dfn=patient_dfn,
-                    station=station,
-                    completed_only=completed_only,
-                    days_back=days_back,
-                ),
-                metadata=build_metadata(station=station),
-            )
+                "metadata": build_metadata(station=station),
+            }
 
         except Exception as e:
             logger.error(f"Error getting patient documents: {e}")
