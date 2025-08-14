@@ -194,13 +194,6 @@ async def test_mcp_server():
         # Initialize
         await session.initialize()
         
-        # Test patient search
-        result = await session.call_tool(
-            "search_patients",
-            arguments={"search_text": "Anderson"}
-        )
-        assert result.content[0].text.find("ANDERSON,JAMES") != -1
-        
         # Test medications
         result = await session.call_tool(
             "get_medications",
@@ -230,116 +223,11 @@ if ! curl -s http://localhost:8888/health > /dev/null; then
 fi
 
 # Test with mcp-cli (if installed)
-echo "1. Testing patient search..."
-echo '{"tool": "search_patients", "arguments": {"search_text": "Anderson"}}' | mcp-cli
-
-echo "2. Testing medications..."
+echo "1. Testing medications..."
 echo '{"tool": "get_medications", "arguments": {"patient_id": "100022"}}' | mcp-cli
+
+echo "2. Testing demographics..."
+echo '{"tool": "get_patient_demographics", "arguments": {"patient_id": "100022"}}' | mcp-cli
 
 echo "Tests complete!"
 ```
-
-## Performance Benchmarks
-
-Expected response times for common operations:
-
-| Operation | Expected Time | Max Time |
-|-----------|--------------|----------|
-| Patient Search | < 100ms | 500ms |
-| Get Demographics | < 50ms | 200ms |
-| Get Medications | < 150ms | 500ms |
-| Get Lab Results | < 200ms | 1000ms |
-| Get Full Patient Data | < 500ms | 2000ms |
-
-## Common Issues and Solutions
-
-### Issue: "Patient not found"
-
-**Solution:** Verify you're using correct test patient DFNs (100022-100029)
-
-### Issue: "Authentication failed"
-
-**Solution:** Ensure mock server is running and using correct API key
-
-### Issue: "Tool not found"
-
-**Solution:** Check tool name spelling (use underscores, not hyphens)
-
-### Issue: Slow responses
-
-**Solution:**
-
-1. Check if mock server is running locally
-2. Verify no network issues
-3. Consider implementing caching
-
-## Advanced Testing
-
-### Load Testing with Locust
-
-```python
-from locust import HttpUser, task, between
-
-class VistaMCPUser(HttpUser):
-    wait_time = between(1, 3)
-    
-    @task
-    def search_patient(self):
-        self.client.post("/tools/search_patients", json={
-            "search_text": "Anderson"
-        })
-    
-    @task
-    def get_medications(self):
-        self.client.post("/tools/get_medications", json={
-            "patient_id": "100022"
-        })
-```
-
-### Continuous Testing
-
-Set up automated tests to run on every commit:
-
-```yaml
-# .github/workflows/test.yml
-name: Test Vista MCP Server
-on: [push, pull_request]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-      - run: |
-          pip install -e .
-          pytest tests/
-```
-
-## Debugging Tips
-
-1. **Enable debug logging:**
-
-   ```bash
-   VISTA_MCP_DEBUG=true mise run dev-with-mock
-   ```
-
-2. **Check mock server logs:**
-
-   ```bash
-   docker-compose -f mock_server/docker-compose.yml logs -f
-   ```
-
-3. **Use MCP Inspector:**
-   - Open <http://localhost:6274>
-   - Enable request/response logging
-   - Test individual tools interactively
-
-4. **Verify mock data:**
-
-   ```bash
-   # Check if patient exists in mock
-   curl http://localhost:8888/test/patients
-   ```

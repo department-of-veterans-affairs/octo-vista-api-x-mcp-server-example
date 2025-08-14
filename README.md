@@ -117,14 +117,16 @@ python scripts/test_config.py
 Once configured in your LLM client:
 
 ```
-You: "Search for patients with last name ANDERSON"
-Assistant: I'll search for patients with the last name Anderson...
-[Uses search_patients tool]
-
 You: "Show medications for patient 100022"
 Assistant: I'll retrieve the medications for patient 100022...
 [Uses get_medications tool]
+
+You: "Get vital signs for patient 100022"
+Assistant: I'll retrieve the vital signs for patient 100022...
+[Uses get_patient_vitals tool]
 ```
+
+**Note:** Patient context (DFN) should be injected by CPRS, not searched from MCP tools.
 
 ## Requirements
 

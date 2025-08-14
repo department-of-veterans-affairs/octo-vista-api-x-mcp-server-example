@@ -31,7 +31,6 @@ class ToolName:
 
 ### Patient Tools ([src/tools/patient.py](mdc:src/tools/patient.py))
 
-- `search_patients` - Find patients by name or SSN
 - `get_patient_demographics` - Retrieve patient basic info
 - `select_patient` - Set current patient context
 - `get_patient_data` - Comprehensive patient data retrieval
@@ -91,7 +90,6 @@ Tools must be registered in [server.py](mdc:server.py) or [http_server.py](mdc:h
 
 ```python
 # Register MCP tools
-server.add_tool("search_patients", patient_tools.search_patients)
 server.add_tool("get_medications", clinical_tools.get_medications)
 ```
 

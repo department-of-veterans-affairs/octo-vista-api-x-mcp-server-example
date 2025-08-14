@@ -428,22 +428,6 @@ MCP_LOG_LEVEL=DEBUG
 
 ### Patient Tools
 
-#### search_patients
-
-Search for patients by name or SSN fragment.
-
-**Parameters:**
-
-- `search_term` (required): Name prefix or SSN last 4 (min 2 chars)
-- `station`: Vista station number (optional)
-- `limit`: Maximum results (1-100, default: 10)
-
-**Example:**
-
-```python
-result = await search_patients(search_term="SMI", limit=5)
-```
-
 #### get_patient_vitals
 
 Retrieve vital sign measurements for a patient.

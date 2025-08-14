@@ -209,14 +209,8 @@ def register_resources(mcp: FastMCP):
         """
         rpc_catalog = {
             "patient_operations": {
-                "description": "Patient search and demographics",
+                "description": "Patient demographics and data",
                 "rpcs": [
-                    {
-                        "name": "ORWPT LIST",
-                        "tool": "search_patients",
-                        "description": "Search for patients by name or SSN",
-                        "parameters": ["search_prefix"],
-                    },
                     {
                         "name": "ORWPT ID INFO",
                         "tool": "get_patient_demographics",

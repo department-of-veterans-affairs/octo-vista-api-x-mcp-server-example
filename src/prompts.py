@@ -103,7 +103,7 @@ Please organize the summary in a clear, clinical format suitable for healthcare 
             "assessment": """For a comprehensive clinical assessment:
 
 1. Patient identification:
-   - Search for patient: search_patients(search_term="ANDERSON")
+   - Note: Patient context (DFN) should be injected by CPRS
    - Select patient: select_patient(patient_dfn="100022")
 
 2. Gather comprehensive data:
@@ -167,7 +167,7 @@ Please organize the summary in a clear, clinical format suitable for healthcare 
    - Check provider schedules
 
 4. For specific patient scheduling:
-   - Search patient: search_patients(search_term="NAME")
+   - Note: Patient context (DFN) should be injected by CPRS
    - Review their care needs
    - Find appropriate appointment slot"""
 
