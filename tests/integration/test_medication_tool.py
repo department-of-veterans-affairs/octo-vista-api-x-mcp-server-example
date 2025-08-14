@@ -33,6 +33,27 @@ def sample_patient_data():
         ssn="***-**-0001",
         facilityCode=500,
         facilityName="CAMP MASTER",
+        disability=[
+            {"percent": 70, "condition": "DIABETES MELLITUS TYPE 2"},
+            {"percent": 30, "condition": "HYPERTENSION"},
+        ],
+        exposures=[
+            {"type": "Agent Orange", "status": "Yes"},
+        ],
+        facilities=[
+            {"name": "CAMP MASTER", "id": "500", "type": "VAMC"},
+        ],
+        pcTeamMembers=[
+            {
+                "team": "BLUE TEAM",
+                "role": "PRIMARY CARE PROVIDER",
+                "name": "SMITH,JOHN MD",
+            },
+            {"team": "BLUE TEAM", "role": "NURSE", "name": "JONES,MARY RN"},
+        ],
+        eligibility=[
+            {"type": "SERVICE CONNECTED", "percent": "100%"},
+        ],
     )
 
     medications = [

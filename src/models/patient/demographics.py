@@ -170,6 +170,11 @@ class PatientDemographics(BasePatientModel):
     eligibility_status: str | None = Field(None, alias="eligibilityStatus")
     primary_team: str | None = Field(None, alias="pcTeamName")
     primary_provider: str | None = None
+    disability: list[dict] = Field(default_factory=list)
+    exposures: list[dict] = Field(default_factory=list)
+    facilities: list[dict] = Field(default_factory=list)
+    pc_team_members: list[dict] = Field(default_factory=list, alias="pcTeamMembers")
+    eligibility: list[dict] = Field(default_factory=list)
 
     @field_validator("gender_code", mode="before")
     @classmethod
