@@ -1,4 +1,4 @@
-"""Vista API MCP Server - HTTP Transport (SSE + Streamable HTTP)"""
+"""Vista API MCP Server - Streamable HTTP Transport"""
 
 import logging
 import os
@@ -27,81 +27,48 @@ if __name__ == "__main__":
     # Get configuration from environment
     host = os.getenv("VISTA_MCP_HTTP_HOST", "0.0.0.0")
     port = int(os.getenv("VISTA_MCP_HTTP_PORT", "8000"))
-    transport = os.getenv("VISTA_MCP_TRANSPORT", "sse")
 
     # Additional configuration for enhanced transport support
     auth_header = os.getenv("VISTA_MCP_AUTH_HEADER")
     cors_origins = os.getenv("VISTA_MCP_CORS_ORIGINS")
 
-    # Normalize transport names (support aliases)
-    if transport in ["http", "streamable-http", "streamable_http"]:
-        transport = "http"  # Use "http" internally for Streamable HTTP
-        logger.info("🚀 Starting Streamable HTTP server")
-        logger.info(f"📍 MCP endpoint: http://{host}:{port}/mcp")
-        logger.info("🔧 Configure your client with:")
-        logger.info(f'  {{"transport": "http", "url": "http://{host}:{port}/mcp"}}')
-    elif transport == "sse":
-        logger.warning(
-            "⚠️  SSE transport is DEPRECATED and will be removed in a future version!"
-        )
-        logger.warning(
-            "⚠️  Please migrate to 'streamable-http' transport for better performance and stability."
-        )
-        logger.info(f"📍 SSE endpoint: http://{host}:{port}/sse")
-        logger.info(f"📝 Message endpoint: http://{host}:{port}/messages/")
-        logger.info("⏰ SSE support will be removed on: 2025-06-01")
-    else:
-        logger.error(f"❌ Unsupported transport: {transport}")
-        logger.error(
-            "✅ Supported transports: 'http', 'streamable-http', 'sse' (deprecated)"
-        )
-        sys.exit(1)
+    logger.info("🚀 Starting Streamable HTTP server")
+    logger.info(f"📍 MCP endpoint: http://{host}:{port}/mcp")
+    logger.info("🔧 Configure your client with:")
+    logger.info(f'  {{"transport": "http", "url": "http://{host}:{port}/mcp"}}')
 
-    logger.info(f"🌐 Starting {transport.upper()} server on {host}:{port}")
+    logger.info(f"🌐 Starting HTTP server on {host}:{port}")
 
     # Set environment variables for uvicorn
     os.environ["UVICORN_HOST"] = host
     os.environ["UVICORN_PORT"] = str(port)
 
     try:
-        # Import uvicorn for both transports
+        # Import uvicorn for HTTP transport
         import uvicorn
 
-        if transport == "sse":
-            # Legacy SSE transport (deprecated)
-            logger.info("📡 Using legacy SSE transport...")
-            app = mcp.sse_app()
+        # Modern Streamable HTTP transport
+        logger.info("🎯 Using Streamable HTTP transport...")
+        logger.info("✨ Getting Streamable HTTP app...")
 
-            # Add CORS headers if specified
-            if cors_origins:
-                logger.info(f"🔗 CORS origins: {cors_origins}")
-                # Note: CORS configuration would need to be implemented in FastMCP
+        # Get the Streamable HTTP app
+        app = mcp.streamable_http_app()
 
-            # Run with uvicorn directly
-            uvicorn.run(app, host=host, port=port, log_level="info")
-        else:
-            # Modern Streamable HTTP transport
-            logger.info("🎯 Using modern Streamable HTTP transport...")
-            logger.info("✨ Getting Streamable HTTP app...")
+        # Add auth header if specified
+        if auth_header:
+            logger.info(
+                f"🔐 Using authentication header: {auth_header.split('=')[0]}=***"
+            )
+            # Note: Auth implementation would need to be handled by the app
 
-            # Get the Streamable HTTP app
-            app = mcp.streamable_http_app()
+        # Add CORS configuration if specified
+        if cors_origins:
+            logger.info(f"🔗 CORS origins: {cors_origins}")
+            # Note: CORS configuration would need to be implemented in FastMCP
 
-            # Add auth header if specified
-            if auth_header:
-                logger.info(
-                    f"🔐 Using authentication header: {auth_header.split('=')[0]}=***"
-                )
-                # Note: Auth implementation would need to be handled by the app
-
-            # Add CORS configuration if specified
-            if cors_origins:
-                logger.info(f"🔗 CORS origins: {cors_origins}")
-                # Note: CORS configuration would need to be implemented in FastMCP
-
-            # Run the Streamable HTTP app with uvicorn
-            logger.info("🚀 Starting uvicorn server...")
-            uvicorn.run(app, host=host, port=port, log_level="info")
+        # Run the Streamable HTTP app with uvicorn
+        logger.info("🚀 Starting uvicorn server...")
+        uvicorn.run(app, host=host, port=port, log_level="info")
 
     except KeyboardInterrupt:
         logger.info("\n✋ Server stopped by user")

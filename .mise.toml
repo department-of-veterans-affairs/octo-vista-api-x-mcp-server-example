@@ -24,28 +24,25 @@ env = { COMPOSE_PROJECT_NAME = "vista-mock" }
 run = ["docker-compose down", "echo '✅ Mock server stopped'"]
 
 [tasks.dev-with-mock]
-description = "Start ALL transports with mock server (stdio + HTTP + SSE) - comprehensive testing"
+description = "Start both transports with mock server (stdio + HTTP) - comprehensive testing"
 run = [
     # Auto-setup if needed
     "python scripts/silent_setup.py",
-    # Start mock server if needed
+    # Start mock server if needed (or check if it's running on host)
     "python scripts/start_mock_if_needed.py",
-    "echo '🚀 Starting ALL MCP transports for comprehensive testing...'",
+    "echo '🚀 Starting MCP transports for comprehensive testing...'",
     "echo ''",
     "echo '📍 Available endpoints:'",
     "echo '  📡 stdio: mcp dev server (for Claude Desktop)'", 
     "echo '  🌐 HTTP: http://localhost:8000/mcp'",
-    "echo '  📡 SSE:  http://localhost:8001/sse (deprecated)'",
     "echo ''",
     "echo '🎯 Starting servers in background...'",
     # Start HTTP server in background
     "mkdir -p logs",
-    "VISTA_MCP_TRANSPORT=streamable-http VISTA_MCP_HTTP_PORT=8000 uv run python http_server.py > logs/http.log 2>&1 &",
-    # Start SSE server in background  
-    "VISTA_MCP_TRANSPORT=sse VISTA_MCP_HTTP_PORT=8001 uv run python http_server.py > logs/sse.log 2>&1 &",
+    "VISTA_MCP_HTTP_PORT=8000 uv run python http_server.py > logs/http.log 2>&1 &",
     # Wait for servers to start
     "sleep 3",
-    "echo '✅ Background servers started (logs in logs/ directory)'",
+    "echo '✅ Background HTTP server started (logs in logs/http.log)'",
     "echo '🏃 Starting stdio MCP dev server (main)...'",
     "echo '   Use Ctrl+C to stop all servers'",
     # Run stdio server in foreground (this one you can Ctrl+C to stop all)
@@ -97,7 +94,6 @@ run = "python scripts/setup_claude_desktop.py"
 # === NEW STREAMABLE HTTP TASKS ===
 [tasks.dev-http]
 description = "Start Streamable HTTP server for development (RECOMMENDED)"
-env = { VISTA_MCP_TRANSPORT = "streamable-http" }
 run = [
     # Auto-setup if needed
     "python scripts/silent_setup.py",
@@ -119,7 +115,6 @@ run = [
 
 [tasks.dev-http-with-mock]
 description = "Start Streamable HTTP server with mock Vista API (RECOMMENDED)"
-env = { VISTA_MCP_TRANSPORT = "streamable-http" }
 run = [
     # Auto-setup if needed
     "python scripts/silent_setup.py",
@@ -145,7 +140,6 @@ run = [
 # Raw server tasks (without inspector)
 [tasks.dev-http-server]
 description = "Start Streamable HTTP server only (no inspector)"
-env = { VISTA_MCP_TRANSPORT = "streamable-http" }
 run = [
     "python scripts/silent_setup.py",
     "echo '🚀 Starting Streamable HTTP server...'",
@@ -159,7 +153,6 @@ run = [
 
 [tasks.dev-http-server-with-mock]
 description = "Start Streamable HTTP server with mock (no inspector)" 
-env = { VISTA_MCP_TRANSPORT = "streamable-http" }
 run = [
     "python scripts/silent_setup.py",
     "python scripts/start_mock_if_needed.py",
@@ -168,53 +161,6 @@ run = [
     "echo '🔧 Connect manually with MCP Inspector:'",
     "echo '  npx @modelcontextprotocol/inspector'",
     "echo '  Transport: http, URL: http://localhost:8000/mcp'",
-    "echo ''",
-    "uv run python http_server.py",
-]
-
-# === DEPRECATED SSE TASKS ===
-[tasks.dev-sse]
-description = "⚠️  DEPRECATED: Start SSE server for development (use dev-http instead)"
-env = { VISTA_MCP_TRANSPORT = "sse", VISTA_MCP_HTTP_PORT = "8001" }
-run = [
-    # Auto-setup if needed
-    "python scripts/silent_setup.py",
-    # Show deprecation warning
-    "echo '⚠️  WARNING: SSE transport is DEPRECATED!'",
-    "echo '⚠️  Please use \"mise run dev-http\" for better performance.'",
-    "echo '⚠️  SSE support will be removed on 2025-06-01'",
-    "echo ''",
-    # Run SSE server
-    "echo '🌐 Starting SSE server...'",
-    "echo '📍 SSE endpoint: http://localhost:8001/sse'",
-    "echo '📝 Message endpoint: http://localhost:8001/messages/'",
-    "echo ''",
-    "echo '🔧 Configure your client with:'",
-    "echo '  {\"url\": \"http://localhost:8001/sse\"}'",
-    "echo ''",
-    "uv run python http_server.py",
-]
-
-[tasks.dev-sse-with-mock]
-description = "⚠️  DEPRECATED: Start SSE server with mock Vista API (use dev-http-with-mock instead)"
-env = { VISTA_MCP_TRANSPORT = "sse", VISTA_MCP_HTTP_PORT = "8001" }
-run = [
-    # Auto-setup if needed
-    "python scripts/silent_setup.py",
-    # Start mock server if needed
-    "python scripts/start_mock_if_needed.py",
-    # Show deprecation warning
-    "echo '⚠️  WARNING: SSE transport is DEPRECATED!'",
-    "echo '⚠️  Please use \"mise run dev-http-with-mock\" for better performance.'",
-    "echo '⚠️  SSE support will be removed on 2025-06-01'",
-    "echo ''",
-    # Run SSE server
-    "echo '🌐 Starting SSE server with mock...'",
-    "echo '📍 SSE endpoint: http://localhost:8001/sse'",
-    "echo '📝 Message endpoint: http://localhost:8001/messages/'",
-    "echo ''",
-    "echo '🔧 Configure your client with:'",
-    "echo '  {\"url\": \"http://localhost:8001/sse\"}'",
     "echo ''",
     "uv run python http_server.py",
 ]
@@ -236,35 +182,10 @@ run = [
     "echo '🎯 Starting HTTP server in background...'",
     # Start HTTP server in background
     "mkdir -p logs",
-    "VISTA_MCP_TRANSPORT=streamable-http VISTA_MCP_HTTP_PORT=8000 uv run python http_server.py > logs/http.log 2>&1 &",
+    "VISTA_MCP_HTTP_PORT=8000 uv run python http_server.py > logs/http.log 2>&1 &",
     # Wait for server to start
     "sleep 3",
     "echo '✅ HTTP server started (log in logs/http.log)'",
-    "echo '🏃 Starting stdio MCP dev server...'",
-    # Run stdio server in foreground
-    "uv run mcp dev server.py:server",
-]
-
-[tasks.dev-stdio-sse-with-mock]
-description = "Start stdio + SSE transports with mock (for legacy testing)"
-run = [
-    # Auto-setup if needed
-    "python scripts/silent_setup.py",
-    # Start mock server if needed
-    "python scripts/start_mock_if_needed.py",
-    "echo '🚀 Starting stdio + SSE transports...'",
-    "echo ''", 
-    "echo '📍 Available endpoints:'",
-    "echo '  📡 stdio: mcp dev server (for Claude Desktop)'",
-    "echo '  📡 SSE:  http://localhost:8001/sse'",
-    "echo ''",
-    "echo '🎯 Starting SSE server in background...'",
-    # Start SSE server in background
-    "mkdir -p logs",
-    "VISTA_MCP_TRANSPORT=sse VISTA_MCP_HTTP_PORT=8001 uv run python http_server.py > logs/sse.log 2>&1 &",
-    # Wait for server to start
-    "sleep 3", 
-    "echo '✅ SSE server started (log in logs/sse.log)'",
     "echo '🏃 Starting stdio MCP dev server...'",
     # Run stdio server in foreground
     "uv run mcp dev server.py:server",

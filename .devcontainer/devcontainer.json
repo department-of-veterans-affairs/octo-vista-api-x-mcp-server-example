@@ -1,0 +1,38 @@
+{
+  "name": "Vista API Dev Tools",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "runArgs": ["--network=host"],
+  "containerEnv": {
+    "DOCKER_HOST": "tcp://host.docker.internal:2375"
+  },
+  "mounts": [
+    "source=mise-root,target=/home/vscode/.mise,type=volume",
+    "source=mise-cache,target=/home/vscode/.cache/mise,type=volume",
+    "source=uv-cache,target=/home/vscode/.cache/uv,type=volume",
+    "source=vscode-extensions,target=/home/vscode/.vscode-server/extensions,type=volume"
+  ],
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreter": "/workspace/.venv/bin/python",
+        "terminal.integrated.defaultProfile.linux": "bash"
+      },
+      "extensions": [
+        "ms-python.python",
+        "charliermarsh.ruff"
+      ]
+    }
+  },
+  "forwardPorts": [8000, 8888, 4566, 8001],
+  "portsAttributes": {
+    "8000": { "label": "MCP Server" },
+    "8888": { "label": "Mock API" },
+    "4566": { "label": "LocalStack" },
+    "8001": { "label": "DynamoDB Admin" }
+  },
+  "remoteUser": "vscode"
+}

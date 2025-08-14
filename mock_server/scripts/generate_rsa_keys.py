@@ -58,9 +58,16 @@ def generate_rsa_keys(key_dir: str = "../keys"):
     print(f"Public key written to: {public_key_path}")
 
     # Set appropriate permissions (Unix-like systems only)
-    if os.name != "nt":  # Not Windows
-        private_key_path.chmod(0o600)
-        public_key_path.chmod(0o644)
+    # Skip chmod in containers where the filesystem doesn't support it
+    if os.name != "nt" and not os.environ.get(
+        "REMOTE_CONTAINERS"
+    ):  # Not Windows and not in container
+        try:
+            private_key_path.chmod(0o600)
+            public_key_path.chmod(0o644)
+        except (PermissionError, OSError):
+            # Silently skip if permissions can't be set (e.g., mounted volumes)
+            pass
 
     print("\nRSA key pair generated successfully!")
     print(

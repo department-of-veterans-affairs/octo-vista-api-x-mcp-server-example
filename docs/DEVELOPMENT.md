@@ -80,8 +80,8 @@ When connecting to a real Vista API instance:
 # Standard stdio mode
 mise run dev
 
-# HTTP/SSE mode for remote access
-mise run dev-sse
+# HTTP mode for remote access
+mise run dev-http
 ```
 
 ### Available mise Commands
@@ -91,7 +91,7 @@ mise tasks  # List all available commands
 
 # Key commands:
 mise run dev              # Run MCP server in stdio mode
-mise run dev-sse          # Run MCP server in HTTP/SSE mode
+mise run dev-http         # Run MCP server in HTTP mode
 mise run dev-with-mock    # Run with mock Vista API
 mise run mock-server      # Run mock server only
 mise run test            # Run tests

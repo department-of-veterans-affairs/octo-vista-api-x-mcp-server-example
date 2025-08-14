@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  devcontainer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      # Mount the project directory
+      - ..:/workspace:cached
+      # Persist VS Code extensions
+      - vscode-extensions:/home/vscode/.vscode-server/extensions
+      # Persist mise configuration and tools
+      - mise-data:/home/vscode/.mise
+      # Persist uv cache
+      - uv-cache:/home/vscode/.cache/uv
+      # Persist Python virtual environment
+      - venv-data:/workspace/.venv
+      # Optional: Mount Podman socket for container operations
+      # Uncomment if you need to run containers from within the devcontainer
+      # - /run/user/1000/podman/podman.sock:/var/run/docker.sock
+    
+    # Keep container running
+    command: sleep infinity
+    
+    # Network mode - use host network to simplify connectivity
+    # This allows easy access to mock server if running on host
+    network_mode: host
+    
+    environment:
+      # Pass through environment variables
+      - VISTA_API_BASE_URL=${VISTA_API_BASE_URL:-http://localhost:8888}
+      - VISTA_API_KEY=${VISTA_API_KEY:-test-wildcard-key-456}
+      - DEFAULT_STATION=${DEFAULT_STATION:-500}
+      - DEFAULT_DUZ=${DEFAULT_DUZ:-10000000219}
+      - VISTA_MCP_DEBUG=${VISTA_MCP_DEBUG:-false}
+      # Podman compatibility
+      - DOCKER_HOST=unix:///run/user/1000/podman/podman.sock
+    
+    # Resource limits (optional, adjust as needed)
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 4G
+
+  # Optional: Include mock server services directly in devcontainer
+  # Uncomment if you want the mock server to run as part of the devcontainer
+  # localstack:
+  #   image: localstack/localstack:3.0.2
+  #   container_name: vista-localstack-dev
+  #   ports:
+  #     - "4566:4566"
+  #   environment:
+  #     - SERVICES=dynamodb
+  #     - DEBUG=1
+  #     - AWS_ACCESS_KEY_ID=test
+  #     - AWS_SECRET_ACCESS_KEY=test
+  #     - AWS_DEFAULT_REGION=us-east-1
+  #   volumes:
+  #     - localstack-data:/var/lib/localstack
+  #     - ../mock_server/localstack:/etc/localstack/init/ready.d
+  #   network_mode: host
+
+  # vista-mock:
+  #   build:
+  #     context: ../mock_server
+  #     dockerfile: Dockerfile
+  #   container_name: vista-api-x-mock-dev
+  #   ports:
+  #     - "8888:8080"
+  #     - "9990:9990"
+  #   environment:
+  #     - AWS_ENDPOINT_URL=http://localhost:4566
+  #     - AWS_ACCESS_KEY_ID=test
+  #     - AWS_SECRET_ACCESS_KEY=test
+  #     - AWS_DEFAULT_REGION=us-east-1
+  #   depends_on:
+  #     - localstack
+  #   volumes:
+  #     - ../mock_server/keys:/app/keys:ro
+  #   network_mode: host
+
+volumes:
+  vscode-extensions:
+  mise-data:
+  uv-cache:
+  venv-data:
+  # localstack-data:  # Uncomment if using integrated mock server

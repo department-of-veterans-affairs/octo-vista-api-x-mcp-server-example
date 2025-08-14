@@ -8,10 +8,17 @@ from pathlib import Path
 
 def check_table_exists():
     """Check if the auth table exists"""
+    # Try docker first, then podman
+    docker_cmd = "docker"
+    try:
+        subprocess.run(["docker", "version"], capture_output=True, check=True)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        docker_cmd = "podman"
+
     try:
         result = subprocess.run(
             [
-                "docker",
+                docker_cmd,
                 "exec",
                 "vista-localstack",
                 "awslocal",

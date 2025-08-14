@@ -20,14 +20,13 @@ mise run dev-http-with-mock
 
 Then connect via URL: `http://localhost:8000/mcp`
 
-### Option 3: SSE Transport (DEPRECATED)
+### Option 3: VS Code Dev Container (Windows/Podman)
+
+For Windows users with restricted environments:
 
 ```bash
-# ⚠️ DEPRECATED: Use Option 2 instead for better performance
-mise run dev-sse-with-mock
+# See docs/DEVCONTAINER.md for setup instructions
 ```
-
-Then connect via URL: `http://localhost:8000/sse`
 
 ## Features
 
@@ -45,7 +44,7 @@ Connect the Vista API MCP Server to your favorite LLM:
 
 - **[Claude Desktop](docs/DEVELOPMENT.md#claude-desktop)** - Native MCP support
 - **[Continue.dev](docs/DEVELOPMENT.md#vs-code-with-continuedev)** - AI-powered development assistant
-- **[Other Clients](docs/DEVELOPMENT.md#other-clients)** - HTTP/SSE mode for any client
+- **[Other Clients](docs/DEVELOPMENT.md#other-clients)** - HTTP mode for any client
 
 ### Quick Setup for Claude Desktop
 
@@ -68,11 +67,8 @@ Example config files are included:
 export VISTA_API_BASE_URL=https://your-vista-api.va.gov
 export VISTA_API_KEY=your-production-api-key
 
-# Run the HTTP server (recommended)
-VISTA_MCP_TRANSPORT=http docker-compose up -d
-
-# Or use the deprecated SSE server (will be removed 2025-06-01)
-VISTA_MCP_TRANSPORT=sse docker-compose up -d
+# Run the HTTP server
+docker-compose up -d
 ```
 
 ### Local Development with Mock

@@ -18,7 +18,7 @@ This guide covers deploying the Vista API MCP Server to AWS and Azure cloud envi
 
 ## Overview
 
-The Vista API MCP Server can be deployed using the SSE transport for remote access. The server runs as a stateless container that connects to your Vista API X instance.
+The Vista API MCP Server can be deployed using the HTTP transport for remote access. The server runs as a stateless container that connects to your Vista API X instance.
 
 ## Prerequisites
 
@@ -41,7 +41,6 @@ DEFAULT_STATION=500
 DEFAULT_DUZ=your-default-duz
 
 # Transport Configuration
-VISTA_MCP_TRANSPORT=sse
 VISTA_MCP_HTTP_HOST=0.0.0.0
 VISTA_MCP_HTTP_PORT=8000
 
@@ -135,7 +134,7 @@ services:
       - "8000:8000"
     restart: always
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/sse", "-m", "1"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/mcp", "-m", "1"]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -178,7 +177,7 @@ Task definition for ECS:
       "environment": [
         {
           "name": "VISTA_MCP_TRANSPORT",
-          "value": "sse"
+          "value": "http"
         }
       ],
       "secrets": [
@@ -192,7 +191,7 @@ Task definition for ECS:
         }
       ],
       "healthCheck": {
-        "command": ["CMD-SHELL", "curl -f http://localhost:8000/sse -m 1 || exit 1"],
+        "command": ["CMD-SHELL", "curl -f http://localhost:8000/mcp -m 1 || exit 1"],
         "interval": 30,
         "timeout": 3,
         "retries": 3
@@ -225,7 +224,6 @@ az container create \
   --image your-registry/vista-mcp-server:v1.0.0 \
   --ports 8000 \
   --environment-variables \
-    VISTA_MCP_TRANSPORT=sse \
     DEFAULT_STATION=500 \
   --secure-environment-variables \
     VISTA_API_BASE_URL=$VISTA_API_BASE_URL \
@@ -275,7 +273,7 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         
-        # SSE specific
+        # HTTP streaming support
         proxy_buffering off;
         proxy_read_timeout 86400;
     }
@@ -292,11 +290,11 @@ server {
 
 ### 1. Health Checks
 
-Monitor the `/sse` endpoint for availability:
+Monitor the `/mcp` endpoint for availability:
 
 ```bash
 # Health check script
-curl -f https://mcp.yourdomain.com/sse \
+curl -f https://mcp.yourdomain.com/mcp \
   -H "Accept: text/event-stream" \
   -m 5 \
   --write-out "%{http_code}" \
@@ -306,7 +304,7 @@ curl -f https://mcp.yourdomain.com/sse \
 
 ### 2. Metrics to Monitor
 
-- Response time for SSE connections
+- Response time for HTTP connections
 - Number of active sessions
 - Error rates
 - Memory and CPU usage
@@ -357,10 +355,10 @@ az container create \
 
 ### Horizontal Scaling
 
-The SSE server is stateless and can be scaled horizontally:
+The HTTP server is stateless and can be scaled horizontally:
 
 1. **Load Balancer Configuration**
-   - Use sticky sessions for SSE connections
+   - Use load balancing for HTTP connections
    - Configure appropriate timeouts (> 60s)
 
 2. **Auto-scaling Rules**
@@ -413,7 +411,6 @@ az containerapp create \
   --scale-rule-type http \
   --scale-rule-http-concurrency 100 \
   --environment-variables \
-    VISTA_MCP_TRANSPORT=sse \
     DEFAULT_STATION=500 \
   --secrets \
     vista-api-url="$VISTA_API_BASE_URL" \
@@ -424,7 +421,7 @@ az containerapp create \
 
 ### Common Issues
 
-1. **SSE Connection Drops**
+1. **HTTP Connection Issues**
    - Check proxy/load balancer timeout settings
    - Ensure keep-alive is enabled
    - Monitor network stability

@@ -60,3 +60,7 @@ mock_server/keys/*.pem
 
 # mise
 .mise/
+
+# VS Code Dev Containers
+.devcontainer/local-features/
+.devcontainer/.env
