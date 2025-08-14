@@ -5,6 +5,20 @@ from enum import Enum
 from pydantic import BaseModel
 
 
+class BaseModelExcludeNone(BaseModel):
+    """Base model that excludes None values from serialization by default"""
+
+    def model_dump(self, **kwargs):
+        """Override to exclude None values by default"""
+        kwargs.setdefault("exclude_none", True)
+        return super().model_dump(**kwargs)
+
+    def model_dump_json(self, **kwargs):
+        """Override to exclude None values by default"""
+        kwargs.setdefault("exclude_none", True)
+        return super().model_dump_json(**kwargs)
+
+
 class Gender(str, Enum):
     """Patient gender values"""
 
@@ -66,7 +80,7 @@ class LabResultFlag(str, Enum):
     NORMAL = ""
 
 
-class BaseVistaModel(BaseModel):
+class BaseVistaModel(BaseModelExcludeNone):
     """Base model for all Vista data models"""
 
     class Config:

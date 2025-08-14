@@ -1,7 +1,7 @@
 """Integration tests for medication MCP tool"""
 
 import time
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -147,13 +147,8 @@ class TestMedicationTool:
                     "src.tools.patient.get_patient_medications_tool.validate_dfn",
                     return_value=True,
                 ),
-                patch(
-                    "src.tools.patient.get_patient_medications_tool.build_metadata",
-                    return_value={},
-                ),
                 patch("time.time", return_value=start_time),
             ):
-
                 # Get patient data (handles caching internally)
                 patient_data = await mock_get_data(
                     mock_vista_client, station, patient_dfn, caller_duz
@@ -234,7 +229,7 @@ class TestMedicationTool:
     async def test_medication_refill_logic(self):
         """Test medication refill calculation"""
         # Create a medication that needs refill soon
-        last_filled = datetime.now() - timedelta(days=85)
+        last_filled = datetime.now(UTC) - timedelta(days=85)
 
         medication = Medication(
             uid="urn:va:med:500:123:456",

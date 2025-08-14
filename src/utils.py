@@ -2,9 +2,9 @@
 
 import logging
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 
 def get_logger(name: str = "mcp-server") -> logging.Logger:
@@ -114,7 +114,7 @@ def translate_vista_error(error: Exception | dict[str, Any]) -> str:
 def format_timestamp(dt: datetime | None = None) -> str:
     """Format timestamp for responses"""
     if dt is None:
-        dt = datetime.now()
+        dt = datetime.now(UTC)
     return dt.isoformat()
 
 
@@ -213,6 +213,31 @@ def create_rpc_parameter(
 def is_debug_mode() -> bool:
     """Check if debug mode is enabled"""
     return os.getenv("VISTA_MCP_DEBUG", "").lower() in ["true", "1", "yes"]
+
+
+T = TypeVar("T")
+
+
+def paginate_list(
+    items: list[T], offset: int = 0, limit: int = 10
+) -> tuple[list[T], int]:
+    """
+    Apply pagination to a list of items.
+
+    Args:
+        items: List of items to paginate
+        offset: Starting index for pagination
+        limit: Maximum number of items to return
+
+    Returns:
+        Tuple of (paginated items, total count after filtering)
+    """
+
+    if offset < 0 or limit < 1:
+        raise ValueError("Offset must be non-negative and limit must be positive")
+    total_items = len(items)
+    paginated_items = items[offset : offset + limit]
+    return paginated_items, total_items
 
 
 def log_rpc_call(

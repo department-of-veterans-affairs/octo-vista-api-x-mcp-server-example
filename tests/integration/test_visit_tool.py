@@ -162,11 +162,13 @@ class TestVisitToolIntegration:
         self, mock_vista_client, sample_patient_data
     ):
         """Test basic visit retrieval"""
-        with patch("src.tools.patient.visit_tool.get_patient_data") as mock_get_data:
+        with patch(
+            "src.tools.patient.get_patient_visits_tool.get_patient_data"
+        ) as mock_get_data:
             mock_get_data.return_value = sample_patient_data
 
             # Import the visit tool module
-            from src.tools.patient.visit_tool import get_patient_visits
+            from src.tools.patient.get_patient_visits_tool import get_patient_visits
 
             # Test parameters
             station = "500"
@@ -176,15 +178,17 @@ class TestVisitToolIntegration:
             # Mock the utility functions
             with (
                 patch(
-                    "src.tools.patient.visit_tool.get_default_station",
+                    "src.tools.patient.get_patient_visits_tool.get_default_station",
                     return_value=station,
                 ),
                 patch(
-                    "src.tools.patient.visit_tool.get_default_duz",
+                    "src.tools.patient.get_patient_visits_tool.get_default_duz",
                     return_value=caller_duz,
                 ),
-                patch("src.tools.patient.visit_tool.validate_dfn", return_value=True),
-                patch("src.tools.patient.visit_tool.build_metadata", return_value={}),
+                patch(
+                    "src.tools.patient.get_patient_visits_tool.validate_dfn",
+                    return_value=True,
+                ),
                 patch("time.time", return_value=time.time()),
             ):
                 result = await get_patient_visits(
@@ -193,53 +197,45 @@ class TestVisitToolIntegration:
                     vista_client=mock_vista_client,
                 )
 
-                assert result["success"] is True
-                assert "patient" in result
-                assert "visits" in result
-                assert "summary" in result["visits"]
-                assert "all_visits" in result["visits"]
-
-                # Check patient info
-                patient = result["patient"]
-                assert patient["dfn"] == "100022"
-                assert "name" in patient
+                assert result.success is True
+                assert result.data.patient_dfn == "100022"
+                assert result.data.patient_name is not None
+                assert result.data.summary is not None
+                assert result.data.all_visits is not None
 
                 # Check visits summary
-                summary = result["visits"]["summary"]
-                assert "total_count" in summary
-                assert "active_count" in summary
-                assert "inpatient_count" in summary
-                assert "emergency_count" in summary
-                assert "by_type" in summary
+                summary = result.data.summary
+                assert summary.total_visits >= 0
+                assert result.data.total_count >= 0
+                assert result.data.active_count >= 0
+                assert result.data.inpatient_count >= 0
+                assert result.data.emergency_count >= 0
+                assert result.data.by_type is not None
 
     @pytest.mark.asyncio
     async def test_get_patient_visits_with_filters(
         self, mock_vista_client, sample_patient_data
     ):
         """Test visit retrieval with filters"""
-        with patch("src.tools.patient.visit_tool.get_patient_data") as mock_get_data:
+        with patch(
+            "src.tools.patient.get_patient_visits_tool.get_patient_data"
+        ) as mock_get_data:
             mock_get_data.return_value = sample_patient_data
 
-            from src.tools.patient.visit_tool import get_patient_visits
+            from src.tools.patient.get_patient_visits_tool import get_patient_visits
 
             with (
                 patch(
-                    "src.tools.patient.visit_tool.get_default_station",
+                    "src.tools.patient.get_patient_visits_tool.get_default_station",
                     return_value="500",
                 ),
                 patch(
-                    "src.tools.patient.visit_tool.get_default_duz", return_value="12345"
+                    "src.tools.patient.get_patient_visits_tool.get_default_duz",
+                    return_value="12345",
                 ),
-                patch("src.tools.patient.visit_tool.validate_dfn", return_value=True),
                 patch(
-                    "src.tools.patient.visit_tool.build_metadata",
-                    return_value={
-                        "filters": {
-                            "visit_type": "inpatient",
-                            "active_only": False,
-                            "days_back": 30,
-                        }
-                    },
+                    "src.tools.patient.get_patient_visits_tool.validate_dfn",
+                    return_value=True,
                 ),
                 patch("time.time", return_value=time.time()),
             ):
@@ -252,35 +248,45 @@ class TestVisitToolIntegration:
                     vista_client=mock_vista_client,
                 )
 
-                assert result["success"] is True
-                assert "visits" in result
+                assert result.success is True
+                assert result.data is not None
 
                 # Check filters in metadata
-                metadata = result["metadata"]
-                assert metadata["filters"]["visit_type"] == "inpatient"
-                assert metadata["filters"]["active_only"] is False
-                assert metadata["filters"]["days_back"] == 30
+                metadata = result.metadata
+                assert metadata.additional_info["filters"]["visit_type"] == "inpatient"
+                assert metadata.additional_info["filters"]["active_only"] is False
+                assert metadata.additional_info["filters"]["days_back"] == 30
+
+                # Check visits structure
+                visits_data = result.data
+                assert visits_data.all_visits is not None
+                assert visits_data.summary is not None
 
     @pytest.mark.asyncio
     async def test_get_patient_visits_invalid_patient(
         self, mock_vista_client, sample_patient_data
     ):
         """Test visit retrieval with invalid patient"""
-        with patch("src.tools.patient.visit_tool.get_patient_data") as mock_get_data:
+        with patch(
+            "src.tools.patient.get_patient_visits_tool.get_patient_data"
+        ) as mock_get_data:
             mock_get_data.return_value = sample_patient_data
 
-            from src.tools.patient.visit_tool import get_patient_visits
+            from src.tools.patient.get_patient_visits_tool import get_patient_visits
 
             with (
                 patch(
-                    "src.tools.patient.visit_tool.get_default_station",
+                    "src.tools.patient.get_patient_visits_tool.get_default_station",
                     return_value="500",
                 ),
                 patch(
-                    "src.tools.patient.visit_tool.get_default_duz", return_value="12345"
+                    "src.tools.patient.get_patient_visits_tool.get_default_duz",
+                    return_value="12345",
                 ),
-                patch("src.tools.patient.visit_tool.validate_dfn", return_value=True),
-                patch("src.tools.patient.visit_tool.build_metadata", return_value={}),
+                patch(
+                    "src.tools.patient.get_patient_visits_tool.validate_dfn",
+                    return_value=True,
+                ),
                 patch("time.time", return_value=time.time()),
             ):
                 result = await get_patient_visits(
@@ -290,7 +296,7 @@ class TestVisitToolIntegration:
                 )
 
                 # Should handle gracefully - either return empty results or error
-                assert "success" in result
+                assert result.success is not None
                 # The exact behavior depends on how the mock server handles invalid patients
 
     @pytest.mark.asyncio
@@ -298,21 +304,26 @@ class TestVisitToolIntegration:
         self, mock_vista_client, sample_patient_data
     ):
         """Test visit retrieval with invalid days_back parameter"""
-        with patch("src.tools.patient.visit_tool.get_patient_data") as mock_get_data:
+        with patch(
+            "src.tools.patient.get_patient_visits_tool.get_patient_data"
+        ) as mock_get_data:
             mock_get_data.return_value = sample_patient_data
 
-            from src.tools.patient.visit_tool import get_patient_visits
+            from src.tools.patient.get_patient_visits_tool import get_patient_visits
 
             with (
                 patch(
-                    "src.tools.patient.visit_tool.get_default_station",
+                    "src.tools.patient.get_patient_visits_tool.get_default_station",
                     return_value="500",
                 ),
                 patch(
-                    "src.tools.patient.visit_tool.get_default_duz", return_value="12345"
+                    "src.tools.patient.get_patient_visits_tool.get_default_duz",
+                    return_value="12345",
                 ),
-                patch("src.tools.patient.visit_tool.validate_dfn", return_value=True),
-                patch("src.tools.patient.visit_tool.build_metadata", return_value={}),
+                patch(
+                    "src.tools.patient.get_patient_visits_tool.validate_dfn",
+                    return_value=True,
+                ),
                 patch("time.time", return_value=time.time()),
             ):
                 result = await get_patient_visits(
@@ -322,30 +333,35 @@ class TestVisitToolIntegration:
                     vista_client=mock_vista_client,
                 )
 
-                assert result["success"] is False
-                assert "error" in result
-                assert "Days back must be between 1 and 1095" in result["error"]
+                assert result.success is False
+                assert result.error is not None
+                assert "Days back must be between 1 and 1095" in result.error
 
     @pytest.mark.asyncio
     async def test_get_patient_visits_invalid_dfn(
         self, mock_vista_client, sample_patient_data
     ):
         """Test visit retrieval with invalid DFN format"""
-        with patch("src.tools.patient.visit_tool.get_patient_data") as mock_get_data:
+        with patch(
+            "src.tools.patient.get_patient_visits_tool.get_patient_data"
+        ) as mock_get_data:
             mock_get_data.return_value = sample_patient_data
 
-            from src.tools.patient.visit_tool import get_patient_visits
+            from src.tools.patient.get_patient_visits_tool import get_patient_visits
 
             with (
                 patch(
-                    "src.tools.patient.visit_tool.get_default_station",
+                    "src.tools.patient.get_patient_visits_tool.get_default_station",
                     return_value="500",
                 ),
                 patch(
-                    "src.tools.patient.visit_tool.get_default_duz", return_value="12345"
+                    "src.tools.patient.get_patient_visits_tool.get_default_duz",
+                    return_value="12345",
                 ),
-                patch("src.tools.patient.visit_tool.validate_dfn", return_value=False),
-                patch("src.tools.patient.visit_tool.build_metadata", return_value={}),
+                patch(
+                    "src.tools.patient.get_patient_visits_tool.validate_dfn",
+                    return_value=False,
+                ),
                 patch("time.time", return_value=time.time()),
             ):
                 result = await get_patient_visits(
@@ -354,47 +370,34 @@ class TestVisitToolIntegration:
                     vista_client=mock_vista_client,
                 )
 
-                assert result["success"] is False
-                assert "error" in result
-                assert "Invalid patient DFN format" in result["error"]
+                assert result.success is False
+                assert result.error is not None
+                assert "Invalid patient DFN format" in result.error
 
     @pytest.mark.asyncio
     async def test_get_patient_visits_metadata(
         self, mock_vista_client, sample_patient_data
     ):
         """Test visit tool metadata"""
-        with patch("src.tools.patient.visit_tool.get_patient_data") as mock_get_data:
+        with patch(
+            "src.tools.patient.get_patient_visits_tool.get_patient_data"
+        ) as mock_get_data:
             mock_get_data.return_value = sample_patient_data
 
-            from src.tools.patient.visit_tool import get_patient_visits
+            from src.tools.patient.get_patient_visits_tool import get_patient_visits
 
             with (
                 patch(
-                    "src.tools.patient.visit_tool.get_default_station",
+                    "src.tools.patient.get_patient_visits_tool.get_default_station",
                     return_value="500",
                 ),
                 patch(
-                    "src.tools.patient.visit_tool.get_default_duz", return_value="12345"
+                    "src.tools.patient.get_patient_visits_tool.get_default_duz",
+                    return_value="12345",
                 ),
-                patch("src.tools.patient.visit_tool.validate_dfn", return_value=True),
                 patch(
-                    "src.tools.patient.visit_tool.build_metadata",
-                    return_value={
-                        "station": "500",
-                        "duration_ms": 100,
-                        "rpc": {
-                            "rpc": "VPR GET PATIENT DATA JSON",
-                            "context": "LHS RPC CONTEXT",
-                            "jsonResult": True,
-                            "parameters": [{"namedArray": {"patientId": "100022"}}],
-                        },
-                        "duz": "12345",
-                        "filters": {
-                            "visit_type": "",
-                            "active_only": False,
-                            "days_back": 365,
-                        },
-                    },
+                    "src.tools.patient.get_patient_visits_tool.validate_dfn",
+                    return_value=True,
                 ),
                 patch("time.time", return_value=time.time()),
             ):
@@ -404,24 +407,24 @@ class TestVisitToolIntegration:
                     vista_client=mock_vista_client,
                 )
 
-                assert result["success"] is True
-                metadata = result["metadata"]
+                assert result.success is True
+                metadata = result.metadata
 
                 # Check required metadata fields
-                assert "station" in metadata
-                assert "duration_ms" in metadata
-                assert "rpc" in metadata
-                assert "duz" in metadata
-                assert "filters" in metadata
+                assert metadata.station is not None
+                assert metadata.performance.duration_ms >= 0
+                assert metadata.rpc is not None
+                assert metadata.demographics is not None
+                assert metadata.additional_info.get("filters") is not None
 
                 # Check RPC metadata
-                rpc_metadata = metadata["rpc"]
-                assert rpc_metadata["rpc"] == "VPR GET PATIENT DATA JSON"
-                assert rpc_metadata["context"] == "LHS RPC CONTEXT"
-                assert rpc_metadata["jsonResult"] is True
+                rpc_metadata = metadata.rpc
+                assert rpc_metadata.rpc == "VPR GET PATIENT DATA JSON"
+                assert rpc_metadata.context == "LHS RPC CONTEXT"
+                assert rpc_metadata.json_result is True
 
                 # Check filters metadata
-                filters = metadata["filters"]
+                filters = metadata.additional_info["filters"]
                 assert "visit_type" in filters
                 assert "active_only" in filters
                 assert "days_back" in filters
@@ -431,21 +434,26 @@ class TestVisitToolIntegration:
         self, mock_vista_client, sample_patient_data
     ):
         """Test visit tool response structure"""
-        with patch("src.tools.patient.visit_tool.get_patient_data") as mock_get_data:
+        with patch(
+            "src.tools.patient.get_patient_visits_tool.get_patient_data"
+        ) as mock_get_data:
             mock_get_data.return_value = sample_patient_data
 
-            from src.tools.patient.visit_tool import get_patient_visits
+            from src.tools.patient.get_patient_visits_tool import get_patient_visits
 
             with (
                 patch(
-                    "src.tools.patient.visit_tool.get_default_station",
+                    "src.tools.patient.get_patient_visits_tool.get_default_station",
                     return_value="500",
                 ),
                 patch(
-                    "src.tools.patient.visit_tool.get_default_duz", return_value="12345"
+                    "src.tools.patient.get_patient_visits_tool.get_default_duz",
+                    return_value="12345",
                 ),
-                patch("src.tools.patient.visit_tool.validate_dfn", return_value=True),
-                patch("src.tools.patient.visit_tool.build_metadata", return_value={}),
+                patch(
+                    "src.tools.patient.get_patient_visits_tool.validate_dfn",
+                    return_value=True,
+                ),
                 patch("time.time", return_value=time.time()),
             ):
                 result = await get_patient_visits(
@@ -454,75 +462,68 @@ class TestVisitToolIntegration:
                     vista_client=mock_vista_client,
                 )
 
-                assert result["success"] is True
+                assert result.success is True
 
                 # Check patient structure
-                patient = result["patient"]
-                required_patient_fields = ["name", "dfn", "age", "gender"]
-                for field in required_patient_fields:
-                    assert field in patient
+                patient = result.data
+                assert patient.patient_name is not None
+                assert patient.patient_dfn is not None
+                assert patient.patient_age is not None
+                assert patient.patient_gender is not None
 
                 # Check visits structure
-                visits = result["visits"]
-                assert "summary" in visits
-                assert "all_visits" in visits
+                assert patient.summary is not None
+                assert patient.all_visits is not None
 
                 # Check summary structure
-                summary = visits["summary"]
-                required_summary_fields = [
-                    "total_count",
-                    "active_count",
-                    "inpatient_count",
-                    "emergency_count",
-                    "by_type",
-                ]
-                for field in required_summary_fields:
-                    assert field in summary
+                assert patient.total_count >= 0
+                assert patient.active_count >= 0
+                assert patient.inpatient_count >= 0
+                assert patient.emergency_count >= 0
+                assert patient.by_type is not None
 
                 # Check by_type structure
-                by_type = summary["by_type"]
+                by_type = patient.by_type
                 assert isinstance(by_type, dict)
 
                 # Check all_visits structure
-                all_visits = visits["all_visits"]
+                all_visits = patient.all_visits
                 assert isinstance(all_visits, list)
 
                 # If there are visits, check their structure
                 if all_visits:
                     visit = all_visits[0]
-                    required_visit_fields = [
-                        "id",
-                        "visit_date",
-                        "location",
-                        "visit_type",
-                        "status",
-                        "active",
-                        "inpatient",
-                        "emergency",
-                    ]
-                    for field in required_visit_fields:
-                        assert field in visit
+                    assert visit.uid is not None
+                    assert visit.visit_date is not None
+                    assert visit.location_name is not None
+                    assert visit.visit_type is not None
+                    assert visit.status_name is not None
 
     @pytest.mark.asyncio
     async def test_get_patient_visits_duration_calculation(
         self, mock_vista_client, sample_patient_data
     ):
         """Test visit duration calculation in response"""
-        with patch("src.tools.patient.visit_tool.get_patient_data") as mock_get_data:
+        with patch(
+            "src.tools.patient.get_patient_visits_tool.get_patient_data"
+        ) as mock_get_data:
             mock_get_data.return_value = sample_patient_data
 
-            from src.tools.patient.visit_tool import get_patient_visits
+            from src.tools.patient.get_patient_visits_tool import get_patient_visits
 
             with (
                 patch(
-                    "src.tools.patient.visit_tool.get_default_station",
+                    "src.tools.patient.get_patient_visits_tool.get_default_station",
                     return_value="500",
                 ),
                 patch(
-                    "src.tools.patient.visit_tool.get_default_duz", return_value="12345"
+                    "src.tools.patient.get_patient_visits_tool.get_default_duz",
+                    return_value="12345",
                 ),
-                patch("src.tools.patient.visit_tool.validate_dfn", return_value=True),
-                patch("src.tools.patient.visit_tool.build_metadata", return_value={}),
+                patch(
+                    "src.tools.patient.get_patient_visits_tool.validate_dfn",
+                    return_value=True,
+                ),
                 patch("time.time", return_value=time.time()),
             ):
                 result = await get_patient_visits(
@@ -531,44 +532,43 @@ class TestVisitToolIntegration:
                     vista_client=mock_vista_client,
                 )
 
-                assert result["success"] is True
-                visits = result["visits"]["all_visits"]
+                assert result.success is True
+                visits = result.data.all_visits
 
-                # Check that duration_days is present for each visit
+                # Check that visits have proper structure
                 for visit in visits:
-                    assert "duration_days" in visit
-                    # Duration should be None or a positive integer
-                    if visit["duration_days"] is not None:
-                        assert isinstance(visit["duration_days"], int)
-                        assert visit["duration_days"] >= 0
+                    assert visit.uid is not None
+                    # Duration calculation depends on admission/discharge dates
+                    if visit.admission_date and visit.discharge_date:
+                        duration = (visit.discharge_date - visit.admission_date).days
+                        assert duration >= 0
 
     @pytest.mark.asyncio
     async def test_get_patient_visits_date_filtering(
         self, mock_vista_client, sample_patient_data
     ):
         """Test visit date filtering"""
-        with patch("src.tools.patient.visit_tool.get_patient_data") as mock_get_data:
+        with patch(
+            "src.tools.patient.get_patient_visits_tool.get_patient_data"
+        ) as mock_get_data:
             mock_get_data.return_value = sample_patient_data
 
-            from src.tools.patient.visit_tool import get_patient_visits
+            from src.tools.patient.get_patient_visits_tool import get_patient_visits
 
             # Test with different days_back values
             for days_back in [30, 90, 365]:
                 with (
                     patch(
-                        "src.tools.patient.visit_tool.get_default_station",
+                        "src.tools.patient.get_patient_visits_tool.get_default_station",
                         return_value="500",
                     ),
                     patch(
-                        "src.tools.patient.visit_tool.get_default_duz",
+                        "src.tools.patient.get_patient_visits_tool.get_default_duz",
                         return_value="12345",
                     ),
                     patch(
-                        "src.tools.patient.visit_tool.validate_dfn", return_value=True
-                    ),
-                    patch(
-                        "src.tools.patient.visit_tool.build_metadata",
-                        return_value={"filters": {"days_back": days_back}},
+                        "src.tools.patient.get_patient_visits_tool.validate_dfn",
+                        return_value=True,
                     ),
                     patch("time.time", return_value=time.time()),
                 ):
@@ -579,19 +579,21 @@ class TestVisitToolIntegration:
                         vista_client=mock_vista_client,
                     )
 
-                    assert result["success"] is True
-                    metadata = result["metadata"]
-                    assert metadata["filters"]["days_back"] == days_back
+                    assert result.success is True
+                    metadata = result.metadata
+                    assert metadata.additional_info["filters"]["days_back"] == days_back
 
     @pytest.mark.asyncio
     async def test_get_patient_visits_type_filtering(
         self, mock_vista_client, sample_patient_data
     ):
         """Test visit type filtering"""
-        with patch("src.tools.patient.visit_tool.get_patient_data") as mock_get_data:
+        with patch(
+            "src.tools.patient.get_patient_visits_tool.get_patient_data"
+        ) as mock_get_data:
             mock_get_data.return_value = sample_patient_data
 
-            from src.tools.patient.visit_tool import get_patient_visits
+            from src.tools.patient.get_patient_visits_tool import get_patient_visits
 
             visit_types = [
                 "inpatient",
@@ -604,19 +606,16 @@ class TestVisitToolIntegration:
             for visit_type in visit_types:
                 with (
                     patch(
-                        "src.tools.patient.visit_tool.get_default_station",
+                        "src.tools.patient.get_patient_visits_tool.get_default_station",
                         return_value="500",
                     ),
                     patch(
-                        "src.tools.patient.visit_tool.get_default_duz",
+                        "src.tools.patient.get_patient_visits_tool.get_default_duz",
                         return_value="12345",
                     ),
                     patch(
-                        "src.tools.patient.visit_tool.validate_dfn", return_value=True
-                    ),
-                    patch(
-                        "src.tools.patient.visit_tool.build_metadata",
-                        return_value={"filters": {"visit_type": visit_type}},
+                        "src.tools.patient.get_patient_visits_tool.validate_dfn",
+                        return_value=True,
                     ),
                     patch("time.time", return_value=time.time()),
                 ):
@@ -627,38 +626,42 @@ class TestVisitToolIntegration:
                         vista_client=mock_vista_client,
                     )
 
-                    assert result["success"] is True
-                    metadata = result["metadata"]
-                    assert metadata["filters"]["visit_type"] == visit_type
+                    assert result.success is True
+                    metadata = result.metadata
+                    assert (
+                        metadata.additional_info["filters"]["visit_type"] == visit_type
+                    )
 
                     # Check that all returned visits match the requested type
-                    all_visits = result["visits"]["all_visits"]
+                    all_visits = result.data.all_visits
                     for visit in all_visits:
-                        assert visit["visit_type"] == visit_type
+                        assert visit.visit_type.value == visit_type
 
     @pytest.mark.asyncio
     async def test_get_patient_visits_active_filtering(
         self, mock_vista_client, sample_patient_data
     ):
         """Test active visit filtering"""
-        with patch("src.tools.patient.visit_tool.get_patient_data") as mock_get_data:
+        with patch(
+            "src.tools.patient.get_patient_visits_tool.get_patient_data"
+        ) as mock_get_data:
             mock_get_data.return_value = sample_patient_data
 
-            from src.tools.patient.visit_tool import get_patient_visits
+            from src.tools.patient.get_patient_visits_tool import get_patient_visits
 
             # Test with active_only=True
             with (
                 patch(
-                    "src.tools.patient.visit_tool.get_default_station",
+                    "src.tools.patient.get_patient_visits_tool.get_default_station",
                     return_value="500",
                 ),
                 patch(
-                    "src.tools.patient.visit_tool.get_default_duz", return_value="12345"
+                    "src.tools.patient.get_patient_visits_tool.get_default_duz",
+                    return_value="12345",
                 ),
-                patch("src.tools.patient.visit_tool.validate_dfn", return_value=True),
                 patch(
-                    "src.tools.patient.visit_tool.build_metadata",
-                    return_value={"filters": {"active_only": True}},
+                    "src.tools.patient.get_patient_visits_tool.validate_dfn",
+                    return_value=True,
                 ),
                 patch("time.time", return_value=time.time()),
             ):
@@ -669,28 +672,28 @@ class TestVisitToolIntegration:
                     vista_client=mock_vista_client,
                 )
 
-                assert result["success"] is True
-                metadata = result["metadata"]
-                assert metadata["filters"]["active_only"] is True
+                assert result.success is True
+                metadata = result.metadata
+                assert metadata.additional_info["filters"]["active_only"] is True
 
                 # Check that all returned visits are active
-                all_visits = result["visits"]["all_visits"]
+                all_visits = result.data.all_visits
                 for visit in all_visits:
-                    assert visit["active"] is True
+                    assert visit.is_active is True
 
             # Test with active_only=False
             with (
                 patch(
-                    "src.tools.patient.visit_tool.get_default_station",
+                    "src.tools.patient.get_patient_visits_tool.get_default_station",
                     return_value="500",
                 ),
                 patch(
-                    "src.tools.patient.visit_tool.get_default_duz", return_value="12345"
+                    "src.tools.patient.get_patient_visits_tool.get_default_duz",
+                    return_value="12345",
                 ),
-                patch("src.tools.patient.visit_tool.validate_dfn", return_value=True),
                 patch(
-                    "src.tools.patient.visit_tool.build_metadata",
-                    return_value={"filters": {"active_only": False}},
+                    "src.tools.patient.get_patient_visits_tool.validate_dfn",
+                    return_value=True,
                 ),
                 patch("time.time", return_value=time.time()),
             ):
@@ -701,11 +704,11 @@ class TestVisitToolIntegration:
                     vista_client=mock_vista_client,
                 )
 
-                assert result["success"] is True
-                metadata = result["metadata"]
-                assert metadata["filters"]["active_only"] is False
+                assert result.success is True
+                metadata = result.metadata
+                assert metadata.additional_info["filters"]["active_only"] is False
 
-                # Should return both active and inactive visits
-                all_visits = result["visits"]["all_visits"]
+                # Should return all visits (active and inactive)
+                all_visits = result.data.all_visits
                 # Note: In a real scenario, we'd expect both active and inactive visits
                 # For the mock server, we just verify the structure is correct

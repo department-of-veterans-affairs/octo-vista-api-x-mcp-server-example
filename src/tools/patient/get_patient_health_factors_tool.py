@@ -1,13 +1,26 @@
 """Get patient health factors tool for MCP server"""
 
-import time
-from typing import Any
+from datetime import UTC, datetime
+from typing import Annotated
 
 from mcp.server.fastmcp import FastMCP
+from pydantic import Field
 
+from ...models.responses.metadata import (
+    DemographicsMetadata,
+    PaginationMetadata,
+    PerformanceMetrics,
+    ResponseMetadata,
+    RpcCallMetadata,
+    StationMetadata,
+)
+from ...models.responses.tool_responses import (
+    HealthFactorsResponse,
+    HealthFactorsResponseData,
+)
 from ...services.data import get_patient_data
 from ...services.validators import validate_dfn
-from ...utils import build_metadata, get_default_duz, get_default_station, get_logger
+from ...utils import get_default_duz, get_default_station, get_logger, paginate_list
 from ...vista.base import BaseVistaClient
 
 logger = get_logger(__name__)
@@ -25,28 +38,31 @@ def register_get_patient_health_factors_tool(
         category_filter: str | None = None,
         risk_category: str | None = None,
         severity_filter: str | None = None,
-        limit: int = 50,
-    ) -> dict[str, Any]:
+        offset: Annotated[int, Field(default=0, ge=0)] = 0,
+        limit: Annotated[int, Field(default=10, ge=1, le=200)] = 10,
+    ) -> HealthFactorsResponse:
         """Get patient health factors and risk assessments."""
-        start_time = time.time()
+        start_time = datetime.now(UTC)
         station = station or get_default_station()
         caller_duz = get_default_duz()
 
         # Validate DFN
         if not validate_dfn(patient_dfn):
-            return {
-                "success": False,
-                "error": "Invalid patient DFN format. DFN must be numeric.",
-                "metadata": build_metadata(station=station),
-            }
-
-        # Validate limit parameter
-        if limit < 1 or limit > 200:
-            return {
-                "success": False,
-                "error": "Limit must be between 1 and 200.",
-                "metadata": build_metadata(station=station),
-            }
+            end_time = datetime.now(UTC)
+            md = ResponseMetadata(
+                request_id=f"req_{int(start_time.timestamp())}",
+                performance=PerformanceMetrics(
+                    duration_ms=int((end_time - start_time).total_seconds() * 1000),
+                    start_time=start_time,
+                    end_time=end_time,
+                ),
+                station=StationMetadata(station_number=station),
+            )
+            return HealthFactorsResponse(
+                success=False,
+                error=f"Invalid patient DFN: {patient_dfn}",
+                metadata=md,
+            )
 
         try:
             # Get patient data (handles caching internally)
@@ -54,57 +70,48 @@ def register_get_patient_health_factors_tool(
                 vista_client, station, patient_dfn, caller_duz
             )
 
-            # Filter health factors
-            health_factors = patient_data.health_factors
+            # Filter health factors with combined conditions
+            health_factors = [
+                f
+                for f in patient_data.health_factors
+                if (
+                    not category_filter or category_filter.upper() in f.category.upper()
+                )
+                and (
+                    not risk_category
+                    or f.risk_category.lower() == risk_category.lower()
+                )
+                and (
+                    not severity_filter
+                    or f.severity_level.lower() == severity_filter.lower()
+                )
+            ]
 
-            # Filter by category
-            if category_filter:
-                health_factors = [
-                    f
-                    for f in health_factors
-                    if category_filter.upper() in f.category.upper()
-                ]
-
-            # Filter by risk category
-            if risk_category:
-                health_factors = [
-                    f
-                    for f in health_factors
-                    if f.risk_category.lower() == risk_category.lower()
-                ]
-
-            # Filter by severity
-            if severity_filter:
-                health_factors = [
-                    f
-                    for f in health_factors
-                    if f.severity_level.lower() == severity_filter.lower()
-                ]
+            # Apply pagination
+            health_factors_page, total_health_factors_after_filtering = paginate_list(
+                health_factors, offset, limit
+            )
 
             # Group factors by risk category
             from ...services.validators.clinical_validators import (
                 get_health_factor_trends,
             )
 
-            factor_groups: dict[str, list[Any]] = {}
-            for factor in health_factors:
+            factor_groups: dict[str, list[str]] = {}
+            for factor in health_factors_page:
                 group_key = factor.risk_category
                 if group_key not in factor_groups:
                     factor_groups[group_key] = []
-                factor_groups[group_key].append(factor)
+                factor_groups[group_key].append(factor.uid)
 
             # Identify high-risk factors
-            high_risk_factors = [f for f in health_factors if f.risk_score >= 7]
-
-            # Identify modifiable factors
-            modifiable_factors = [f for f in health_factors if f.is_modifiable]
-
-            # Get factors requiring monitoring
-            monitoring_factors = [f for f in health_factors if f.requires_monitoring]
+            high_risk_factors = [
+                f.uid for f in health_factors_page if f.risk_score >= 7
+            ]
 
             # Calculate trending for common factors
             trending_data = {}
-            common_factor_names = list({f.factor_name for f in health_factors})[
+            common_factor_names = list({f.factor_name for f in health_factors_page})[
                 :10
             ]  # Top 10
             for factor_name in common_factor_names:
@@ -112,112 +119,75 @@ def register_get_patient_health_factors_tool(
                     health_factors, factor_name
                 )
 
-            return {
-                "success": True,
-                "data": {
-                    "patient_dfn": patient_dfn,
-                    "patient_name": patient_data.patient_name,
-                    "total_health_factors": len(patient_data.health_factors),
-                    "filtered_count": len(health_factors),
-                    "summary": {
-                        "high_risk_count": len(high_risk_factors),
-                        "modifiable_count": len(modifiable_factors),
-                        "monitoring_required_count": len(monitoring_factors),
-                        "average_risk_score": (
-                            round(
-                                sum(f.risk_score for f in health_factors)
-                                / len(health_factors),
-                                1,
-                            )
-                            if health_factors
-                            else 0.0
-                        ),
-                    },
-                    "by_risk_category": {
-                        group: {
-                            "count": len(factors),
-                            "average_risk_score": (
-                                round(
-                                    sum(f.risk_score for f in factors) / len(factors), 1
-                                )
-                                if factors
-                                else 0.0
-                            ),
-                            "factors": [
-                                {
-                                    "name": factor.factor_name,
-                                    "category": factor.category,
-                                    "severity": factor.severity_level,
-                                    "risk_score": factor.risk_score,
-                                    "recorded_date": factor.recorded_date.isoformat(),
-                                    "is_modifiable": factor.is_modifiable,
-                                    "requires_monitoring": factor.requires_monitoring,
-                                    "facility": factor.facility_name,
-                                }
-                                for factor in factors
-                            ],
-                        }
-                        for group, factors in factor_groups.items()
-                    },
-                    "high_risk_factors": [
-                        {
-                            "name": factor.factor_name,
-                            "category": factor.category,
-                            "risk_category": factor.risk_category,
-                            "severity": factor.severity_level,
-                            "risk_score": factor.risk_score,
-                            "recorded_date": factor.recorded_date.isoformat(),
-                            "is_modifiable": factor.is_modifiable,
-                            "comments": factor.comments,
-                        }
-                        for factor in high_risk_factors
-                    ],
-                    "trending": trending_data,
-                    "all_health_factors": [
-                        {
-                            "id": factor.local_id,
-                            "uid": factor.uid,
-                            "name": factor.factor_name,
-                            "category": factor.category,
-                            "risk_category": factor.risk_category,
-                            "severity": factor.severity_level,
-                            "status": factor.status,
-                            "risk_score": factor.risk_score,
-                            "recorded_date": factor.recorded_date.isoformat(),
-                            "recorded_by": factor.recorded_by,
-                            "facility": factor.facility_name,
-                            "encounter": factor.encounter_name,
-                            "location": factor.location_name,
-                            "comments": factor.comments,
-                            "is_modifiable": factor.is_modifiable,
-                            "requires_monitoring": factor.requires_monitoring,
-                            "summary": factor.summary,
-                        }
-                        for factor in health_factors[:limit]  # Limit based on parameter
-                    ],
+            # Build typed metadata inline
+            end_time = datetime.now(UTC)
+            duration_ms = int((end_time - start_time).total_seconds() * 1000)
+            rpc_details = RpcCallMetadata(
+                rpc="VPR GET PATIENT DATA JSON",
+                context="LHS RPC CONTEXT",
+                parameters=[{"namedArray": {"patientId": patient_dfn}}],
+                duz=caller_duz,
+            )
+            md = ResponseMetadata(
+                request_id=f"req_{int(end_time.timestamp())}",
+                performance=PerformanceMetrics(
+                    duration_ms=duration_ms,
+                    start_time=start_time,
+                    end_time=end_time,
+                ),
+                station=StationMetadata(station_number=station),
+                rpc=rpc_details,
+                demographics=DemographicsMetadata(
+                    patient_dfn=patient_dfn,
+                    patient_name=patient_data.patient_name,
+                    patient_age=patient_data.demographics.calculate_age(),
+                ),
+                additional_info={
+                    "category_filter": category_filter,
+                    "risk_category_filter": risk_category,
+                    "severity_filter": severity_filter,
+                    "limit": limit,
                 },
-                "metadata": {
-                    **build_metadata(
-                        station=station,
-                        duration_ms=int((time.time() - start_time) * 1000),
-                    ),
-                    "rpc": {
-                        "rpc": "VPR GET PATIENT DATA JSON",
-                        "context": "LHS RPC CONTEXT",
-                        "jsonResult": True,
-                        "parameters": [{"namedArray": {"patientId": patient_dfn}}],
-                    },
-                    "duz": caller_duz,
-                },
-            }
+                pagination=PaginationMetadata(
+                    total_available_items=total_health_factors_after_filtering,
+                    returned=len(health_factors_page),
+                    offset=offset,
+                    limit=limit,
+                    tool_name="get_patient_health_factors",
+                    patient_dfn=patient_dfn,
+                ),
+            )
+
+            # Build response data
+            data = HealthFactorsResponseData(
+                by_risk_category=dict(factor_groups),
+                high_risk_factors=high_risk_factors,
+                health_factors=health_factors_page,
+            )
+
+            return HealthFactorsResponse(
+                success=True,
+                data=data,
+                metadata=md,
+            )
 
         except Exception as e:
             logger.error(
                 f"🩺 [DEBUG] Exception in get_patient_health_factors: {type(e).__name__}: {str(e)}"
             )
             logger.exception("Unexpected error in get_patient_health_factors")
-            return {
-                "success": False,
-                "error": f"Unexpected error: {str(e)}",
-                "metadata": build_metadata(station=station),
-            }
+            end_time = datetime.now(UTC)
+            md = ResponseMetadata(
+                request_id=f"req_{int(end_time.timestamp())}",
+                performance=PerformanceMetrics(
+                    duration_ms=int((end_time - start_time).total_seconds() * 1000),
+                    start_time=start_time,
+                    end_time=end_time,
+                ),
+                station=StationMetadata(station_number=station),
+            )
+            return HealthFactorsResponse(
+                success=False,
+                error=f"Unexpected error: {str(e)}",
+                metadata=md,
+            )

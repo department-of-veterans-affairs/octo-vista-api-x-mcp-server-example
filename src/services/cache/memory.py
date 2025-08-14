@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from .base import CacheBackend
@@ -27,7 +27,7 @@ class MemoryCacheBackend(CacheBackend):
             value, expiry = self._cache[key]
 
             # Check expiry
-            if expiry and datetime.now(timezone.utc) > expiry:
+            if expiry and datetime.now(UTC) > expiry:
                 # Expired, remove it
                 del self._cache[key]
                 logger.debug(f"Cache key {key} expired")
@@ -41,7 +41,7 @@ class MemoryCacheBackend(CacheBackend):
         async with self._lock:
             expiry = None
             if ttl:
-                expiry = datetime.now(timezone.utc) + ttl
+                expiry = datetime.now(UTC) + ttl
 
             self._cache[key] = (value, expiry)
             logger.debug(f"Cached key {key} with TTL {ttl}")
@@ -64,7 +64,7 @@ class MemoryCacheBackend(CacheBackend):
 
             # Check if expired
             value, expiry = self._cache[key]
-            if expiry and datetime.now(timezone.utc) > expiry:
+            if expiry and datetime.now(UTC) > expiry:
                 # Expired, remove it
                 del self._cache[key]
                 return False
@@ -86,7 +86,7 @@ class MemoryCacheBackend(CacheBackend):
         """Get cache statistics (for debugging)."""
         total_keys = len(self._cache)
         expired_keys = 0
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         for _, (_, expiry) in self._cache.items():
             if expiry and now > expiry:

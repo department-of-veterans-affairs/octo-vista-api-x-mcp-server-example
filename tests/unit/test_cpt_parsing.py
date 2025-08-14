@@ -1,6 +1,6 @@
 """Unit tests for CPT code parsing and validation"""
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 
@@ -195,7 +195,7 @@ class TestCPTCodeIntegration:
             localId="123",
             cptCode="99213",
             name="Office Visit",
-            dateTime=datetime.now(),
+            dateTime=datetime.now(UTC),
             facilityCode="500",
             facilityName="Test",
         )
@@ -208,7 +208,7 @@ class TestCPTCodeIntegration:
             localId="123",
             cptCode="99213",
             name="",
-            dateTime=datetime.now(),
+            dateTime=datetime.now(UTC),
             facilityCode="500",
             facilityName="Test",
         )
@@ -221,7 +221,7 @@ class TestCPTCodeIntegration:
             "uid": "test",
             "localId": "123",
             "cptCode": "99213",
-            "dateTime": datetime.now(),
+            "dateTime": datetime.now(UTC),
             "facilityCode": "500",
             "facilityName": "Test",
         }

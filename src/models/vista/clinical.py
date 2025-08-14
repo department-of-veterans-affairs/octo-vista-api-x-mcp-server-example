@@ -116,7 +116,4 @@ class Clinician(BaseVistaModel):
     @field_validator("signed_date_time", mode="before")
     @classmethod
     def parse_datetime(cls, v):
-        """Parse datetime format"""
-        if v is None or isinstance(v, datetime):
-            return v
         return parse_datetime(v)

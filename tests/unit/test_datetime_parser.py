@@ -1,6 +1,6 @@
 """Tests for datetime parser"""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.services.parsers.patient.datetime_parser import (
     format_date,
@@ -17,24 +17,24 @@ class TestDatetimeParser:
         """Test parsing full datetime format"""
         # Full format: YYYYMMDDHHMMSS
         result = parse_datetime(20240115143045)
-        assert result == datetime(2024, 1, 15, 14, 30, 45)
+        assert result == datetime(2024, 1, 15, 14, 30, 45, tzinfo=timezone.utc)
 
     def test_parse_datetime_date_only(self):
         """Test parsing date only format"""
         # Date only: YYYYMMDD
         result = parse_datetime(20240115)
-        assert result == datetime(2024, 1, 15)
+        assert result == datetime(2024, 1, 15, tzinfo=timezone.utc)
 
     def test_parse_datetime_with_hour_minute(self):
         """Test parsing datetime with hour and minute"""
         # YYYYMMDDHHMM
         result = parse_datetime(202401151430)
-        assert result == datetime(2024, 1, 15, 14, 30)
+        assert result == datetime(2024, 1, 15, 14, 30, tzinfo=timezone.utc)
 
     def test_parse_datetime_string_input(self):
         """Test parsing datetime from string"""
         result = parse_datetime("20240115143045")
-        assert result == datetime(2024, 1, 15, 14, 30, 45)
+        assert result == datetime(2024, 1, 15, 14, 30, 45, tzinfo=timezone.utc)
 
     def test_parse_datetime_none(self):
         """Test parsing None returns None"""

@@ -1,9 +1,9 @@
 """Clinical data models for patient records"""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_serializer, field_validator
 
 from ...services.parsers.patient.datetime_parser import parse_datetime
 from ...services.parsers.patient.value_parser import (
@@ -11,6 +11,7 @@ from ...services.parsers.patient.value_parser import (
     parse_numeric_result,
 )
 from ...utils import get_logger
+from ..utils import format_datetime_for_mcp_response, format_datetime_with_default
 from .base import (
     BasePatientModel,
     CodedValue,
@@ -71,10 +72,11 @@ class VitalSign(BasePatientModel):
     @field_validator("observed", "resulted", mode="before")
     @classmethod
     def parse_datetime_field(cls, v):
-        """Parse datetime format"""
-        if isinstance(v, datetime):
-            return v
         return parse_datetime(v)
+
+    @field_serializer("observed", "resulted")
+    def serialize_datetime_fields(self, value: datetime | None) -> str | None:
+        return format_datetime_for_mcp_response(value)
 
     @field_validator("result", mode="before")
     @classmethod
@@ -202,13 +204,27 @@ class LabResult(BasePatientModel):
         """Ensure these fields are strings"""
         return str(v) if v is not None else v
 
-    @field_validator("observed", "resulted", "verified", mode="before")
+    @field_validator("observed", "resulted", mode="before")
     @classmethod
-    def parse_datetime(cls, v):
-        """Parse datetime format"""
-        if v is None or isinstance(v, datetime):
-            return v
+    def parse_required_datetime(cls, v):
+        """Parse required datetime fields"""
         return parse_datetime(v)
+
+    @field_validator("verified", mode="before")
+    @classmethod
+    def parse_optional_datetime(cls, v):
+        """Parse optional datetime field"""
+        return parse_datetime(v)
+
+    @field_serializer("observed", "resulted")
+    def serialize_required_datetime_fields(self, value: datetime) -> str:
+        """Serialize required datetime fields to ISO format"""
+        return format_datetime_with_default(value)
+
+    @field_serializer("verified")
+    def serialize_optional_datetime_field(self, value: datetime | None) -> str | None:
+        """Serialize optional datetime field to ISO format"""
+        return format_datetime_with_default(value)
 
     @field_validator("result", mode="before")
     @classmethod
@@ -296,10 +312,12 @@ class Consult(BasePatientModel):
     @field_validator("date_time", "scheduled_date", "completed_date", mode="before")
     @classmethod
     def parse_datetime(cls, v):
-        """Parse datetime format"""
-        if v is None or isinstance(v, datetime):
-            return v
         return parse_datetime(v)
+
+    @field_serializer("date_time", "scheduled_date", "completed_date")
+    def serialize_datetime_fields(self, value: datetime | None) -> str | None:
+        """Serialize datetime fields to ISO format for JSON schema compliance"""
+        return format_datetime_for_mcp_response(value)
 
     @property
     def is_active(self) -> bool:
@@ -313,7 +331,7 @@ class Consult(BasePatientModel):
         if not self.is_active:
             return False
         # Consider overdue if more than 30 days old
-        return (datetime.now() - self.date_time).days > 30
+        return (datetime.now(UTC) - self.date_time).days > 30
 
     @property
     def status(self) -> ConsultStatus:

@@ -162,12 +162,7 @@ class TestOrdersTool:
                     "src.tools.patient.get_patient_orders.validate_dfn",
                     return_value=True,
                 ),
-                patch(
-                    "src.tools.patient.get_patient_orders.build_metadata",
-                    return_value={},
-                ),
             ):
-
                 # Get patient data (handles caching internally)
                 patient_data = await mock_get_data(
                     mock_vista_client, station, patient_dfn, caller_duz
@@ -237,12 +232,7 @@ class TestOrdersTool:
                     "src.tools.patient.get_patient_orders.validate_dfn",
                     return_value=True,
                 ),
-                patch(
-                    "src.tools.patient.get_patient_orders.build_metadata",
-                    return_value={},
-                ),
             ):
-
                 # Get patient data
                 patient_data = await mock_get_data(
                     mock_vista_client, station, patient_dfn, caller_duz
@@ -359,9 +349,6 @@ class TestOrdersTool:
         with (
             patch(
                 "src.tools.patient.get_patient_orders.validate_dfn", return_value=False
-            ),
-            patch(
-                "src.tools.patient.get_patient_orders.build_metadata", return_value={}
             ),
         ):
             # Import the orders tool module

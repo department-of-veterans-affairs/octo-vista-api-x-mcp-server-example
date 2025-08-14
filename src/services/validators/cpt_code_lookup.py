@@ -349,7 +349,6 @@ def search_cpt_codes(
     for code, info in CPT_CODE_DATABASE.items():
         # Check if query matches code or description
         if query_lower in code.lower() or query_lower in info["description"].lower():
-
             # Apply filters
             if category and info["category"] != category.lower():
                 continue

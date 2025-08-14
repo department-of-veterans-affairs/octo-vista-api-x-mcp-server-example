@@ -1,6 +1,6 @@
 """Tests for medication parsing utilities"""
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from src.models.patient.medication import Medication
 from src.services.parsers.patient.value_parser import (
@@ -144,7 +144,7 @@ class TestMedicationModel:
     def test_medication_refill_logic(self):
         """Test medication refill calculation logic"""
         # Create a medication filled 85 days ago with 90 days supply (closer to needing refill)
-        last_filled = datetime.now() - timedelta(days=85)
+        last_filled = datetime.now(UTC) - timedelta(days=85)
 
         med_data = {
             "uid": "urn:va:med:500:123:456",

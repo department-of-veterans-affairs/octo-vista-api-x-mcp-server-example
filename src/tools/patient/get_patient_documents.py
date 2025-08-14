@@ -1,12 +1,23 @@
 """Get patient documents tool for MCP server"""
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
+from typing import Annotated
 
 from mcp.server.fastmcp import FastMCP
+from pydantic import Field
 
+from ...models.responses.metadata import (
+    DemographicsMetadata,
+    PaginationMetadata,
+    PerformanceMetrics,
+    ResponseMetadata,
+    RpcCallMetadata,
+    StationMetadata,
+)
+from ...models.responses.tool_responses import DocumentsResponse, DocumentsResponseData
 from ...services.data import get_patient_data
 from ...services.validators import validate_dfn
-from ...utils import build_metadata, get_default_duz, get_default_station, get_logger
+from ...utils import get_default_duz, get_default_station, get_logger, paginate_list
 from ...vista.base import BaseVistaClient
 
 logger = get_logger()
@@ -21,18 +32,31 @@ def register_get_patient_documents_tool(mcp: FastMCP, vista_client: BaseVistaCli
         station: str = "",
         completed_only: bool = True,
         days_back: int = 180,
-    ) -> dict:
+        document_type: str = "",
+        offset: Annotated[int, Field(default=0, ge=0)] = 0,
+        limit: Annotated[int, Field(default=10, ge=1, le=200)] = 10,
+    ) -> DocumentsResponse:
         """Get patient clinical documents and notes."""
+        start_time = datetime.now(UTC)
         station = station or get_default_station()
         caller_duz = get_default_duz()
 
         # Validate DFN
         if not validate_dfn(patient_dfn):
-            return {
-                "success": False,
-                "error": "Invalid patient DFN format. DFN must be numeric.",
-                "metadata": build_metadata(station=station),
-            }
+            md = ResponseMetadata(
+                request_id=f"req_{int(start_time.timestamp())}",
+                performance=PerformanceMetrics(
+                    duration_ms=0,
+                    start_time=start_time,
+                    end_time=start_time,
+                ),
+                station=StationMetadata(station_number=station),
+            )
+            return DocumentsResponse(
+                success=False,
+                error=f"Invalid patient DFN: {patient_dfn}",
+                metadata=md,
+            )
 
         try:
             # Get patient data (handles caching internally)
@@ -40,69 +64,86 @@ def register_get_patient_documents_tool(mcp: FastMCP, vista_client: BaseVistaCli
                 vista_client, station, patient_dfn, caller_duz
             )
 
-            # Filter documents by date
-            cutoff_date = datetime.now() - timedelta(days=days_back)
+            # Filter documents with combined conditions
+            cutoff_date = datetime.now(UTC) - timedelta(days=days_back)
             documents = [
                 d
                 for d in patient_data.documents
-                if d.reference_date_time and d.reference_date_time >= cutoff_date
+                if d.reference_date_time
+                and d.reference_date_time >= cutoff_date
+                and (not completed_only or d.is_completed)
+                and (not document_type or d.document_type == document_type)
             ]
 
-            # Filter by completion status if requested
-            if completed_only:
-                documents = [d for d in documents if d.is_completed]
+            # Apply pagination
+            documents_page, total_documents_after_filtering = paginate_list(
+                documents, offset, limit
+            )
 
-            # Build response
-            return {
-                "success": True,
-                "patient": {
-                    "dfn": patient_dfn,
-                    "name": patient_data.patient_name,
-                    "age": patient_data.demographics.calculate_age(),
+            # Build typed metadata inline
+            end_time = datetime.now(UTC)
+            duration_ms = int((end_time - start_time).total_seconds() * 1000)
+            rpc_details = RpcCallMetadata(
+                rpc="VPR GET PATIENT DATA JSON",
+                context="LHS RPC CONTEXT",
+                parameters=[{"namedArray": {"patientId": patient_dfn}}],
+                duz=caller_duz,
+            )
+            md = ResponseMetadata(
+                request_id=f"req_{int(end_time.timestamp())}",
+                performance=PerformanceMetrics(
+                    duration_ms=duration_ms,
+                    start_time=start_time,
+                    end_time=end_time,
+                ),
+                station=StationMetadata(station_number=station),
+                rpc=rpc_details,
+                demographics=DemographicsMetadata(
+                    patient_dfn=patient_dfn,
+                    patient_name=patient_data.patient_name,
+                    patient_age=patient_data.demographics.calculate_age(),
+                ),
+                additional_info={
+                    "document_type_filter": document_type,
+                    "completed_only_filter": completed_only,
+                    "days_back_filter": days_back,
                 },
-                "documents": {
-                    "total": len(documents),
-                    "completed": len([d for d in documents if d.is_completed]),
-                    "progress_notes": len([d for d in documents if d.is_progress_note]),
-                    "consult_notes": len([d for d in documents if d.is_consult_note]),
-                    "items": [
-                        {
-                            "uid": doc.uid,
-                            "local_id": doc.local_id,
-                            "document_class": doc.document_class,
-                            "document_type": doc.document_type_name,
-                            "local_title": doc.local_title,
-                            "national_title": (
-                                doc.national_title.title if doc.national_title else None
-                            ),
-                            "status": doc.status_name,
-                            "completed": doc.is_completed,
-                            "entered": doc.entered.isoformat() if doc.entered else None,
-                            "reference_date": (
-                                doc.reference_date_time.isoformat()
-                                if doc.reference_date_time
-                                else None
-                            ),
-                            "encounter_name": doc.encounter_name,
-                            "facility": {
-                                "code": doc.facility_code,
-                                "name": doc.facility_name,
-                            },
-                            "author": doc.primary_author,
-                            "has_signature": doc.has_signature,
-                            "content_summary": doc.content_summary,
-                            "text_items": len(doc.text),
-                        }
-                        for doc in documents
-                    ],
-                },
-                "metadata": build_metadata(station=station),
-            }
+                pagination=PaginationMetadata(
+                    total_available_items=total_documents_after_filtering,
+                    returned=len(documents_page),
+                    offset=offset,
+                    limit=limit,
+                    tool_name="get_patient_documents",
+                    patient_dfn=patient_dfn,
+                ),
+            )
+
+            # Build response data
+            data = DocumentsResponseData(
+                completed=[d.uid for d in documents_page if d.is_completed],
+                documents=documents_page,
+            )
+
+            return DocumentsResponse(
+                success=True,
+                data=data,
+                metadata=md,
+            )
 
         except Exception as e:
             logger.error(f"Error getting patient documents: {e}")
-            return {
-                "success": False,
-                "error": f"Failed to retrieve patient documents: {str(e)}",
-                "metadata": build_metadata(station=station),
-            }
+            end_time = datetime.now(UTC)
+            md = ResponseMetadata(
+                request_id=f"req_{int(end_time.timestamp())}",
+                performance=PerformanceMetrics(
+                    duration_ms=int((end_time - start_time).total_seconds() * 1000),
+                    start_time=start_time,
+                    end_time=end_time,
+                ),
+                station=StationMetadata(station_number=station),
+            )
+            return DocumentsResponse(
+                success=False,
+                error=f"Unexpected error: {str(e)}",
+                metadata=md,
+            )

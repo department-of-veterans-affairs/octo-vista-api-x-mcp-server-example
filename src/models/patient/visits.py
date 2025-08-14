@@ -1,13 +1,14 @@
 """Visit data models for patient records"""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import Field, field_validator
 
 from ...services.formatters.location_mapper import LocationMapper
 from ...services.parsers.patient.datetime_parser import parse_datetime
+from ..base.common import BaseModelExcludeNone
 from .base import BasePatientModel, FacilityInfo
 
 
@@ -73,7 +74,7 @@ class Visit(BasePatientModel):
     local_id: str = Field(alias="localId")
 
     # Visit identification
-    visit_date: datetime = Field(alias="visitDate")
+    visit_date: datetime | None = Field(None, alias="visitDate")
     location_code: str = Field(alias="locationCode")
     location_name: str = Field(alias="locationName")
     visit_type: VisitType = Field(default=VisitType.UNKNOWN, alias="visitType")
@@ -129,20 +130,6 @@ class Visit(BasePatientModel):
     )
     @classmethod
     def parse_datetime_field(cls, v):
-        """Parse datetime format"""
-        if isinstance(v, datetime):
-            return v
-        if v is None:
-            return v
-
-        # Try ISO format first (for tests)
-        if isinstance(v, str) and ("T" in v or "-" in v):
-            try:
-                return datetime.fromisoformat(v.replace("Z", "+00:00"))
-            except ValueError:
-                pass
-
-        # Fall back to VistA format parser
         return parse_datetime(v)
 
     @field_validator("visit_type", mode="before")
@@ -198,7 +185,7 @@ class Visit(BasePatientModel):
         """Calculate visit duration in days"""
         if not self.admission_date:
             return None
-        end_date = self.discharge_date or datetime.now(timezone.utc)
+        end_date = self.discharge_date or datetime.now(UTC)
         delta = end_date - self.admission_date
         return delta.days
 
@@ -235,11 +222,11 @@ class Visit(BasePatientModel):
         return LocationMapper.standardize_location_name(self.location_name)
 
 
-class VisitSummary(BaseModel):
+class VisitSummary(BaseModelExcludeNone):
     """Summary of patient visits"""
 
-    total_visits: int = Field(..., description="Total number of visits")
-    last_visit: datetime | None = Field(None, description="Date of last visit")
+    total_visits: int = Field(description="Total number of visits")
+    last_visit: datetime | None = Field(default=None, description="Date of last visit")
     visit_types: list[VisitType] = Field(
         default_factory=list, description="Types of visits"
     )

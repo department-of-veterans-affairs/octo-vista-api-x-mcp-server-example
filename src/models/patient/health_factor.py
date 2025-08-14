@@ -2,10 +2,11 @@
 
 from datetime import datetime
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_serializer, field_validator
 
 from ...services.parsers.patient.datetime_parser import parse_datetime
 from ...utils import get_logger
+from ..utils import format_datetime_with_default
 from .base import BasePatientModel
 
 logger = get_logger()
@@ -57,10 +58,12 @@ class HealthFactor(BasePatientModel):
     @field_validator("recorded_date", mode="before")
     @classmethod
     def parse_datetime_field(cls, v):
-        """Parse datetime format"""
-        if v is None or isinstance(v, datetime):
-            return v
         return parse_datetime(v)
+
+    @field_serializer("recorded_date")
+    def serialize_datetime_fields(self, value: datetime) -> str:
+        """Serialize datetime fields to ISO format for JSON schema compliance"""
+        return format_datetime_with_default(value)
 
     @field_validator("factor_name", mode="before")
     @classmethod

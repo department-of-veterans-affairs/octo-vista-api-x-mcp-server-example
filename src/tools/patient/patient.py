@@ -11,18 +11,14 @@ from .get_patient_labs_tool import register_get_patient_labs_tool
 from .get_patient_medications_tool import register_get_patient_medications_tool
 from .get_patient_orders import register_get_patient_orders_tool
 from .get_patient_procedures import register_get_patient_procedures_tool
+from .get_patient_visits_tool import register_get_patient_visits_tool
 from .get_patient_vitals_tool import register_get_patient_vitals_tool
-
-# Import all patient tool registration functions
-from .search_patients_tool import register_search_patients_tool
-from .visit_tool import register_get_patient_visits_tool
 
 
 def register_patient_tools(mcp: FastMCP, vista_client: BaseVistaClient):
     """Register all patient-related tools with the MCP server"""
 
     # Register all individual patient tools
-    register_search_patients_tool(mcp, vista_client)
     register_get_patient_vitals_tool(mcp, vista_client)
     register_get_patient_labs_tool(mcp, vista_client)
     register_get_patient_consults_tool(mcp, vista_client)

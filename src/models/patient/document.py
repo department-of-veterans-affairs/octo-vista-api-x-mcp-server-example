@@ -46,16 +46,13 @@ class DocumentText(BasePatientModel):
 
     uid: str
     content: str
-    date_time: datetime = Field(alias="dateTime")
+    date_time: datetime | None = Field(None, alias="dateTime")
     status: str
     clinicians: list[Clinician] = Field(default_factory=list)
 
     @field_validator("date_time", mode="before")
     @classmethod
     def parse_datetime(cls, v):
-        """Parse datetime format"""
-        if v is None or isinstance(v, datetime):
-            return v
         return parse_datetime(v)
 
 
@@ -117,9 +114,6 @@ class Document(BasePatientModel):
     @field_validator("entered", "reference_date_time", mode="before")
     @classmethod
     def parse_datetime(cls, v):
-        """Parse datetime format"""
-        if v is None or isinstance(v, datetime):
-            return v
         return parse_datetime(v)
 
     @computed_field  # type: ignore[prop-decorator]

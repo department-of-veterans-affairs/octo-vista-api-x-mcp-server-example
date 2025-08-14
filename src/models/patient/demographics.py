@@ -1,6 +1,6 @@
 """Patient demographics models"""
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 
 from pydantic import Field, field_validator
 
@@ -328,7 +328,7 @@ class PatientDemographics(BasePatientModel):
     def calculate_age(self, as_of: datetime | None = None) -> int:
         """Calculate patient age"""
         if as_of is None:
-            as_of = datetime.now()
+            as_of = datetime.now(UTC)
 
         age = as_of.year - self.date_of_birth.year
 

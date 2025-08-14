@@ -1,9 +1,9 @@
 """Medication data models for patient records"""
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_serializer, field_validator
 
 from ...services.parsers.patient.datetime_parser import parse_datetime
 from ...services.parsers.patient.value_parser import (
@@ -12,6 +12,7 @@ from ...services.parsers.patient.value_parser import (
     normalize_medication_frequency,
 )
 from ...utils import get_logger
+from ..utils import format_datetime_for_mcp_response
 from .base import BasePatientModel
 
 logger = get_logger()
@@ -77,6 +78,11 @@ class Medication(BasePatientModel):
             return v
         return parse_datetime(v)
 
+    @field_serializer("start_date", "end_date", "last_filled")
+    def serialize_datetime_fields(self, value: datetime | None) -> str | None:
+        """Serialize datetime fields to ISO format for JSON schema compliance"""
+        return format_datetime_for_mcp_response(value)
+
     @field_validator("medication_name", mode="before")
     @classmethod
     def ensure_string_medication_name(cls, v):
@@ -132,7 +138,7 @@ class Medication(BasePatientModel):
             return False
 
         # Check if end date has passed
-        return not (self.end_date and self.end_date < datetime.now())
+        return not (self.end_date and self.end_date < datetime.now(UTC))
 
     @property
     def is_discontinued(self) -> bool:
@@ -163,7 +169,7 @@ class Medication(BasePatientModel):
             return None
 
         refill_due = self.last_filled + timedelta(days=self.days_supply)
-        days_remaining = (refill_due - datetime.now()).days
+        days_remaining = (refill_due - datetime.now(UTC)).days
 
         return max(0, days_remaining)
 

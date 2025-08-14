@@ -4,7 +4,7 @@ This module parses the raw Patient Record (VPR) JSON response
 into structured Pydantic models for easier consumption.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from jsonpath_ng import parse as jsonpath_parse  # type: ignore
@@ -102,9 +102,9 @@ class PatientDataParser:
         lab_results = self._parse_lab_results(grouped_items.get("lab", []))
         consults = self._parse_consults(grouped_items.get("consult", []))
         medications = self._parse_medications(grouped_items.get("med", []))
-        visits = self._parse_visits(grouped_items.get("visit", []))
-        health_factors = self._parse_health_factors(grouped_items.get("factor", []))
         orders = self._parse_orders(grouped_items.get("order", []))
+        visits = self._parse_visits(grouped_items.get("visit", []), orders)
+        health_factors = self._parse_health_factors(grouped_items.get("factor", []))
         documents = self._parse_documents(grouped_items.get("document", []))
         cpt_codes = self._parse_cpt_codes(grouped_items.get("cpt", []))
 
@@ -334,14 +334,53 @@ class PatientDataParser:
 
         return medications
 
-    def _parse_visits(self, visit_items: list[dict[str, Any]]) -> list[Visit]:
-        """Parse visits from visit items"""
-        visits = []
+    def _parse_visits(
+        self,
+        visit_items: list[dict[str, Any]],
+        orders: list = None,  # type: ignore
+    ) -> list[Visit]:
+        """Parse visits from visit items and populate order/treatment UIDs"""
+        visits: list[Visit] = []
+        orders = orders or []
+
+        # Create a mapping of visit UIDs to order UIDs for efficient lookup
+        visit_to_orders: dict[str, list[str]] = {}
+        visit_to_treatments: dict[str, list[str]] = {}
+
+        for order in orders:
+            encounter_uid = getattr(order, "encounter_uid", None)
+            if encounter_uid:
+                # Initialize lists if not present
+                if encounter_uid not in visit_to_orders:
+                    visit_to_orders[encounter_uid] = []
+                    visit_to_treatments[encounter_uid] = []
+
+                # Add order UID
+                visit_to_orders[encounter_uid].append(order.uid)
+
+                # If this is a treatment-related order, also add to treatments
+                if hasattr(order, "order_type") and order.order_type in [
+                    "MEDICATION",
+                    "PROCEDURE",
+                ]:
+                    visit_to_treatments[encounter_uid].append(order.uid)
 
         for item in visit_items:
             try:
                 # Pre-process visit data
                 processed_item = self._preprocess_visit_item(item)
+
+                # Get the visit UID to look up related orders
+                visit_uid = processed_item.get("uid")
+
+                # Populate orderUids and treatmentUids from the mappings
+                processed_item["orderUids"] = (
+                    visit_to_orders.get(visit_uid, []) if visit_uid else []
+                )
+                processed_item["treatmentUids"] = (
+                    visit_to_treatments.get(visit_uid, []) if visit_uid else []
+                )
+
                 visit = Visit(**processed_item)
                 visits.append(visit)
             except Exception as e:
@@ -349,7 +388,7 @@ class PatientDataParser:
                 logger.debug(f"Visit item data: {item}")
 
         # Sort by visit date (newest first)
-        visits.sort(key=lambda v: v.visit_date, reverse=True)
+        visits.sort(key=lambda v: v.visit_date or datetime.min, reverse=True)
 
         return visits
 
@@ -408,7 +447,7 @@ class PatientDataParser:
                 # Default to current date if no start date found
                 from datetime import datetime
 
-                processed["overallStart"] = datetime.now().strftime("%Y%m%d")
+                processed["overallStart"] = datetime.now(UTC).strftime("%Y%m%d")
 
         return processed
 
@@ -467,7 +506,7 @@ class PatientDataParser:
 
         if "entered" not in processed:
             # Use current date if no date provided
-            processed["entered"] = datetime.now().strftime("%Y%m%d")
+            processed["entered"] = datetime.now(UTC).strftime("%Y%m%d")
 
         # Handle localId - ensure it's present
         if "localId" not in processed:
@@ -486,7 +525,7 @@ class PatientDataParser:
 
     def _parse_diagnoses(self, problem_items: list[dict[str, Any]]) -> list[Diagnosis]:
         """Parse diagnoses from problem items"""
-        diagnoses = []
+        diagnoses: list[Diagnosis] = []
 
         for item in problem_items:
             try:
@@ -499,7 +538,7 @@ class PatientDataParser:
                 logger.debug(f"Diagnosis item data: {item}")
 
         # Sort by diagnosis date (newest first)
-        diagnoses.sort(key=lambda d: d.diagnosis_date, reverse=True)
+        diagnoses.sort(key=lambda d: d.diagnosis_date or datetime.min, reverse=True)
 
         return diagnoses
 
@@ -536,10 +575,7 @@ class PatientDataParser:
             processed["facilityName"] = "UNKNOWN FACILITY"
 
         if "entered" not in processed:
-            # Use current date if no date provided
-            from datetime import datetime
-
-            processed["entered"] = datetime.now().strftime("%Y%m%d")
+            processed["entered"] = datetime.now(UTC).strftime("%Y%m%d")
 
         # Handle localId - ensure it's present
         if "localId" not in processed:

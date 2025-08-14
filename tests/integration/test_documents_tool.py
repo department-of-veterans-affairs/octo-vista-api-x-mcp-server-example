@@ -1,6 +1,6 @@
 """Integration tests for patient documents MCP tool"""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -9,6 +9,8 @@ from src.models.patient import Document, PatientDataCollection, PatientDemograph
 from src.models.patient.document import DocumentText, DocumentTitle
 from src.models.vista.clinical import Clinician
 from src.vista.base import BaseVistaClient
+
+DATE_WINDOW_START_DATE = datetime(2025, 7, 1, tzinfo=timezone.utc)
 
 
 @pytest.fixture
@@ -58,12 +60,12 @@ def sample_patient_data():
                     name="PROVIDER,ONE",
                     role="S",
                     signature="ONE PROVIDER MD",
-                    signed_date_time=datetime(2024, 1, 15, 14, 35),
+                    signed_date_time=datetime(2024, 1, 15, 14, 35, tzinfo=timezone.utc),
                     uid="urn:va:user:84F0:983",
                 ),
             ],
             content="Patient presents for routine follow-up. Vital signs stable. Continue current medications.",
-            dateTime=datetime(2024, 1, 15, 14, 30),
+            dateTime=datetime(2024, 1, 15, 14, 30, tzinfo=timezone.utc),
             status="COMPLETED",
             uid="urn:va:document:84F0:237:3040101.8874-1",
         )
@@ -81,12 +83,12 @@ def sample_patient_data():
                     name="CARDIOLOGIST,EXPERT",
                     role="S",
                     signature="EXPERT CARDIOLOGIST MD",
-                    signed_date_time=datetime(2024, 1, 10, 10, 25),
+                    signed_date_time=datetime(2024, 1, 10, 10, 25, tzinfo=timezone.utc),
                     uid="urn:va:user:84F0:1024",
                 ),
             ],
             content="Cardiology consultation requested for chest pain evaluation. EKG shows normal sinus rhythm.",
-            dateTime=datetime(2024, 1, 10, 10, 15),
+            dateTime=datetime(2024, 1, 10, 10, 15, tzinfo=timezone.utc),
             status="COMPLETED",
             uid="urn:va:document:84F0:237:3040102.8875-1",
         )
@@ -105,8 +107,8 @@ def sample_patient_data():
             national_title=progress_note_title,
             encounter_name="GENERAL MEDICINE VISIT",
             encounter_uid="urn:va:visit:84F0:237:H2401",
-            entered=datetime(2025, 7, 15, 14, 30),
-            reference_date_time=datetime(2025, 7, 15, 14, 30),
+            entered=datetime(2025, 7, 15, 14, 30, tzinfo=timezone.utc),
+            reference_date_time=datetime(2025, 7, 15, 14, 30, tzinfo=timezone.utc),
             status_name="COMPLETED",
             text=progress_note_text,
         ),
@@ -122,8 +124,8 @@ def sample_patient_data():
             national_title=consult_note_title,
             encounter_name="CARDIOLOGY CONSULTATION",
             encounter_uid="urn:va:visit:84F0:237:H2402",
-            entered=datetime(2025, 7, 10, 10, 15),
-            reference_date_time=datetime(2025, 7, 10, 10, 15),
+            entered=datetime(2025, 7, 10, 10, 15, tzinfo=timezone.utc),
+            reference_date_time=datetime(2025, 7, 10, 10, 15, tzinfo=timezone.utc),
             status_name="COMPLETED",
             text=consult_note_text,
         ),
@@ -139,14 +141,14 @@ def sample_patient_data():
             national_title=progress_note_title,
             encounter_name="GENERAL MEDICINE VISIT",
             encounter_uid="urn:va:visit:84F0:237:H2403",
-            entered=datetime(2025, 1, 20, 9, 45),  # Older document
-            reference_date_time=datetime(2025, 1, 20, 9, 45),
+            entered=datetime(2025, 1, 20, 9, 45, tzinfo=timezone.utc),  # Older document
+            reference_date_time=datetime(2025, 1, 20, 9, 45, tzinfo=timezone.utc),
             status_name="COMPLETED",
             text=[
                 DocumentText(
                     clinicians=[],
                     content="Follow-up visit for diabetes management. A1C improved to 7.2%.",
-                    dateTime=datetime(2025, 7, 20, 9, 45),
+                    dateTime=datetime(2025, 7, 20, 9, 45, tzinfo=timezone.utc),
                     status="COMPLETED",
                     uid="urn:va:document:84F0:237:3040103.8876-1",
                 )
@@ -212,10 +214,6 @@ class TestDocumentsTool:
                     "src.tools.patient.get_patient_documents.validate_dfn",
                     return_value=True,
                 ),
-                patch(
-                    "src.tools.patient.get_patient_documents.build_metadata",
-                    return_value={},
-                ),
             ):
                 # Get patient data (handles caching internally)
                 patient_data = await mock_get_data(
@@ -223,7 +221,9 @@ class TestDocumentsTool:
                 )
 
                 # Filter documents by date
-                cutoff_date = datetime.now() - timedelta(days=days_back)
+                cutoff_date = datetime(2025, 7, 1, tzinfo=timezone.utc) - timedelta(
+                    days=days_back
+                )
                 documents = [
                     d
                     for d in patient_data.documents
@@ -290,17 +290,16 @@ class TestDocumentsTool:
                 assert result["patient"]["name"] == "HARRIS,SHEBA"
 
                 # Check document counts
-                docs = result["documents"]
-                assert docs["total"] == 3
+                assert len(result["documents"]["items"]) == 3
                 assert (
-                    docs["filtered_count"] == 2
-                )  # Two recent documents within 180 days
-                assert docs["completed_only"] is True
-                assert docs["days_back"] == 180
+                    result["documents"]["filtered_count"] == 3
+                )  # Three recent documents within 180 days
+                assert result["documents"]["completed_only"] is True
+                assert result["documents"]["days_back"] == 180
 
                 # Verify document items
-                doc_items = docs["items"]
-                assert len(doc_items) == 2
+                doc_items = result["documents"]["items"]
+                assert len(doc_items) == 3
 
                 # Check that recent documents are included
                 doc_classes = [item["document_class"] for item in doc_items]
@@ -338,10 +337,6 @@ class TestDocumentsTool:
                     "src.tools.patient.get_patient_documents.validate_dfn",
                     return_value=True,
                 ),
-                patch(
-                    "src.tools.patient.get_patient_documents.build_metadata",
-                    return_value={},
-                ),
             ):
                 # Get patient data
                 patient_data = await mock_get_data(
@@ -349,7 +344,9 @@ class TestDocumentsTool:
                 )
 
                 # Filter documents by date only (not completion status)
-                cutoff_date = datetime.now() - timedelta(days=days_back)
+                cutoff_date = datetime(2025, 7, 1, tzinfo=timezone.utc) - timedelta(
+                    days=days_back
+                )
                 documents = [
                     d
                     for d in patient_data.documents
@@ -436,7 +433,7 @@ class TestDocumentsTool:
         documents = sample_patient_data.documents
 
         # Test recent documents (within 30 days)
-        cutoff_30_days = datetime.now() - timedelta(days=30)
+        cutoff_30_days = datetime(2025, 7, 1, tzinfo=timezone.utc) - timedelta(days=30)
         recent_docs = [
             d
             for d in documents
@@ -448,7 +445,9 @@ class TestDocumentsTool:
             assert isinstance(recent_docs, list)
 
         # Test older documents (within 365 days)
-        cutoff_365_days = datetime.now() - timedelta(days=365)
+        cutoff_365_days = datetime(2025, 7, 1, tzinfo=timezone.utc) - timedelta(
+            days=365
+        )
         all_recent_docs = [
             d
             for d in documents

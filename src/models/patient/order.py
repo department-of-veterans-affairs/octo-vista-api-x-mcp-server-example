@@ -70,9 +70,6 @@ class Order(BasePatientModel):
     @field_validator("start", "stop", "entered", mode="before")
     @classmethod
     def parse_datetime(cls, v):
-        """Parse datetime format"""
-        if v is None or isinstance(v, datetime):
-            return v
         return parse_datetime(v)
 
     @computed_field  # type: ignore[prop-decorator]

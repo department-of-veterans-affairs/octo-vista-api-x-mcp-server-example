@@ -1,6 +1,6 @@
 """Patient data collection model"""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import Field
@@ -47,7 +47,7 @@ class PatientDataCollection(BasePatientModel):
     # Metadata
     source_station: str
     source_dfn: str
-    retrieved_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    retrieved_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     cache_version: str = Field(default="1.0")
     total_items: int = 0
 
@@ -120,11 +120,12 @@ class PatientDataCollection(BasePatientModel):
         """Get documents from the last N days"""
         from datetime import datetime, timedelta
 
-        cutoff_date = datetime.now() - timedelta(days=days)
+        cutoff_date = datetime.now(UTC) - timedelta(days=days)
         return [
             doc
             for doc in self.documents
-            if doc.reference_date_time and doc.reference_date_time >= cutoff_date
+            if doc.reference_date_time is not None
+            and doc.reference_date_time >= cutoff_date
         ]
 
     def get_progress_notes(self) -> list[Document]:
@@ -208,8 +209,7 @@ class PatientDataCollection(BasePatientModel):
             "data_freshness": {
                 "retrieved_at": self.retrieved_at.isoformat(),
                 "age_minutes": int(
-                    (datetime.now(timezone.utc) - self.retrieved_at).total_seconds()
-                    / 60
+                    (datetime.now(UTC) - self.retrieved_at).total_seconds() / 60
                 ),
             },
         }

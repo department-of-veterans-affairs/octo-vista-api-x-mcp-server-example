@@ -3,7 +3,7 @@
 import base64
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -72,7 +72,7 @@ def get_token_expiry(token: str) -> datetime:
 
     # Convert Unix timestamp to datetime
     try:
-        expiry = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
+        expiry = datetime.fromtimestamp(exp_timestamp, tz=UTC)
         return expiry
     except (ValueError, OverflowError, OSError) as e:
         raise ValueError(f"Invalid expiry timestamp {exp_timestamp}: {e}") from e
@@ -91,7 +91,7 @@ def has_token_expired(token: str, buffer_seconds: int = 30) -> bool:
     """
     try:
         expiry = get_token_expiry(token)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Calculate time until expiry
         time_until_expiry = (expiry - now).total_seconds()
@@ -124,7 +124,7 @@ def get_token_ttl_seconds(token: str) -> float:
     """
     try:
         expiry = get_token_expiry(token)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         return (expiry - now).total_seconds()
     except Exception as e:
         logger.error(f"Error getting token TTL: {e}")

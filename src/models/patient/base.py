@@ -3,20 +3,24 @@
 from enum import Enum
 from typing import Optional, Protocol, runtime_checkable
 
-from pydantic import BaseModel, field_validator
+from pydantic import ConfigDict, field_validator
+
+from ..base.common import BaseModelExcludeNone
 
 
-class BasePatientModel(BaseModel):
+class BasePatientModel(BaseModelExcludeNone):
     """Base model for all patient data models"""
 
-    model_config = {
+    model_config = ConfigDict(
         # Allow population by field name or alias
-        "populate_by_name": True,
+        populate_by_name=True,
         # Use enum values
-        "use_enum_values": True,
-        # Serialize datetime as ISO format
-        "json_schema_serialization_defaults_required": True,
-    }
+        use_enum_values=True,
+        # Serialize datetime as ISO format strings
+        ser_json_timedelta="iso8601",
+        # JSON schema serialization
+        json_schema_serialization_defaults_required=True,
+    )
 
 
 @runtime_checkable

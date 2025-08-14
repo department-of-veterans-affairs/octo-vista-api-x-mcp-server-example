@@ -2,7 +2,7 @@
 
 import logging
 import re
-from datetime import datetime
+from datetime import UTC, datetime
 
 from ....models.vista import (
     Allergy,
@@ -105,7 +105,7 @@ def calculate_age(birth_date: str) -> int | None:
                 birth = datetime.fromisoformat(birth_date.split("T")[0])
             else:
                 birth = datetime.fromisoformat(birth_date)
-            today = datetime.now()
+            today = datetime.now(UTC)
             age = today.year - birth.year
             if (today.month, today.day) < (birth.month, birth.day):
                 age -= 1
@@ -352,9 +352,9 @@ def parse_lab_results(result: str) -> list[LabResult]:
                     units=row[3] if len(row) > 3 else None,
                     reference_range=row[4] if len(row) > 4 else None,
                     date_time=(
-                        parse_fileman_date(row[5]) or datetime.now().isoformat()
+                        parse_fileman_date(row[5]) or datetime.now(UTC).isoformat()
                         if row[5]
-                        else datetime.now().isoformat()
+                        else datetime.now(UTC).isoformat()
                     ),
                     flag=row[6] if len(row) > 6 else None,
                     status=row[7] if len(row) > 7 else "F",  # F=Final
@@ -381,9 +381,9 @@ def parse_vital_signs(result: str) -> list[VitalSign]:
             try:
                 vital = VitalSign(
                     date_time=(
-                        parse_fileman_date(row[0]) or datetime.now().isoformat()
+                        parse_fileman_date(row[0]) or datetime.now(UTC).isoformat()
                         if row[0]
-                        else datetime.now().isoformat()
+                        else datetime.now(UTC).isoformat()
                     ),
                     type=row[1],
                     value=row[2],

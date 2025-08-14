@@ -2,10 +2,11 @@
 
 from datetime import datetime
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_serializer, field_validator
 
 from ...services.parsers.patient.datetime_parser import parse_datetime
 from ...utils import get_logger
+from ..utils import format_datetime_for_mcp_response
 from .base import BasePatientModel
 
 logger = get_logger()
@@ -29,12 +30,12 @@ class Diagnosis(BasePatientModel):
     status: str = Field(default="active")  # active, resolved, chronic, rule-out
 
     # Dates and provider info
-    diagnosis_date: datetime = Field(alias="entered")
-    provider: str | None = Field(None, alias="providerName")
-    provider_uid: str | None = Field(None, alias="providerUid")
+    diagnosis_date: datetime | None = Field(default=None, alias="entered")
+    provider: str | None = Field(default=None, alias="providerName")
+    provider_uid: str | None = Field(default=None, alias="providerUid")
 
     # Associated visit/encounter
-    associated_visit_uid: str | None = Field(None, alias="encounterUid")
+    associated_visit_uid: str | None = Field(default=None, alias="encounterUid")
     encounter_name: str | None = Field(None, alias="encounterName")
 
     # Facility information
@@ -42,7 +43,7 @@ class Diagnosis(BasePatientModel):
     facility_name: str = Field(alias="facilityName")
 
     # Additional context
-    comments: str | None = Field(None, alias="comment")
+    comments: str | None = Field(default=None, alias="comment")
     summary: str | None = None
 
     @field_validator("local_id", "facility_code", mode="before")
@@ -58,6 +59,11 @@ class Diagnosis(BasePatientModel):
         if v is None or isinstance(v, datetime):
             return v
         return parse_datetime(v)
+
+    @field_serializer("diagnosis_date")
+    def serialize_datetime_fields(self, value: datetime | None) -> str | None:
+        """Serialize datetime fields to ISO format for JSON schema compliance"""
+        return format_datetime_for_mcp_response(value)
 
     @field_validator("icd_code", mode="before")
     @classmethod

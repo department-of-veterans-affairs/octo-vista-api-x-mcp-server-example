@@ -1,13 +1,11 @@
 """Integration tests for CPT procedures MCP tool"""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
 import pytest
 
-from src.models.patient.collection import PatientDataCollection
-from src.models.patient.cpt_code import CPTCode
-from src.models.patient.demographics import PatientDemographics
+from src.models.patient import CPTCode, PatientDataCollection, PatientDemographics
 from src.tools.patient.get_patient_procedures import (
     _apply_procedure_filters,
     _build_procedure_summary,
@@ -30,14 +28,15 @@ def mock_vista_client():
 @pytest.fixture
 def sample_cpt_codes():
     """Create sample CPT codes for testing"""
-    base_date = datetime(2024, 1, 1, 12, 0, 0)
+    base_date = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
 
     codes = [
         CPTCode(
             uid="urn:va:cpt:84F0:237:5326",
             localId="5326",
             cptCode="99213",
-            name="Office Visit",
+            name="Office visit",
+            category="primary_care",
             dateTime=base_date,
             facilityCode="500",
             facilityName="Test Hospital",
@@ -51,6 +50,7 @@ def sample_cpt_codes():
             localId="5327",
             cptCode="71020",
             name="Chest X-ray",
+            category="radiology",
             dateTime=base_date,
             facilityCode="500",
             facilityName="Test Hospital",
@@ -65,6 +65,7 @@ def sample_cpt_codes():
             localId="5328",
             cptCode="12001",
             name="Simple repair of superficial wounds",
+            category="surgery",
             dateTime=base_date,
             facilityCode="500",
             facilityName="Test Hospital",
@@ -128,16 +129,16 @@ class TestCPTProceduresImplementation:
                 caller_duz="456",
             )
 
-            assert result["success"] is True
-            assert result["patient"]["dfn"] == "123"
-            assert len(result["procedures"]) == 3
-            assert result["summary"]["total_procedures"] == 3
+            assert result.success is True
+            assert result.metadata.demographics.patient_dfn == "123"
+            assert len(result.data.procedures) == 3
+            assert result.data.total_procedures == 3
 
             # Check procedure data
-            procedures = result["procedures"]
-            assert any(p["cpt_code"] == "99213" for p in procedures)
-            assert any(p["cpt_code"] == "71020" for p in procedures)
-            assert any(p["cpt_code"] == "12001" for p in procedures)
+            procedures = result.data.procedures
+            assert any(p.cpt_code == "99213" for p in procedures)
+            assert any(p.cpt_code == "71020" for p in procedures)
+            assert any(p.cpt_code == "12001" for p in procedures)
 
     @pytest.mark.asyncio
     async def test_get_patient_procedures_with_filters(
@@ -156,11 +157,11 @@ class TestCPTProceduresImplementation:
                 procedure_category="radiology",
             )
 
-            assert result["success"] is True
-            procedures = result["procedures"]
+            assert result.success is True
+            procedures = result.data.procedures
             assert len(procedures) == 1
-            assert procedures[0]["cpt_code"] == "71020"
-            assert procedures[0]["category"] == "radiology"
+            assert procedures[0].cpt_code == "71020"
+            assert procedures[0].category == "radiology"
 
     @pytest.mark.asyncio
     async def test_get_patient_procedures_grouped_by_encounter(
@@ -178,27 +179,34 @@ class TestCPTProceduresImplementation:
                 group_by_encounter=True,
             )
 
-            assert result["success"] is True
-            procedures_data = result["procedures"]
+            assert result.success is True
+            procedures = result.data.procedures
 
-            # Should have encounters grouping
-            assert "encounters" in procedures_data
-            encounters = procedures_data["encounters"]
+            # Should have procedures from different encounters
+            assert len(procedures) == 3
+
+            # Group procedures by encounter for testing
+            encounters = {}
+            for proc in procedures:
+                encounter_name = proc.encounter_name or "Unknown"
+                if encounter_name not in encounters:
+                    encounters[encounter_name] = []
+                encounters[encounter_name].append(proc)
 
             # Should have 2 encounters
             assert len(encounters) == 2
 
-            # Find primary care encounter
-            primary_encounter = next(
-                e for e in encounters if e["encounter_name"] == "Primary Care Visit"
-            )
-            assert len(primary_encounter["procedures"]) == 2  # 99213 and 12001
+            # Check primary care encounter procedures
+            primary_care_procs = encounters.get("Primary Care Visit", [])
+            assert len(primary_care_procs) == 2
+            primary_care_codes = {p.cpt_code for p in primary_care_procs}
+            assert "99213" in primary_care_codes
+            assert "12001" in primary_care_codes
 
-            # Find radiology encounter
-            radiology_encounter = next(
-                e for e in encounters if e["encounter_name"] == "Radiology Visit"
-            )
-            assert len(radiology_encounter["procedures"]) == 1  # 71020
+            # Check radiology encounter procedures
+            radiology_procs = encounters.get("Radiology Visit", [])
+            assert len(radiology_procs) == 1
+            assert radiology_procs[0].cpt_code == "71020"
 
 
 class TestCPTFilteringFunctions:
@@ -324,8 +332,8 @@ class TestCPTErrorHandling:
                 patient_dfn="invalid",
             )
 
-            assert result["success"] is False
-            assert "error" in result
+            assert result.success is False
+            assert result.error is not None
 
     @pytest.mark.asyncio
     async def test_no_procedures_found(self, mock_vista_client):
@@ -366,9 +374,9 @@ class TestCPTErrorHandling:
                 patient_dfn="123",
             )
 
-            assert result["success"] is True
-            assert len(result["procedures"]) == 0
-            assert result["summary"]["total_procedures"] == 0
+            assert result.success is True
+            assert len(result.data.procedures) == 0
+            assert result.data.total_procedures == 0
 
 
 if __name__ == "__main__":
