@@ -442,7 +442,7 @@ class TestDocumentsTool:
             for d in documents
             if d.reference_date_time and d.reference_date_time >= cutoff_30_days
         ]
-        assert len(recent_docs) == 2  # Two recent documents
+        assert len(recent_docs) == 1  # One recent document (July 15, 2025)
 
         # Test older documents (within 365 days)
         cutoff_365_days = datetime.now() - timedelta(days=365)
@@ -451,7 +451,9 @@ class TestDocumentsTool:
             for d in documents
             if d.reference_date_time and d.reference_date_time >= cutoff_365_days
         ]
-        assert len(all_recent_docs) == 3  # All documents within a year
+        assert (
+            len(all_recent_docs) == 3
+        )  # All three documents are within a year (all from 2025)
 
     @pytest.mark.asyncio
     async def test_document_completion_filtering(self, sample_patient_data):
