@@ -1,6 +1,5 @@
 """Vista API MCP Server - Main entry point"""
 
-import logging
 import os
 import sys
 
@@ -8,6 +7,7 @@ from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 
 from src.config import get_vista_config
+from src.logging_config import get_logger, log_mcp_message
 from src.tools.patient import register_patient_tools
 from src.tools.system import register_system_tools
 
@@ -17,12 +17,8 @@ from src.vista.client import VistaAPIClient
 # Load environment variables
 load_dotenv()
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO if not os.getenv("VISTA_MCP_DEBUG") else logging.DEBUG,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
-logger = logging.getLogger(__name__)
+# Get MCP-compliant logger
+logger = get_logger("mcp-server")
 
 # Initialize MCP server (global for mcp dev)
 mcp = FastMCP(
@@ -35,15 +31,18 @@ server = mcp
 
 def initialize_server():
     """Initialize the server components"""
-    logger.info("Initializing Vista API MCP Server...")
+    log_mcp_message(mcp, "info", "Initializing Vista API MCP Server...")
 
     # Create Vista client
     try:
         config = get_vista_config()
 
-        logger.info(f"🔧 Vista mode: {config['mode'].upper()}")
-        logger.info(f"Auth endpoint: {config['auth_url']}")
-        logger.info(f"API endpoint: {config['base_url']}")
+        log_mcp_message(
+            mcp,
+            "info",
+            f"Vista mode: {config['mode'].upper()}, Auth endpoint: {config['auth_url']}, "
+            f"API endpoint: {config['base_url']}",
+        )
 
         vista_client = VistaAPIClient(
             base_url=config["base_url"],
@@ -56,19 +55,19 @@ def initialize_server():
         raise
 
     # Register all tools
-    logger.info("Registering tools...")
+    log_mcp_message(mcp, "info", "Registering tools...")
     register_patient_tools(mcp, vista_client)
     register_system_tools(mcp, vista_client)
 
     # # Register resources
-    # logger.info("Registering resources...")
+    # log_mcp_message(mcp, "info", "Registering resources...")
     # register_resources(mcp)
 
     # # Register prompts
-    # logger.info("Registering prompts...")
+    # log_mcp_message(mcp, "info", "Registering prompts...")
     # register_prompts(mcp)
 
-    logger.info("Vista API MCP Server initialized successfully")
+    log_mcp_message(mcp, "info", "Vista API MCP Server initialized successfully")
 
 
 # Initialize on import for mcp dev

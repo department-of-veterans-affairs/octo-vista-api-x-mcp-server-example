@@ -151,7 +151,7 @@ def register_get_patient_medications_tool(mcp: FastMCP, vista_client: BaseVistaC
 
         except Exception as e:
             logger.error(
-                f"🩺 [DEBUG] Exception in get_patient_medications: {type(e).__name__}: {str(e)}"
+                f"[DEBUG] Exception in get_patient_medications: {type(e).__name__}: {str(e)}"
             )
             logger.exception("Unexpected error in get_patient_medications")
             end_time = datetime.now(UTC)

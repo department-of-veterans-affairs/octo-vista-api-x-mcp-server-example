@@ -173,7 +173,7 @@ def register_get_patient_health_factors_tool(
 
         except Exception as e:
             logger.error(
-                f"🩺 [DEBUG] Exception in get_patient_health_factors: {type(e).__name__}: {str(e)}"
+                f"[DEBUG] Exception in get_patient_health_factors: {type(e).__name__}: {str(e)}"
             )
             logger.exception("Unexpected error in get_patient_health_factors")
             end_time = datetime.now(UTC)

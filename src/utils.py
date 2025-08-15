@@ -1,18 +1,10 @@
 """Utility functions for Vista API MCP Server"""
 
-import logging
 import os
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any, TypeVar
 
-
-def get_logger(name: str = "mcp-server") -> logging.Logger:
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
-    logger.addHandler(logging.FileHandler(Path(f"logs/{name}.log"), mode="a"))
-    return logger
-
+from src.logging_config import get_logger
 
 logger = get_logger()
 
@@ -250,24 +242,15 @@ def log_rpc_call(
     error: str | None = None,
 ):
     """Log RPC call for audit trail"""
-    log_data = {
-        "rpc": rpc_name,
-        "station": station,
-        "duz": duz,
-        "timestamp": format_timestamp(),
-        "success": success,
-    }
+    from src.logging_config import log_rpc_call as log_rpc_call_structured
 
-    if duration_ms is not None:
-        log_data["duration_ms"] = duration_ms
-
-    if error:
-        log_data["error"] = error
-
-    if is_debug_mode() and parameters:
-        log_data["parameters"] = parameters
-
-    if success:
-        logger.info(f"RPC call completed: {rpc_name}", extra=log_data)
-    else:
-        logger.error(f"RPC call failed: {rpc_name}", extra=log_data)
+    log_rpc_call_structured(
+        logger=logger,
+        rpc_name=rpc_name,
+        station=station,
+        duz=duz,
+        duration_ms=duration_ms,
+        success=success,
+        error=error,
+        parameters=parameters if is_debug_mode() else None,
+    )

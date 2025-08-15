@@ -227,7 +227,7 @@ def register_get_patient_diagnoses_tool(mcp: FastMCP, vista_client: BaseVistaCli
 
         except Exception as e:
             logger.error(
-                f"🩺 [DEBUG] Exception in get_patient_diagnoses: {type(e).__name__}: {str(e)}"
+                f"[DEBUG] Exception in get_patient_diagnoses: {type(e).__name__}: {str(e)}"
             )
             logger.exception("Unexpected error in get_patient_diagnoses")
             end_time = datetime.now(UTC)
