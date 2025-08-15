@@ -8,6 +8,7 @@ from pydantic import Field
 
 from ...models.responses.metadata import (
     DemographicsMetadata,
+    HealthFactorsFiltersMetadata,
     PaginationMetadata,
     PerformanceMetrics,
     ResponseMetadata,
@@ -142,12 +143,11 @@ def register_get_patient_health_factors_tool(
                     patient_name=patient_data.patient_name,
                     patient_age=patient_data.demographics.calculate_age(),
                 ),
-                additional_info={
-                    "category_filter": category_filter,
-                    "risk_category_filter": risk_category,
-                    "severity_filter": severity_filter,
-                    "limit": limit,
-                },
+                filters=HealthFactorsFiltersMetadata(
+                    category_filter=category_filter,
+                    risk_category=risk_category,
+                    severity_filter=severity_filter,
+                ),
                 pagination=PaginationMetadata(
                     total_available_items=total_health_factors_after_filtering,
                     returned=len(health_factors_page),

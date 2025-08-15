@@ -8,6 +8,7 @@ from pydantic import Field
 
 from ...models.responses.metadata import (
     DemographicsMetadata,
+    DocumentsFiltersMetadata,
     PaginationMetadata,
     PerformanceMetrics,
     ResponseMetadata,
@@ -31,7 +32,7 @@ def register_get_patient_documents_tool(mcp: FastMCP, vista_client: BaseVistaCli
         patient_dfn: str,
         station: str = "",
         completed_only: bool = True,
-        days_back: int = 180,
+        days_back: Annotated[int, Field(default=365, ge=1)] = 365,
         document_type: str = "",
         offset: Annotated[int, Field(default=0, ge=0)] = 0,
         limit: Annotated[int, Field(default=10, ge=1, le=200)] = 10,
@@ -103,11 +104,11 @@ def register_get_patient_documents_tool(mcp: FastMCP, vista_client: BaseVistaCli
                     patient_name=patient_data.patient_name,
                     patient_age=patient_data.demographics.calculate_age(),
                 ),
-                additional_info={
-                    "document_type_filter": document_type,
-                    "completed_only_filter": completed_only,
-                    "days_back_filter": days_back,
-                },
+                filters=DocumentsFiltersMetadata(
+                    document_type=document_type,
+                    completed_only=completed_only,
+                    days_back=days_back,
+                ),
                 pagination=PaginationMetadata(
                     total_available_items=total_documents_after_filtering,
                     returned=len(documents_page),

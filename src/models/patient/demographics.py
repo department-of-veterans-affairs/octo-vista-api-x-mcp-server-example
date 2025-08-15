@@ -189,10 +189,11 @@ class PatientDemographics(BasePatientModel):
     @classmethod
     def parse_date_of_birth(cls, v):
         """Parse date format"""
-        if isinstance(v, date):
-            return v
+        # datetime is a subclass of date; check it first so we convert to date
         if isinstance(v, datetime):
             return v.date()
+        if isinstance(v, date):
+            return v
         return parse_date(v)
 
     @field_validator("ssn", mode="before")

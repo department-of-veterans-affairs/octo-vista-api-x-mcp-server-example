@@ -2,21 +2,27 @@
 
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
-class BaseModelExcludeNone(BaseModel):
+class BaseVistaModel(BaseModel):
     """Base model that excludes None values from serialization by default"""
+
+    model_config = ConfigDict(
+        use_enum_values=True,
+        populate_by_name=True,
+        strict=True,
+        str_strip_whitespace=True,
+    )
 
     def model_dump(self, **kwargs):
         """Override to exclude None values by default"""
-        kwargs.setdefault("exclude_none", True)
-        return super().model_dump(**kwargs)
 
-    def model_dump_json(self, **kwargs):
-        """Override to exclude None values by default"""
-        kwargs.setdefault("exclude_none", True)
-        return super().model_dump_json(**kwargs)
+        overrides = {
+            "exclude_defaults": False,
+            "exclude_none": True,
+        }
+        return super().model_dump(**(kwargs | overrides))
 
 
 class Gender(str, Enum):
@@ -78,11 +84,3 @@ class LabResultFlag(str, Enum):
     CRITICAL = "C"
     ABNORMAL = "A"
     NORMAL = ""
-
-
-class BaseVistaModel(BaseModelExcludeNone):
-    """Base model for all Vista data models"""
-
-    class Config:
-        use_enum_values = True
-        populate_by_name = True

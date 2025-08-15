@@ -10,6 +10,7 @@ from ...models.responses.metadata import (
     DemographicsMetadata,
     PaginationMetadata,
     PerformanceMetrics,
+    ProceduresFiltersMetadata,
     ResponseMetadata,
     RpcCallMetadata,
     StationMetadata,
@@ -115,10 +116,12 @@ async def get_patient_procedures_impl(
                 patient_name=patient_data.patient_name,
                 patient_age=patient_data.demographics.calculate_age(),
             ),
-            additional_info={
-                "total_found": len(filtered_codes),
-                "returned_count": len(paginated_codes),
-            },
+            filters=ProceduresFiltersMetadata(
+                procedure_category=procedure_category,
+                date_from=date_from,
+                date_to=date_to,
+                group_by_encounter=group_by_encounter,
+            ),
             pagination=PaginationMetadata(
                 total_available_items=total_after_filtering,
                 returned=len(paginated_codes),

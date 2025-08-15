@@ -5,6 +5,7 @@ from typing import Any
 
 from pydantic import Field
 
+from .allergy import Allergy
 from .base import BasePatientModel
 from .clinical import Consult, LabResult, VitalSign
 from .cpt_code import CPTCode
@@ -37,10 +38,10 @@ class PatientDataCollection(BasePatientModel):
     orders: list[Order] = Field(default_factory=list)
     documents: list[Document] = Field(default_factory=list)
     cpt_codes: list[CPTCode] = Field(default_factory=list)
+    allergies: list[Allergy] = Field(default_factory=list)
 
     # Future expansion (stubs for now)
     # problems: List[Problem] = Field(default_factory=list)
-    # allergies: List[Allergy] = Field(default_factory=list)
     # immunizations: List[Immunization] = Field(default_factory=list)
     # appointments: List[Appointment] = Field(default_factory=list)
 

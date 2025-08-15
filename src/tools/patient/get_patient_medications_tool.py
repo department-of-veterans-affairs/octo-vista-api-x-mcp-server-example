@@ -8,6 +8,7 @@ from pydantic import Field
 
 from ...models.responses.metadata import (
     DemographicsMetadata,
+    MedicationsFiltersMetadata,
     PaginationMetadata,
     PerformanceMetrics,
     ResponseMetadata,
@@ -123,10 +124,10 @@ def register_get_patient_medications_tool(mcp: FastMCP, vista_client: BaseVistaC
                     patient_name=patient_data.patient_name,
                     patient_age=patient_data.demographics.calculate_age(),
                 ),
-                additional_info={
-                    "active_only_filter": active_only,
-                    "therapeutic_class_filter": therapeutic_class,
-                },
+                filters=MedicationsFiltersMetadata(
+                    active_only=active_only,
+                    therapeutic_class=therapeutic_class,
+                ),
                 pagination=PaginationMetadata(
                     total_available_items=total_medications_after_filtering,
                     returned=len(medications_page),

@@ -5,10 +5,10 @@ from typing import Optional, Protocol, runtime_checkable
 
 from pydantic import ConfigDict, field_validator
 
-from ..base.common import BaseModelExcludeNone
+from ..base.common import BaseVistaModel
 
 
-class BasePatientModel(BaseModelExcludeNone):
+class BasePatientModel(BaseVistaModel):
     """Base model for all patient data models"""
 
     model_config = ConfigDict(

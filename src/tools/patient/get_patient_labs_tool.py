@@ -8,6 +8,7 @@ from pydantic import Field
 
 from ...models.responses.metadata import (
     DemographicsMetadata,
+    LabsFiltersMetadata,
     PaginationMetadata,
     PerformanceMetrics,
     ResponseMetadata,
@@ -36,7 +37,7 @@ def register_get_patient_labs_tool(mcp: FastMCP, vista_client: BaseVistaClient):
         station: str | None = None,
         abnormal_only: bool = False,
         lab_type: str | None = None,
-        days_back: int = 90,
+        days_back: Annotated[int, Field(default=90, ge=0)] = 90,
         offset: Annotated[int, Field(default=0, ge=0)] = 0,
         limit: Annotated[int, Field(default=10, ge=1, le=200)] = 10,
     ) -> LabResultsResponse:
@@ -112,11 +113,11 @@ def register_get_patient_labs_tool(mcp: FastMCP, vista_client: BaseVistaClient):
                     patient_name=patient_data.patient_name,
                     patient_age=patient_data.demographics.calculate_age(),
                 ),
-                additional_info={
-                    "abnormal_only_filter": abnormal_only,
-                    "lab_type_filter": lab_type,
-                    "days_back_filter": days_back,
-                },
+                filters=LabsFiltersMetadata(
+                    abnormal_only=abnormal_only,
+                    lab_type=lab_type,
+                    days_back=days_back,
+                ),
                 pagination=PaginationMetadata(
                     total_available_items=total_filtered_labs,
                     offset=offset,
@@ -131,7 +132,6 @@ def register_get_patient_labs_tool(mcp: FastMCP, vista_client: BaseVistaClient):
             data = LabResultsResponseData(
                 abnormal_count=len([lab for lab in labs_page if lab.is_abnormal]),
                 critical_count=len([lab for lab in labs_page if lab.is_critical]),
-                days_back=days_back,
                 by_type={
                     format_lab_type(test_type): results
                     for test_type, results in lab_groups.items()

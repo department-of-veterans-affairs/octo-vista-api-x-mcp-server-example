@@ -253,9 +253,9 @@ class TestVisitToolIntegration:
 
                 # Check filters in metadata
                 metadata = result.metadata
-                assert metadata.additional_info["filters"]["visit_type"] == "inpatient"
-                assert metadata.additional_info["filters"]["active_only"] is False
-                assert metadata.additional_info["filters"]["days_back"] == 30
+                assert metadata.filters.visit_type == "inpatient"
+                assert metadata.filters.active_only is False
+                assert metadata.filters.days_back == 30
 
                 # Check visits structure
                 visits_data = result.data
@@ -415,7 +415,7 @@ class TestVisitToolIntegration:
                 assert metadata.performance.duration_ms >= 0
                 assert metadata.rpc is not None
                 assert metadata.demographics is not None
-                assert metadata.additional_info.get("filters") is not None
+                assert metadata.filters is not None
 
                 # Check RPC metadata
                 rpc_metadata = metadata.rpc
@@ -424,10 +424,10 @@ class TestVisitToolIntegration:
                 assert rpc_metadata.json_result is True
 
                 # Check filters metadata
-                filters = metadata.additional_info["filters"]
-                assert "visit_type" in filters
-                assert "active_only" in filters
-                assert "days_back" in filters
+                filters = metadata.filters
+                assert hasattr(filters, "visit_type")
+                assert hasattr(filters, "active_only")
+                assert hasattr(filters, "days_back")
 
     @pytest.mark.asyncio
     async def test_get_patient_visits_response_structure(
@@ -581,7 +581,7 @@ class TestVisitToolIntegration:
 
                     assert result.success is True
                     metadata = result.metadata
-                    assert metadata.additional_info["filters"]["days_back"] == days_back
+                    assert metadata.filters.days_back == days_back
 
     @pytest.mark.asyncio
     async def test_get_patient_visits_type_filtering(
@@ -628,9 +628,7 @@ class TestVisitToolIntegration:
 
                     assert result.success is True
                     metadata = result.metadata
-                    assert (
-                        metadata.additional_info["filters"]["visit_type"] == visit_type
-                    )
+                    assert metadata.filters.visit_type == visit_type
 
                     # Check that all returned visits match the requested type
                     all_visits = result.data.all_visits
@@ -674,7 +672,7 @@ class TestVisitToolIntegration:
 
                 assert result.success is True
                 metadata = result.metadata
-                assert metadata.additional_info["filters"]["active_only"] is True
+                assert metadata.filters.active_only is True
 
                 # Check that all returned visits are active
                 all_visits = result.data.all_visits
@@ -706,7 +704,7 @@ class TestVisitToolIntegration:
 
                 assert result.success is True
                 metadata = result.metadata
-                assert metadata.additional_info["filters"]["active_only"] is False
+                assert metadata.filters.active_only is False
 
                 # Should return all visits (active and inactive)
                 all_visits = result.data.all_visits

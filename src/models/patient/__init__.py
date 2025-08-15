@@ -1,5 +1,6 @@
 """Patient data models"""
 
+from .allergy import Allergy, AllergyProduct, AllergyReaction
 from .base import (
     BasePatientModel,
     CodedValue,
@@ -58,6 +59,10 @@ __all__ = [
     "Diagnosis",
     "Order",
     "Document",
+    # Allergies
+    "Allergy",
+    "AllergyProduct",
+    "AllergyReaction",
     # Collection
     "PatientDataCollection",
     "CPTCode",

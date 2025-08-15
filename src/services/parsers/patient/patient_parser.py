@@ -10,6 +10,9 @@ from typing import Any
 from jsonpath_ng import parse as jsonpath_parse  # type: ignore
 
 from ....models.patient import (
+    Allergy,
+    AllergyProduct,
+    AllergyReaction,
     Consult,
     CPTCode,
     Diagnosis,
@@ -107,6 +110,7 @@ class PatientDataParser:
         health_factors = self._parse_health_factors(grouped_items.get("factor", []))
         documents = self._parse_documents(grouped_items.get("document", []))
         cpt_codes = self._parse_cpt_codes(grouped_items.get("cpt", []))
+        allergies = self._parse_allergies(grouped_items.get("allergy", []))
 
         problem_items = grouped_items.get("problem", [])
         pov_items = grouped_items.get("pov", [])
@@ -126,6 +130,7 @@ class PatientDataParser:
             orders=orders,
             documents=documents,
             cpt_codes=cpt_codes,
+            allergies=allergies,
             source_station=self.station,
             source_dfn=self.dfn,
             total_items=len(items),
@@ -776,6 +781,84 @@ class PatientDataParser:
             from ...validators.cpt_validators import parse_cpt_modifiers
 
             processed["modifiers"] = parse_cpt_modifiers(processed["modifiers"])
+
+        return processed
+
+    def _parse_allergies(self, allergy_items: list[dict[str, Any]]) -> list[Allergy]:
+        """Parse allergy items from VPR JSON"""
+        allergies = []
+
+        for item in allergy_items:
+            try:
+                processed_item = self._preprocess_allergy_item(item)
+                if not processed_item:
+                    continue
+
+                allergy = Allergy(**processed_item)
+                allergies.append(allergy)
+            except Exception as e:
+                logger.warning(f"Failed to parse allergy {item.get('uid')}: {e}")
+                logger.debug(f"Allergy item data: {item}")
+
+        # Sort by entered date (newest first)
+        allergies.sort(
+            key=lambda a: a.entered or datetime.min.replace(tzinfo=UTC), reverse=True
+        )
+
+        return allergies
+
+    def _preprocess_allergy_item(self, item: dict[str, Any]) -> dict[str, Any] | None:
+        """Preprocess allergy item for model creation"""
+        if not item:
+            return None
+
+        processed = item.copy()
+
+        # Handle required fields
+        if "uid" not in processed:
+            logger.warning("Allergy item missing UID")
+            return None
+
+        # Parse products array
+        if "products" in processed and isinstance(processed["products"], list):
+            products = []
+            for product_item in processed["products"]:
+                if isinstance(product_item, dict):
+                    product = AllergyProduct(
+                        name=product_item.get("name", ""), vuid=product_item.get("vuid")
+                    )
+                    products.append(product)
+            processed["products"] = products
+        else:
+            processed["products"] = []
+
+        # Parse reactions array
+        if "reactions" in processed and isinstance(processed["reactions"], list):
+            reactions = []
+            for reaction_item in processed["reactions"]:
+                if isinstance(reaction_item, dict):
+                    reaction = AllergyReaction(
+                        name=reaction_item.get("name", ""),
+                        vuid=reaction_item.get("vuid"),
+                    )
+                    reactions.append(reaction)
+            processed["reactions"] = reactions
+        else:
+            processed["reactions"] = []
+
+        # Parse datetime fields
+        from .datetime_parser import parse_datetime
+
+        for field in ["entered", "verified"]:
+            if field in processed and processed[field]:
+                processed[field] = parse_datetime(processed[field])
+
+        # Ensure facility code and name are present
+        if "facilityCode" not in processed:
+            processed["facilityCode"] = self.station
+
+        if "facilityName" not in processed:
+            processed["facilityName"] = f"Station {self.station}"
 
         return processed
 

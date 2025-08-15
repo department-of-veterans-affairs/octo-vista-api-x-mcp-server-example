@@ -7,6 +7,7 @@ from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
 from ...models.responses.metadata import (
+    ConsultsFiltersMetadata,
     DemographicsMetadata,
     PaginationMetadata,
     PerformanceMetrics,
@@ -102,9 +103,9 @@ def register_get_patient_consults_tool(mcp: FastMCP, vista_client: BaseVistaClie
                     patient_name=patient_data.patient_name,
                     patient_age=patient_data.demographics.calculate_age(),
                 ),
-                additional_info={
-                    "active_only_filter": active_only,
-                },
+                filters=ConsultsFiltersMetadata(
+                    active_only=active_only,
+                ),
                 pagination=PaginationMetadata(
                     total_available_items=total_consults_after_filtering,
                     returned=len(consults_page),

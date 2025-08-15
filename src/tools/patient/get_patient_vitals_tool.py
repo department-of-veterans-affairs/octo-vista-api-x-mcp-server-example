@@ -13,6 +13,7 @@ from ...models.responses.metadata import (
     ResponseMetadata,
     RpcCallMetadata,
     StationMetadata,
+    VitalsFiltersMetadata,
 )
 from ...models.responses.tool_responses import (
     VitalSignsResponse,
@@ -34,7 +35,7 @@ def register_get_patient_vitals_tool(mcp: FastMCP, vista_client: BaseVistaClient
         patient_dfn: str,
         station: str | None = None,
         vital_type: str | None = None,
-        days_back: int = 30,
+        days_back: Annotated[int, Field(default=30, ge=0)] = 30,
         offset: Annotated[int, Field(default=0, ge=0)] = 0,
         limit: Annotated[int, Field(default=10, ge=1, le=200)] = 10,
     ) -> VitalSignsResponse:
@@ -108,10 +109,10 @@ def register_get_patient_vitals_tool(mcp: FastMCP, vista_client: BaseVistaClient
                     patient_name=patient_data.patient_name,
                     patient_age=patient_data.demographics.calculate_age(),
                 ),
-                additional_info={
-                    "vital_type_filter": vital_type,
-                    "days_back_filter": days_back,
-                },
+                filters=VitalsFiltersMetadata(
+                    vital_type=vital_type,
+                    days_back=days_back,
+                ),
                 pagination=PaginationMetadata(
                     total_available_items=total_vitals_after_filtering,
                     returned=len(vitals_page),

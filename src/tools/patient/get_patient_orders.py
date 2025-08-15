@@ -8,6 +8,7 @@ from pydantic import Field
 
 from ...models.responses.metadata import (
     DemographicsMetadata,
+    OrdersFiltersMetadata,
     PaginationMetadata,
     PerformanceMetrics,
     ResponseMetadata,
@@ -99,7 +100,9 @@ def register_get_patient_orders_tool(mcp: FastMCP, vista_client: BaseVistaClient
                     patient_name=patient_data.patient_name,
                     patient_age=patient_data.demographics.calculate_age(),
                 ),
-                additional_info={"active_only_filter": active_only},
+                filters=OrdersFiltersMetadata(
+                    active_only=active_only,
+                ),
                 pagination=PaginationMetadata(
                     total_available_items=total_orders_after_filtering,
                     returned=len(orders_page),

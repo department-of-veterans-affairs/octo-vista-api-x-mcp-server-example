@@ -15,6 +15,7 @@ from ...models.responses.metadata import (
     ResponseMetadata,
     RpcCallMetadata,
     StationMetadata,
+    VisitsFiltersMetadata,
 )
 from ...models.responses.tool_responses import VisitsResponse, VisitsResponseData
 from ...services.data import get_patient_data
@@ -229,13 +230,11 @@ async def get_patient_visits(
                 patient_dfn=patient_dfn,
                 patient_name=patient_data.patient_name,
             ),
-            additional_info={
-                "filters": {
-                    "visit_type": visit_type,
-                    "active_only": active_only,
-                    "days_back": days_back,
-                }
-            },
+            filters=VisitsFiltersMetadata(
+                visit_type=visit_type,
+                active_only=active_only,
+                days_back=days_back,
+            ),
             pagination=PaginationMetadata(
                 total_available_items=total_visits_after_filtering,
                 returned=len(visits_page),
@@ -279,7 +278,7 @@ def register_get_patient_visits_tool(mcp: FastMCP, vista_client: BaseVistaClient
         station: str | None = None,
         visit_type: str = "",
         active_only: bool = False,
-        days_back: int = 365,
+        days_back: Annotated[int, Field(default=365, ge=1)] = 365,
         offset: Annotated[int, Field(default=0, ge=0)] = 0,
         limit: Annotated[int, Field(default=10, ge=1, le=200)] = 10,
     ) -> VisitsResponse:

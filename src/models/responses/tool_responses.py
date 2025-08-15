@@ -6,8 +6,8 @@ from typing import Generic, TypeVar
 from pydantic import Field, computed_field
 
 from ..base import BaseVistaModel
-from ..base.common import BaseModelExcludeNone
 from ..patient import (
+    Allergy,
     Consult,
     CPTCode,
     Diagnosis,
@@ -26,7 +26,7 @@ from .metadata import ResponseMetadata
 T = TypeVar("T")
 
 
-class ResponseData(BaseModelExcludeNone):
+class ResponseData(BaseVistaModel):
     """Base class for response data payloads"""
 
     pass
@@ -75,7 +75,7 @@ class BodySystem(str, Enum):
     UNCLASSIFIED = "unclassified"
 
 
-class DiagnosisTrend(BaseModelExcludeNone):
+class DiagnosisTrend(BaseVistaModel):
     """Trend analysis for a specific diagnosis"""
 
     trend: str  # "stable", "improving", "worsening", "no_data"
@@ -102,7 +102,6 @@ class MedicationsResponseData(ResponseData):
 class LabResultsResponseData(ResponseData):
     abnormal_count: int = 0
     critical_count: int = 0
-    days_back: int = 0
     by_type: dict[str, list[str]] = Field(default_factory=dict)
     labs: list[LabResult] = Field(default_factory=list)
 
@@ -134,6 +133,17 @@ class DiagnosesResponseData(ResponseData):
     chronic_conditions: list[str] = Field(default_factory=list)
     trending: dict[str, DiagnosisTrend] = Field(default_factory=dict)
     diagnoses: list[Diagnosis] = Field(default_factory=list)
+
+
+class AllergiesResponseData(ResponseData):
+    """Response data for patient allergies"""
+
+    verified_count: int = 0
+    unverified_count: int = 0
+    by_product_type: dict[str, int] = Field(default_factory=dict)
+    by_reaction_type: dict[str, int] = Field(default_factory=dict)
+    severe_allergies: list[str] = Field(default_factory=list)
+    allergies: list[Allergy] = Field(default_factory=list)
 
 
 class HealthFactorsResponseData(ResponseData):
@@ -233,6 +243,12 @@ class DiagnosesResponse(ToolResponse[DiagnosesResponseData]):
 
 class VisitsResponse(ToolResponse[VisitsResponseData]):
     """Visits response"""
+
+    pass
+
+
+class AllergiesResponse(ToolResponse[AllergiesResponseData]):
+    """Allergies response"""
 
     pass
 

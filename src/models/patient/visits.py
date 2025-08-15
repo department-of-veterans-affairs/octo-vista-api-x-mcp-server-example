@@ -8,7 +8,7 @@ from pydantic import Field, field_validator
 
 from ...services.formatters.location_mapper import LocationMapper
 from ...services.parsers.patient.datetime_parser import parse_datetime
-from ..base.common import BaseModelExcludeNone
+from ..base.common import BaseVistaModel
 from .base import BasePatientModel, FacilityInfo
 
 
@@ -222,7 +222,7 @@ class Visit(BasePatientModel):
         return LocationMapper.standardize_location_name(self.location_name)
 
 
-class VisitSummary(BaseModelExcludeNone):
+class VisitSummary(BaseVistaModel):
     """Summary of patient visits"""
 
     total_visits: int = Field(description="Total number of visits")
