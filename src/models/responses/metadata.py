@@ -1,7 +1,6 @@
 """Response metadata models for MCP tools"""
 
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
 
 from pydantic import (
     Field,
@@ -15,9 +14,6 @@ from pydantic import (
 
 from ...utils import get_logger
 from ..base import BaseVistaModel
-
-if TYPE_CHECKING:
-    pass
 from ..utils import format_datetime_for_mcp_response
 
 logger = get_logger()
@@ -154,6 +150,17 @@ class POVsFiltersMetadata(FiltersMetadata):
 
     primary_only: bool = Field(
         default=False, description="Filter to show only primary POVs"
+    )
+
+
+class ProblemsFiltersMetadata(FiltersMetadata):
+    """Filter metadata for Problems tool"""
+
+    active_only: bool = Field(
+        default=False, description="Filter to show only active problems"
+    )
+    service_connected_only: bool = Field(
+        default=False, description="Filter to show only service connected problems"
     )
 
 

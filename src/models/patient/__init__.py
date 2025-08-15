@@ -28,6 +28,13 @@ from .health_factor import HealthFactor
 from .medication import Medication
 from .order import Order
 from .pov import POVSummary, POVType, PurposeOfVisit
+from .problem import (
+    Problem,
+    ProblemAcuity,
+    ProblemComment,
+    ProblemStatus,
+    ProblemSummary,
+)
 from .visits import Visit, VisitSummary, VisitType
 
 __all__ = [
@@ -64,6 +71,12 @@ __all__ = [
     "PurposeOfVisit",
     "POVType",
     "POVSummary",
+    # Problems
+    "Problem",
+    "ProblemAcuity",
+    "ProblemComment",
+    "ProblemStatus",
+    "ProblemSummary",
     # Allergies
     "Allergy",
     "AllergyProduct",

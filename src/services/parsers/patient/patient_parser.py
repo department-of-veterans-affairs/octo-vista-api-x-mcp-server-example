@@ -27,6 +27,7 @@ from ....models.patient import (
     PatientFlag,
     PatientSupport,
     PatientTelecom,
+    Problem,
     PurposeOfVisit,
     VeteranInfo,
     Visit,
@@ -114,6 +115,7 @@ class PatientDataParser:
         cpt_codes = self._parse_cpt_codes(grouped_items.get("cpt", []))
         allergies = self._parse_allergies(grouped_items.get("allergy", []))
         povs = self._parse_povs(grouped_items.get("pov", []))
+        problems = self._parse_problems(grouped_items.get("problem", []))
 
         problem_items = grouped_items.get("problem", [])
         pov_items = grouped_items.get("pov", [])
@@ -135,6 +137,7 @@ class PatientDataParser:
             cpt_codes=cpt_codes,
             allergies=allergies,
             povs=povs,
+            problems=problems,
             source_station=self.station,
             source_dfn=self.dfn,
             total_items=len(items),
@@ -146,7 +149,9 @@ class PatientDataParser:
             {len(vital_signs)} vitals, {len(lab_results)} labs, {len(consults)} consults, 
             {len(medications)} medications, {len(visits)} visits, {len(health_factors)} health factors, 
             {len(diagnoses)} diagnoses, {len(orders)} orders, {len(documents)} documents, 
-            {len(cpt_codes)} CPT codes, {len(povs)} POVs"""
+            {len(cpt_codes)} CPT codes, 
+            {len(povs)} POVs, 
+            {len(problems)} problems"""
         )
 
         return collection
@@ -928,6 +933,97 @@ class PatientDataParser:
                 processed["type"] = POVType.SECONDARY
             else:
                 processed["type"] = POVType.PRIMARY  # Default fallback
+
+        return processed
+
+    def _parse_problems(self, problem_items: list[dict[str, Any]]) -> list[Problem]:
+        """Parse Problem items from VPR data"""
+        problems = []
+
+        for item in problem_items:
+            try:
+                processed_item = self._preprocess_problem_item(item)
+                if processed_item is None:
+                    continue
+
+                problem = Problem(**processed_item)
+                problems.append(problem)
+            except Exception as e:
+                logger.warning(f"Failed to parse problem {item.get('uid')}: {e}")
+                logger.debug(f"Problem item data: {item}")
+
+        # Sort by onset date (newest first)
+        problems.sort(
+            key=lambda p: p.entered or datetime.min.replace(tzinfo=UTC), reverse=True
+        )
+
+        return problems
+
+    def _preprocess_problem_item(self, item: dict[str, Any]) -> dict[str, Any] | None:
+        """Preprocess problem item for model creation"""
+        if not item:
+            return None
+
+        processed = item.copy()
+
+        # Handle required fields
+        if "uid" not in processed:
+            logger.warning("Problem item missing UID")
+            return None
+
+        # Parse datetime fields
+        from .datetime_parser import parse_datetime
+
+        for field in ["entered", "onset", "updated"]:
+            if field in processed and processed[field]:
+                processed[field] = parse_datetime(processed[field])
+
+        # Parse comments if present
+        if "comments" in processed and isinstance(processed["comments"], list):
+            from ....models.patient.problem import ProblemComment
+
+            comments = []
+            for comment_item in processed["comments"]:
+                if isinstance(comment_item, dict):
+                    try:
+                        comment = ProblemComment(**comment_item)
+                        comments.append(comment)
+                    except Exception as e:
+                        logger.warning(f"Failed to parse problem comment: {e}")
+            processed["comments"] = comments
+        else:
+            processed["comments"] = []
+
+        # Ensure facility code and name are present
+        if "facilityCode" not in processed:
+            processed["facilityCode"] = self.station
+
+        if "facilityName" not in processed:
+            processed["facilityName"] = f"Station {self.station}"
+
+        # Ensure required fields have defaults
+        if "problemText" not in processed:
+            processed["problemText"] = processed.get("name", "UNKNOWN PROBLEM")
+
+        # Handle localId - ensure it's present
+        if "localId" not in processed:
+            # Extract from UID if possible
+            uid = processed.get("uid", "")
+            if uid:
+                parts = uid.split(":")
+                if len(parts) >= 4:
+                    processed["localId"] = parts[-1]  # Last part of UID
+                else:
+                    processed["localId"] = "0"
+            else:
+                processed["localId"] = "0"
+
+        # Set default values for optional fields
+        if "removed" not in processed:
+            processed["removed"] = False
+
+        if "unverified" not in processed:
+            processed["unverified"] = False
 
         return processed
 

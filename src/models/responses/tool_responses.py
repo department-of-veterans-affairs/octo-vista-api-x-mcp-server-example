@@ -17,6 +17,8 @@ from ..patient import (
     Medication,
     Order,
     POVSummary,
+    Problem,
+    ProblemSummary,
     PurposeOfVisit,
     Visit,
     VisitSummary,
@@ -280,5 +282,23 @@ class POVsResponseData(ResponseData):
 
 class POVsResponse(ToolResponse[POVsResponseData]):
     """POVs response"""
+
+    pass
+
+
+class ProblemsResponseData(ResponseData):
+    """Problems response data"""
+
+    problems: list[Problem]
+    summary: ProblemSummary
+    by_status: dict[str, int] = Field(default_factory=dict)
+    by_acuity: dict[str, int] = Field(default_factory=dict)
+    active_problems: list[str] = Field(default_factory=list)
+    inactive_problems: list[str] = Field(default_factory=list)
+    service_connected_problems: list[str] = Field(default_factory=list)
+
+
+class ProblemsResponse(ToolResponse[ProblemsResponseData]):
+    """Problems response"""
 
     pass
