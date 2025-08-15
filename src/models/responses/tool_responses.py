@@ -16,6 +16,8 @@ from ..patient import (
     LabResult,
     Medication,
     Order,
+    POVSummary,
+    PurposeOfVisit,
     Visit,
     VisitSummary,
     VitalSign,
@@ -261,5 +263,22 @@ class HealthFactorsResponse(ToolResponse[HealthFactorsResponseData]):
 
 class ProceduresResponse(ToolResponse[ProceduresResponseData]):
     """Procedures response"""
+
+    pass
+
+
+class POVsResponseData(ResponseData):
+    """POVs response data"""
+
+    povs: list[PurposeOfVisit]
+    summary: POVSummary
+    by_encounter: dict[str, list[str]] = Field(default_factory=dict)
+    by_type: dict[str, int] = Field(default_factory=dict)
+    primary_povs: list[str] = Field(default_factory=list)
+    secondary_povs: list[str] = Field(default_factory=list)
+
+
+class POVsResponse(ToolResponse[POVsResponseData]):
+    """POVs response"""
 
     pass

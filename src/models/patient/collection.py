@@ -15,6 +15,7 @@ from .document import Document
 from .health_factor import HealthFactor
 from .medication import Medication
 from .order import Order
+from .pov import PurposeOfVisit
 from .visits import Visit
 
 
@@ -39,6 +40,7 @@ class PatientDataCollection(BasePatientModel):
     documents: list[Document] = Field(default_factory=list)
     cpt_codes: list[CPTCode] = Field(default_factory=list)
     allergies: list[Allergy] = Field(default_factory=list)
+    povs: list[PurposeOfVisit] = Field(default_factory=list)
 
     # Future expansion (stubs for now)
     # problems: List[Problem] = Field(default_factory=list)

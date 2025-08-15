@@ -27,6 +27,7 @@ from .document import Document
 from .health_factor import HealthFactor
 from .medication import Medication
 from .order import Order
+from .pov import POVSummary, POVType, PurposeOfVisit
 from .visits import Visit, VisitSummary, VisitType
 
 __all__ = [
@@ -59,6 +60,10 @@ __all__ = [
     "Diagnosis",
     "Order",
     "Document",
+    # POVs
+    "PurposeOfVisit",
+    "POVType",
+    "POVSummary",
     # Allergies
     "Allergy",
     "AllergyProduct",

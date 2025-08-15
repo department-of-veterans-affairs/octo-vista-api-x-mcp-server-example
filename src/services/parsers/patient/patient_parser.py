@@ -27,10 +27,12 @@ from ....models.patient import (
     PatientFlag,
     PatientSupport,
     PatientTelecom,
+    PurposeOfVisit,
     VeteranInfo,
     Visit,
     VitalSign,
 )
+from ....models.patient.pov import POVType
 from ....utils import get_logger
 
 logger = get_logger()
@@ -111,6 +113,7 @@ class PatientDataParser:
         documents = self._parse_documents(grouped_items.get("document", []))
         cpt_codes = self._parse_cpt_codes(grouped_items.get("cpt", []))
         allergies = self._parse_allergies(grouped_items.get("allergy", []))
+        povs = self._parse_povs(grouped_items.get("pov", []))
 
         problem_items = grouped_items.get("problem", [])
         pov_items = grouped_items.get("pov", [])
@@ -131,6 +134,7 @@ class PatientDataParser:
             documents=documents,
             cpt_codes=cpt_codes,
             allergies=allergies,
+            povs=povs,
             source_station=self.station,
             source_dfn=self.dfn,
             total_items=len(items),
@@ -138,12 +142,11 @@ class PatientDataParser:
         )
 
         logger.info(
-            f"Parsed patient data for {collection.patient_name}: "
-            f"{len(vital_signs)} vitals, {len(lab_results)} labs, "
-            f"{len(consults)} consults, {len(medications)} medications, "
-            f"{len(visits)} visits, {len(health_factors)} health factors, "
-            f"{len(diagnoses)} diagnoses, {len(orders)} orders, "
-            f"{len(documents)} documents, {len(cpt_codes)} CPT codes"
+            f"""Parsed patient data for {collection.patient_name}: 
+            {len(vital_signs)} vitals, {len(lab_results)} labs, {len(consults)} consults, 
+            {len(medications)} medications, {len(visits)} visits, {len(health_factors)} health factors, 
+            {len(diagnoses)} diagnoses, {len(orders)} orders, {len(documents)} documents, 
+            {len(cpt_codes)} CPT codes, {len(povs)} POVs"""
         )
 
         return collection
@@ -859,6 +862,72 @@ class PatientDataParser:
 
         if "facilityName" not in processed:
             processed["facilityName"] = f"Station {self.station}"
+
+        return processed
+
+    def _parse_povs(self, pov_items: list[dict[str, Any]]) -> list[PurposeOfVisit]:
+        """Parse POV (Purpose of Visit) items from VPR data"""
+        povs = []
+
+        for item in pov_items:
+            try:
+                processed_item = self._preprocess_pov_item(item)
+                if processed_item is None:
+                    continue
+
+                pov = PurposeOfVisit(**processed_item)
+                povs.append(pov)
+            except Exception as e:
+                logger.warning(f"Failed to parse POV {item.get('uid')}: {e}")
+                logger.debug(f"POV item data: {item}")
+
+        # Sort by entered date (newest first)
+        povs.sort(
+            key=lambda p: p.entered or datetime.min.replace(tzinfo=UTC), reverse=True
+        )
+
+        return povs
+
+    def _preprocess_pov_item(self, item: dict[str, Any]) -> dict[str, Any] | None:
+        """Preprocess POV item for model creation"""
+        if not item:
+            return None
+
+        processed = item.copy()
+
+        # Handle required fields
+        if "uid" not in processed:
+            logger.warning("POV item missing UID")
+            return None
+
+        # Parse datetime fields
+        from .datetime_parser import parse_datetime
+
+        for field in ["entered"]:
+            if field in processed and processed[field]:
+                processed[field] = parse_datetime(processed[field])
+
+        # Ensure facility code and name are present
+        if "facilityCode" not in processed:
+            processed["facilityCode"] = self.station
+
+        if "facilityName" not in processed:
+            processed["facilityName"] = f"Station {self.station}"
+
+        # Ensure required fields have defaults
+        if "name" not in processed:
+            processed["name"] = ""
+
+        # Convert type string to POVType enum
+
+        type_value = processed.get("type", "P")
+        if isinstance(type_value, str):
+            if type_value.upper() == "P":
+                processed["type"] = POVType.PRIMARY
+            elif type_value.upper() == "S":
+                processed["type"] = POVType.SECONDARY
+            else:
+                processed["type"] = POVType.PRIMARY  # Default fallback
 
         return processed
 

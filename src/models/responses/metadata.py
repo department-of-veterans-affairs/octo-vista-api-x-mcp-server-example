@@ -1,6 +1,7 @@
 """Response metadata models for MCP tools"""
 
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from pydantic import (
     Field,
@@ -13,7 +14,10 @@ from pydantic import (
 )
 
 from ...utils import get_logger
-from ..base.common import BaseVistaModel
+from ..base import BaseVistaModel
+
+if TYPE_CHECKING:
+    pass
 from ..utils import format_datetime_for_mcp_response
 
 logger = get_logger()
@@ -142,6 +146,14 @@ class ProceduresFiltersMetadata(FiltersMetadata):
     )
     group_by_encounter: bool = Field(
         default=False, description="Group procedures by encounter"
+    )
+
+
+class POVsFiltersMetadata(FiltersMetadata):
+    """Filter metadata for POVs (Purpose of Visit) tool"""
+
+    primary_only: bool = Field(
+        default=False, description="Filter to show only primary POVs"
     )
 
 
