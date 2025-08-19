@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from pydantic import Field, field_serializer, field_validator
+from pydantic import BaseModel, Field, field_serializer, field_validator
 
 from ...services.parsers.patient.datetime_parser import parse_datetime
 from ...utils import get_logger
@@ -10,6 +10,28 @@ from ..utils import format_datetime_for_mcp_response
 from .base import BasePatientModel
 
 logger = get_logger()
+
+
+class ProblemComment(BaseModel):
+    """Individual comment on a diagnosis/problem"""
+
+    comment: str
+    entered: datetime | None = None
+    entered_by_code: str | None = Field(default=None, alias="enteredByCode")
+    entered_by_name: str | None = Field(default=None, alias="enteredByName")
+
+    @field_validator("entered", mode="before")
+    @classmethod
+    def parse_datetime_field(cls, v):
+        """Parse datetime format"""
+        if v is None or isinstance(v, datetime):
+            return v
+        return parse_datetime(v)
+
+    @field_serializer("entered")
+    def serialize_datetime_fields(self, value: datetime | None) -> str | None:
+        """Serialize datetime fields to ISO format for JSON schema compliance"""
+        return format_datetime_for_mcp_response(value)
 
 
 class Diagnosis(BasePatientModel):
@@ -43,7 +65,7 @@ class Diagnosis(BasePatientModel):
     facility_name: str = Field(alias="facilityName")
 
     # Additional context
-    comments: str | None = Field(default=None, alias="comment")
+    comments: list[ProblemComment] | None = Field(default=None)
     summary: str | None = None
 
     @field_validator("local_id", "facility_code", mode="before")

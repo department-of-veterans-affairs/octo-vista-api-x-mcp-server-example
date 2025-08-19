@@ -14,9 +14,9 @@ from ...utils import get_logger
 from ..utils import format_datetime_for_mcp_response, format_datetime_with_default
 from .base import (
     BasePatientModel,
-    CodedValue,
     ConsultStatus,
     InterpretationCode,
+    ProvisionalDx,
     Urgency,
     VitalType,
 )
@@ -154,10 +154,10 @@ class LabResult(BasePatientModel):
     # Test information
     type_code: str = Field(alias="typeCode")  # LOINC code
     type_name: str = Field(alias="typeName")  # "GLUCOSE"
-    display_name: str = Field(alias="displayName")
+    display_name: str | None = Field(None, alias="displayName")
 
     # Results - handle mixed types
-    result: str  # Original value
+    result: str | None = None  # Original value
     numeric_result: float | None = None
     units: str | None = None
 
@@ -180,7 +180,7 @@ class LabResult(BasePatientModel):
 
     # Order info
     order_uid: str | None = Field(None, alias="orderUid")
-    lab_order_id: int | None = Field(None, alias="labOrderId")
+    lab_order_id: str | None = Field(None, alias="labOrderId")
 
     # Location
     facility_code: str | int = Field(alias="facilityCode")
@@ -262,7 +262,7 @@ class LabResult(BasePatientModel):
         """Get display-friendly value with units"""
         if self.units:
             return f"{self.result} {self.units}"
-        return self.result
+        return self.result or ""
 
 
 class Consult(BasePatientModel):
@@ -293,7 +293,7 @@ class Consult(BasePatientModel):
 
     # Clinical info
     reason: str | None = None
-    provisional_dx: CodedValue | None = Field(None, alias="provisionalDx")
+    provisional_dx: ProvisionalDx | None = Field(None, alias="provisionalDx")
 
     # Location
     facility_code: str | int = Field(alias="facilityCode")

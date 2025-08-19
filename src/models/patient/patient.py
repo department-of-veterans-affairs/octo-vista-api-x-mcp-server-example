@@ -2,11 +2,11 @@
 
 from .base import (
     BasePatientModel,
-    CodedValue,
     ConsultStatus,
     FacilityInfo,
     Gender,
     InterpretationCode,
+    ProvisionalDx,
     Urgency,
 )
 from .clinical import (
@@ -36,7 +36,7 @@ __all__ = [
     "ConsultStatus",
     "Urgency",
     "FacilityInfo",
-    "CodedValue",
+    "ProvisionalDx",
     # Demographics
     "PatientAddress",
     "PatientTelecom",

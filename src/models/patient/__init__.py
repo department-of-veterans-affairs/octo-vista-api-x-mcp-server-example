@@ -3,11 +3,11 @@
 from .allergy import Allergy, AllergyProduct, AllergyReaction
 from .base import (
     BasePatientModel,
-    CodedValue,
     ConsultStatus,
     FacilityInfo,
     Gender,
     InterpretationCode,
+    ProvisionalDx,
     Urgency,
     VitalType,
 )
@@ -45,7 +45,7 @@ __all__ = [
     "ConsultStatus",
     "Urgency",
     "FacilityInfo",
-    "CodedValue",
+    "ProvisionalDx",
     "VitalType",
     # Demographics
     "PatientAddress",

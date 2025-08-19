@@ -241,16 +241,16 @@ class FacilityInfo(BasePatientModel):
         return str(v) if v is not None else ""
 
 
-class CodedValue(BasePatientModel):
+class ProvisionalDx(BasePatientModel):
     """Generic coded value with code and name"""
 
-    code: str
+    code: str | None = None
     name: str
     system: str | None = None
 
     @classmethod
     def from_code_name_pair(
         cls, code: str, name: str, system: str | None = None
-    ) -> "CodedValue":
+    ) -> "ProvisionalDx":
         """Create from code/name pair"""
         return cls(code=code, name=name, system=system)

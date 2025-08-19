@@ -98,6 +98,16 @@ class VeteranInfo(BasePatientModel):
         percent = int(v)
         return max(0, min(100, percent))  # Clamp to 0-100
 
+    @field_validator("is_veteran", mode="before")
+    @classmethod
+    def validate_is_veteran(cls, v):
+        """Parse various boolean indicators"""
+        return len(bool_str := str(v)) > 0 and bool_str.strip()[0].lower() in [
+            "t",
+            "1",
+            "y",
+        ]
+
 
 class PatientFlag(BasePatientModel):
     """Patient flag/alert"""

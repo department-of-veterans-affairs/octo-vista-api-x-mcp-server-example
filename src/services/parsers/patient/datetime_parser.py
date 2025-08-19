@@ -1,16 +1,22 @@
 """Datetime parsing utilities for healthcare data"""
 
+import re
 from datetime import UTC, date, datetime
 
+DT_MATCHER = re.compile(
+    r"^(?P<year>\d{4})(?P<month>0[1-9]|1[0-2])?(?P<day>0[1-9]|[12][0-9]|3[01])?(?P<hour>[01][0-9]|2[0-3])?(?P<minute>[0-5][0-9])?(?P<second>[0-5][0-9])?"
+)
 
-def parse_datetime(dt_value: int | str | None) -> datetime | None:
+
+def parse_datetime(dt_value: int | str | datetime | None) -> datetime | None:
     """
-    Parse datetime format YYYYMMDDHHMMSS or variants.
+    Parse datetime ISO format and YYYYMMDDHHMMSS or variants.
 
     Parses dates stored as integers in various formats:
     - 20240119160242 -> 2024-01-19 16:02:42 (full datetime)
     - 202401191602   -> 2024-01-19 16:02:00 (missing seconds)
     - 20240119       -> 2024-01-19 00:00:00 (date only)
+    - 2002           -> 2002-01-01 00:00:00 (date only)
 
     Args:
         dt_value: Integer or string datetime value
@@ -28,8 +34,8 @@ def parse_datetime(dt_value: int | str | None) -> datetime | None:
         >>> parse_datetime(20240119)
         datetime.datetime(2024, 1, 19, 0, 0)
     """
-    if dt_value is None:
-        return None
+    if dt_value is None or isinstance(dt_value, datetime):
+        return dt_value
 
     # Convert to string and clean
     dt_str = str(dt_value).strip()
@@ -41,31 +47,22 @@ def parse_datetime(dt_value: int | str | None) -> datetime | None:
     except ValueError:
         pass
 
-    # deal with numeric formats
-    # Remove any decimal parts (sometimes includes subseconds)
-    if "." in dt_str:
-        dt_str = dt_str.split(".")[0]
-
-    # Handle different lengths
-    try:
-        parsed_dt: datetime | None = None
-        match len(dt_str):
-            case 14:  # Full datetime YYYYMMDDHHMMSS
-                parsed_dt = datetime.strptime(dt_str, "%Y%m%d%H%M%S")
-            case 12:  # Missing seconds YYYYMMDDHHMM
-                parsed_dt = datetime.strptime(dt_str + "00", "%Y%m%d%H%M%S")
-            case 10:  # Missing minutes YYYYMMDDHH
-                parsed_dt = datetime.strptime(dt_str + "0000", "%Y%m%d%H%M%S")
-            case 8:  # Date only YYYYMMDD
-                parsed_dt = datetime.strptime(dt_str, "%Y%m%d")
-            case _:
-                # Try to parse as-is in case it's a different format
-                # This handles edge cases we haven't seen yet
-                return None
-
-        return parsed_dt.replace(tzinfo=UTC) if parsed_dt else None
-    except ValueError:
+    # use regex to extract year, month, day, hour, minute, second, ignore .subseconds
+    match = DT_MATCHER.match(dt_str)
+    if not match:
         return None
+
+    yyyy = int(year_part) if ((year_part := match.group("year")) is not None) else 1970
+    mm = int(month_part) if ((month_part := match.group("month")) is not None) else 1
+    dd = int(day_part) if ((day_part := match.group("day")) is not None) else 1
+    hh = int(hour_part) if ((hour_part := match.group("hour")) is not None) else 0
+    mins = (
+        int(minute_part) if ((minute_part := match.group("minute")) is not None) else 0
+    )
+    secs = (
+        int(second_part) if ((second_part := match.group("second")) is not None) else 0
+    )
+    return datetime(yyyy, mm, dd, hh, mins, secs, tzinfo=UTC)
 
 
 def parse_date(date_value: int | str | None) -> date | None:

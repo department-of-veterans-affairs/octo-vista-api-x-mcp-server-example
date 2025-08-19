@@ -1,7 +1,7 @@
 """Integration tests for patient visit MCP tool"""
 
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -44,7 +44,7 @@ def sample_patient_data():
         Visit(
             uid="urn:va:visit:84F0:100022:1001",
             local_id="1001",
-            visit_date=datetime(2024, 1, 15, 10, 30),
+            visit_date=datetime(2024, 1, 15, 10, 30, tzinfo=timezone.utc),
             location_code="23",
             location_name="GENERAL MEDICINE",
             visit_type=VisitType.OUTPATIENT,
@@ -68,7 +68,7 @@ def sample_patient_data():
         Visit(
             uid="urn:va:visit:84F0:100022:1002",
             local_id="1002",
-            visit_date=datetime(2024, 1, 10, 14, 20),
+            visit_date=datetime(2024, 1, 10, 14, 20, tzinfo=timezone.utc),
             location_code="45",
             location_name="CARDIOLOGY CLINIC",
             visit_type=VisitType.OUTPATIENT,
@@ -92,7 +92,7 @@ def sample_patient_data():
         Visit(
             uid="urn:va:visit:84F0:100022:1003",
             local_id="1003",
-            visit_date=datetime(2024, 1, 5, 8, 15),
+            visit_date=datetime(2023, 12, 1, 9, 0, tzinfo=timezone.utc),
             location_code="12",
             location_name="EMERGENCY ROOM",
             visit_type=VisitType.EMERGENCY,
@@ -107,8 +107,8 @@ def sample_patient_data():
             bed="1",
             chief_complaint="Shortness of breath",
             diagnosis="Acute exacerbation of COPD",
-            admission_date=datetime(2024, 1, 5, 8, 15),
-            discharge_date=datetime(2024, 1, 7, 10, 30),
+            admission_date=datetime(2024, 1, 5, 8, 15, tzinfo=timezone.utc),
+            discharge_date=datetime(2024, 1, 7, 10, 30, tzinfo=timezone.utc),
             scheduled_date=None,
             order_uids=["urn:va:order:84F0:100022:15025"],
             treatment_uids=["urn:va:treatment:84F0:100022:2001"],
@@ -116,7 +116,7 @@ def sample_patient_data():
         Visit(
             uid="urn:va:visit:84F0:100022:1004",
             local_id="1004",
-            visit_date=datetime(2023, 12, 20, 9, 0),
+            visit_date=datetime(2023, 12, 25, 16, 45, tzinfo=timezone.utc),
             location_code="34",
             location_name="OPERATING ROOM",
             visit_type=VisitType.SURGERY,
@@ -131,9 +131,9 @@ def sample_patient_data():
             bed=None,
             chief_complaint="Elective procedure",
             diagnosis="Cataract surgery",
-            admission_date=datetime(2023, 12, 20, 9, 0),
-            discharge_date=datetime(2023, 12, 20, 15, 30),
-            scheduled_date=datetime(2023, 12, 20, 9, 0),
+            admission_date=datetime(2023, 12, 20, 9, 0, tzinfo=timezone.utc),
+            discharge_date=datetime(2023, 12, 20, 15, 30, tzinfo=timezone.utc),
+            scheduled_date=datetime(2023, 12, 20, 9, 0, tzinfo=timezone.utc),
             order_uids=["urn:va:order:84F0:100022:15026"],
             treatment_uids=["urn:va:treatment:84F0:100022:2002"],
         ),
