@@ -4,7 +4,7 @@ This repository contains documentation about a Model Context Protocol (MCP) serv
 
 ## Overview
 
-The Vista API MCP Server enables Large Language Models (LLMs) to securely access VistA by acting as a bridge that safely connects LLMs to patient medical records and clinical documentation. The server can be consumed by multiple AI applications, like [AI Assist](add link), to perform summarization or other LLM-enabled tasks.
+The Vista API MCP Server enables Large Language Models (LLMs) to securely access VistA by acting as a bridge that safely connects LLMs to patient medical records and clinical documentation. The server can be consumed by multiple AI applications, like [AI Assist](https://github.com/department-of-veterans-affairs/ai-assist), to perform summarization or other LLM-enabled tasks.
 
 ### What is an MCP server?
 
@@ -28,14 +28,14 @@ Whereas, any application that supports Model Context Protocol can consume this s
 
 Our roadmap provides an overview of how we plan to build this MCP server.
 
-![roadmap](path/to/roadmap-mcp-august-2025.jpg)
+![roadmap](docs/roadmap-august-2025.png)
 
 Review our roadmap in [VA Mural](https://app.mural.co/t/departmentofveteransaffairs9999/m/departmentofveteransaffairs9999/1750882921059/550b745268addb245a7f73287ec7645b6fa0d2c7?sender=u65f0a75fc7c68f2a5a2a9545).
 
 ## Get started
 
-- [Development guide](add link) includes comprehensive instructions and workflows
-- [Deployment guide](add link) explains production deployment
+- [Development guide](https://github.com/department-of-veterans-affairs/octo-vista-api-x-mcp-server/blob/master/docs/DEVELOPMENT.md) includes comprehensive instructions and workflows
+- [Deployment guide](https://github.com/department-of-veterans-affairs/octo-vista-api-x-mcp-server/blob/master/docs/DEPLOYMENT.md) explains production deployment
 
 ## Connect with us
 
