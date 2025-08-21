@@ -14,6 +14,7 @@ from .get_patient_orders import register_get_patient_orders_tool
 from .get_patient_povs_tool import register_get_patient_povs_tool
 from .get_patient_problems_tool import register_get_patient_problems_tool
 from .get_patient_procedures import register_get_patient_procedures_tool
+from .get_patient_treatments_tool import register_get_patient_treatments_tool
 from .get_patient_visits_tool import register_get_patient_visits_tool
 from .get_patient_vitals_tool import register_get_patient_vitals_tool
 
@@ -34,4 +35,5 @@ def register_patient_tools(mcp: FastMCP, vista_client: BaseVistaClient):
     register_get_patient_povs_tool(mcp, vista_client)
     register_get_patient_problems_tool(mcp, vista_client)
     register_get_patient_procedures_tool(mcp, vista_client)
+    register_get_patient_treatments_tool(mcp, vista_client)
     register_get_patient_visits_tool(mcp, vista_client)

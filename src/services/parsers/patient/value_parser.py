@@ -56,7 +56,7 @@ def parse_numeric_result(value: Any) -> float | None:
     value = value.strip()
 
     # Empty or non-numeric indicators
-    if not value or value in ["", "-", "N/A", "PENDING", "CANCELLED"]:
+    if not value or value in ["", "-", "N/A", "PENDING", "EXPIRED"]:
         return None
 
     # Remove comparison operators

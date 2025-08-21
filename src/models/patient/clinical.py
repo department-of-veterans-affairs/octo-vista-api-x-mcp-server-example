@@ -118,9 +118,10 @@ class VitalSign(BasePatientModel):
     @property
     def display_value(self) -> str:
         """Get display-friendly value with units"""
+        result_str = self.result or "N/A"
         if self.units:
-            return f"{self.result} {self.units}"
-        return self.result
+            return f"{result_str} {self.units}"
+        return result_str
 
     @property
     def interpretation(self) -> InterpretationCode | None:
@@ -260,9 +261,10 @@ class LabResult(BasePatientModel):
     @property
     def display_value(self) -> str:
         """Get display-friendly value with units"""
+        result_str = self.result or "N/A"
         if self.units:
-            return f"{self.result} {self.units}"
-        return self.result or ""
+            return f"{result_str} {self.units}"
+        return result_str
 
 
 class Consult(BasePatientModel):

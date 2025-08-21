@@ -111,6 +111,7 @@ class PatientDataParser:
         orders = self._parse_orders(grouped_items.get("order", []))
         visits = self._parse_visits(grouped_items.get("visit", []), orders)
         health_factors = self._parse_health_factors(grouped_items.get("factor", []))
+        treatments = self._parse_treatments(grouped_items.get("treatment", []))
         documents = self._parse_documents(grouped_items.get("document", []))
         cpt_codes = self._parse_cpt_codes(grouped_items.get("cpt", []))
         allergies = self._parse_allergies(grouped_items.get("allergy", []))
@@ -131,6 +132,7 @@ class PatientDataParser:
             medications=medications,
             visits=visits,
             health_factors=health_factors,
+            treatments=treatments,
             diagnoses=diagnoses,
             orders=orders,
             documents=documents,
@@ -150,7 +152,8 @@ class PatientDataParser:
             {len(medications)} medications, {len(visits)} visits, {len(health_factors)} health factors, 
             {len(diagnoses)} diagnoses, {len(orders)} orders, {len(documents)} documents, 
             {len(cpt_codes)} CPT codes, 
-            {len(povs)} POVs, 
+            {len(povs)} POVs,
+            {len(treatments)} treatments,
             {len(problems)} problems"""
         )
 
@@ -533,6 +536,56 @@ class PatientDataParser:
                     processed["localId"] = "0"
             else:
                 processed["localId"] = "0"
+
+        return processed
+
+    def _parse_treatments(self, treatment_items: list[dict[str, Any]]) -> list:
+        """Parse treatments from treatment items"""
+        from ....models.patient.treatment import Treatment
+
+        treatments = []
+
+        for item in treatment_items:
+            try:
+                # Preprocess the treatment data for field normalization
+                processed_item = self._preprocess_treatment_item(item)
+                treatment = Treatment(**processed_item)
+                treatments.append(treatment)
+            except Exception as e:
+                logger.warning(f"Failed to parse treatment {item.get('uid')}: {e}")
+                logger.debug(f"Treatment item data: {item}")
+
+        # Sort by treatment date (newest first)
+        treatments.sort(key=lambda t: t.date, reverse=True)
+
+        return treatments
+
+    def _preprocess_treatment_item(self, item: dict[str, Any]) -> dict[str, Any]:
+        """Preprocess treatment item for field normalization"""
+        processed = item.copy()
+
+        # Add required dfn field from parser context
+        processed["dfn"] = self.dfn
+
+        # Ensure required fields have defaults
+        if "name" not in processed:
+            processed["name"] = "UNKNOWN TREATMENT"
+
+        if "date" not in processed:
+            # Try alternative date fields
+            if "dateTime" in processed:
+                processed["date"] = processed["dateTime"]
+            elif "entered" in processed:
+                processed["date"] = processed["entered"]
+            else:
+                processed["date"] = datetime.now(UTC).strftime("%Y%m%d")
+
+        # Ensure facility code and name are present
+        if "facilityCode" not in processed:
+            processed["facilityCode"] = self.station
+
+        if "facilityName" not in processed:
+            processed["facilityName"] = f"Station {self.station}"
 
         return processed
 

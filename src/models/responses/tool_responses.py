@@ -5,6 +5,8 @@ from typing import Generic, TypeVar
 
 from pydantic import Field, computed_field
 
+from src.models.patient.treatment import Treatment
+
 from ..base import BaseVistaModel
 from ..patient import (
     Allergy,
@@ -300,5 +302,23 @@ class ProblemsResponseData(ResponseData):
 
 class ProblemsResponse(ToolResponse[ProblemsResponseData]):
     """Problems response"""
+
+    pass
+
+
+class TreatmentsResponseData(ResponseData):
+    """Treatments response data"""
+
+    treatments: list[Treatment] = Field(default_factory=list)
+    active_treatments: list[str] = Field(default_factory=list)
+    completed_treatments: list[str] = Field(default_factory=list)
+    scheduled_treatments: list[str] = Field(default_factory=list)
+    by_status: dict[str, int] = Field(default_factory=dict)
+    by_complexity: dict[str, int] = Field(default_factory=dict)
+    by_specialty: dict[str, int] = Field(default_factory=dict)
+
+
+class TreatmentsResponse(ToolResponse[TreatmentsResponseData]):
+    """Treatments response"""
 
     pass

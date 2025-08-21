@@ -17,6 +17,7 @@ from .medication import Medication
 from .order import Order
 from .pov import PurposeOfVisit
 from .problem import Problem
+from .treatment import Treatment
 from .visits import Visit
 
 
@@ -36,6 +37,7 @@ class PatientDataCollection(BasePatientModel):
     medications: list[Medication] = Field(default_factory=list)
     visits: list[Visit] = Field(default_factory=list)
     health_factors: list[HealthFactor] = Field(default_factory=list)
+    treatments: list[Treatment] = Field(default_factory=list)
     diagnoses: list[Diagnosis] = Field(default_factory=list)
     orders: list[Order] = Field(default_factory=list)
     documents: list[Document] = Field(default_factory=list)
@@ -157,6 +159,94 @@ class PatientDataCollection(BasePatientModel):
                 encounters[encounter_key] = []
             encounters[encounter_key].append(cpt)
         return encounters
+
+    def get_active_treatments(self) -> list[Treatment]:
+        """Get active treatment records"""
+        return [treatment for treatment in self.treatments if treatment.is_active]
+
+    def get_completed_treatments(self) -> list[Treatment]:
+        """Get completed treatment records"""
+        return [treatment for treatment in self.treatments if treatment.is_completed]
+
+    def get_scheduled_treatments(self) -> list[Treatment]:
+        """Get scheduled treatment records"""
+        return [treatment for treatment in self.treatments if treatment.is_scheduled]
+
+    def get_related_order_for_treatment(self, treatment: Treatment) -> Order | None:
+        """Get the order that initiated a treatment"""
+        if not treatment.related_order_uid:
+            return None
+
+        for order in self.orders:
+            if order.uid == treatment.related_order_uid:
+                return order
+        return None
+
+    def get_treatments_for_order(self, order: Order) -> list[Treatment]:
+        """Get all treatments that resulted from a specific order"""
+        treatments = [
+            treatment
+            for treatment in self.treatments
+            if treatment.related_order_uid == order.uid
+        ]
+        return treatments
+
+    def get_encounter_context_for_treatment(
+        self, treatment: Treatment
+    ) -> dict[str, Any]:
+        """Get encounter/visit context for a treatment based on date proximity and related orders"""
+        context: dict[str, Any] = {
+            "related_order": None,
+            "concurrent_procedures": [],
+            "encounter_uid": None,
+            "encounter_name": None,
+            "visit_date": None,
+        }
+
+        # First, try to get related order
+        related_order = self.get_related_order_for_treatment(treatment)
+        if related_order:
+            context["related_order"] = {
+                "uid": related_order.uid,
+                "name": related_order.name,
+                "content": related_order.content,
+                "service": related_order.service,
+                "status": related_order.status,
+                "provider": related_order.provider_name,
+                "entered": (
+                    related_order.entered.isoformat() if related_order.entered else None
+                ),
+            }
+
+        # Find concurrent procedures on the same date (potential encounter indicators)
+        treatment_date = treatment.date.date()
+        concurrent_procedures = []
+        encounter_uid = None
+        encounter_name = None
+
+        for cpt in self.cpt_codes:
+            if cpt.procedure_date.date() == treatment_date:
+                concurrent_procedures.append(
+                    {
+                        "cpt_code": cpt.cpt_code,
+                        "description": cpt.description,
+                        "category": cpt.category,
+                        "provider": cpt.provider,
+                        "location": cpt.location_name,
+                    }
+                )
+
+                # Use encounter info from the first matching procedure
+                if not encounter_uid and cpt.associated_visit_uid:
+                    encounter_uid = cpt.associated_visit_uid
+                    encounter_name = cpt.encounter_name
+
+        context["concurrent_procedures"] = concurrent_procedures
+        context["encounter_uid"] = encounter_uid
+        context["encounter_name"] = encounter_name
+        context["visit_date"] = treatment_date.isoformat() if treatment_date else None
+
+        return context
 
     def to_summary(self) -> dict[str, Any]:
         """

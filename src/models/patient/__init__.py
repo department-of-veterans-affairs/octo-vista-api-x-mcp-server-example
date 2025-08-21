@@ -35,6 +35,7 @@ from .problem import (
     ProblemStatus,
     ProblemSummary,
 )
+from .treatment import Treatment, TreatmentStatus
 from .visits import Visit, VisitSummary, VisitType
 
 __all__ = [
@@ -77,6 +78,9 @@ __all__ = [
     "ProblemComment",
     "ProblemStatus",
     "ProblemSummary",
+    # Treatments
+    "Treatment",
+    "TreatmentStatus",
     # Allergies
     "Allergy",
     "AllergyProduct",

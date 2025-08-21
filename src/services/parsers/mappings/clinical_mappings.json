@@ -52,7 +52,7 @@
     "A": "ACTIVE",
     "COMPLETED": "COMPLETED",
     "C": "COMPLETED",
-    "CANCELLED": "CANCELLED",
-    "X": "CANCELLED"
+    "EXPIRED": "EXPIRED",
+    "X": "EXPIRED"
   }
 }
