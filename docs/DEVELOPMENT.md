@@ -7,24 +7,26 @@ This guide covers everything you need to develop, test, and extend the Vista API
 1. [Prerequisites](#prerequisites)
 2. [Initial Setup](#initial-setup)
 3. [Running the Server](#running-the-server)
-4. [Project Structure](#project-structure)
-5. [Development Workflow](#development-workflow)
-6. [Adding New Tools](#adding-new-tools)
-7. [Testing](#testing)
-8. [Code Quality](#code-quality)
-9. [Redis Configuration](#redis-configuration)
-10. [Architecture Overview](#architecture-overview)
-11. [Transport Modes](#transport-modes)
-12. [Troubleshooting](#troubleshooting)
+4. [Client Setup](#client-setup)
+5. [Example Usage](#example-usage)
+6. [Configuration](#configuration)
+7. [Project Structure](#project-structure)
+8. [Development Workflow](#development-workflow)
+9. [Adding New Tools](#adding-new-tools)
+10. [Testing](#testing)
+11. [Code Quality](#code-quality)
+12. [Architecture Overview](#architecture-overview)
+13. [Transport Modes](#transport-modes)
+14. [Troubleshooting](#troubleshooting)
 
-## Prerequisites
+## 1. Prerequisites
 
 - Python 3.12 or higher
 - [mise](https://mise.jdx.dev/) (formerly rtx) for environment management
 - Docker (optional, for Redis)
 - Vista API credentials (contact your Vista administrator)
 
-## Initial Setup
+## 2. Initial Setup
 
 1. **Clone the repository:**
 
@@ -57,7 +59,7 @@ This guide covers everything you need to develop, test, and extend the Vista API
    # Edit .env with your Vista API credentials
    ```
 
-## Running the Server
+## 3. Running the Server
 
 ### With Mock Server (Development)
 
@@ -100,7 +102,105 @@ mise run format          # Format code with black
 mise run typecheck       # Run mypy type checking
 ```
 
-## Project Structure
+## 4. Client Setup
+
+Once you have the Vista API MCP Server running, you need to configure your LLM client to connect to it. This is how you configure Claude Desktop. You can also use Continue.dev or other clients.
+
+### Claude Desktop
+
+Claude Desktop has native MCP support and works best with the stdio transport mode. 
+
+```bash
+# Run the setup script
+python scripts/setup_claude_desktop.py
+
+# Verify configuration
+python scripts/test_config.py --client=claude
+```
+
+Verifying Claude Desktop Connection:
+1. Restart Claude Desktop after configuration changes
+2. Start a new conversation
+3. Look for the Vista API tools in the available tools list
+4. Test with a simple query: "What tools are available for Vista?"
+
+## 5. Example Usage
+
+Once configured in your LLM client:
+
+```
+You: "Search for patients with last name ANDERSON"
+Assistant: I'll search for patients with the last name Anderson...
+[Uses search_patients tool]
+
+You: "Show medications for patient 100022"
+Assistant: I'll retrieve the medications for patient 100022...
+[Uses get_medications tool]
+```
+
+## 6. Configuration
+
+This section covers configuration for local development, testing, and client connections. For production deployment configuration, see the [Deployment Guide](add link).
+
+### Environment Variables
+
+The server automatically detects whether to use production Vista API or the mock server based on environment variables:
+
+```bash
+# In your .env file:
+VISTA_API_BASE_URL=https://your-vista-api.com  # Production API URL
+VISTA_AUTH_URL=https://your-vista-auth.com     # Auth service URL (optional, defaults to API URL)
+VISTA_API_KEY=your-api-key                     # Your Vista API key
+```
+
+- If all required variables are set, the server uses production Vista API
+- If any are missing, it falls back to the mock server at localhost:8888
+
+To verify your configuration:
+
+```bash
+python scripts/test_config.py
+```
+
+### Client Configuration Files
+
+Example configuration files are included in the repository:
+
+- `.claude_desktop_config.example.json` - Claude Desktop template
+- `.cursorrules.example` - Cursor IDE template
+
+### Redis Configuration
+
+#### Local Development
+
+Redis caching is optional but recommended for better performance:
+
+```bash
+# Start Redis with Docker
+docker run -d -p 6379:6379 redis:alpine
+
+# Configure in .env
+CACHE_BACKEND=redis
+REDIS_URL=redis://localhost:6379
+```
+
+#### Testing Redis Connection
+
+```python
+# Test script
+python -c "
+from src.services.cache.factory import CacheFactory
+import asyncio
+
+async def test():
+    cache = await CacheFactory.create_patient_cache()
+    print(f'Cache backend: {type(cache).__name__}')
+    
+asyncio.run(test())
+"
+```
+
+## 7. Project Structure
 
 ```
 vista-api-mcp-server/
@@ -136,7 +236,7 @@ vista-api-mcp-server/
 └── pyproject.toml            # Python project configuration
 ```
 
-## Development Workflow
+## 8. Development Workflow
 
 ### 1. Create a Feature Branch
 
@@ -185,7 +285,7 @@ git add .
 git commit -m "feat: add your feature description"
 ```
 
-## Adding New Tools
+## 9. Adding New Tools
 
 ### 1. Choose the Right Module
 
@@ -204,7 +304,7 @@ Tools are organized by domain:
 - Use formatters for output formatting
 - Return structured responses using Pydantic models
 
-## Testing
+## 10. Testing
 
 ### Running Tests
 
@@ -246,7 +346,7 @@ async def test_get_patient_demographics():
     assert "***-**-" in result["patient"]["ssn"]
 ```
 
-## Code Quality
+## 11. Code Quality
 
 ### Linting and Formatting
 
@@ -285,38 +385,7 @@ Imports are automatically organized by `ruff`. Standard order:
 2. Third-party imports
 3. Local imports
 
-## Redis Configuration
-
-### Local Development
-
-Redis caching is optional but recommended for better performance:
-
-```bash
-# Start Redis with Docker
-docker run -d -p 6379:6379 redis:alpine
-
-# Configure in .env
-CACHE_BACKEND=redis
-REDIS_URL=redis://localhost:6379
-```
-
-### Testing Redis Connection
-
-```python
-# Test script
-python -c "
-from src.services.cache.factory import CacheFactory
-import asyncio
-
-async def test():
-    cache = await CacheFactory.create_patient_cache()
-    print(f'Cache backend: {type(cache).__name__}')
-    
-asyncio.run(test())
-"
-```
-
-## Architecture Overview
+## 12. Architecture Overview
 
 ### Core Components
 
@@ -355,7 +424,7 @@ LLM Client → MCP Server → Tool Function → Services → Vista Client → Vi
 - Station-based access control
 - No PHI logging
 
-## Transport Modes
+## 13. Transport Modes
 
 ### stdio Mode (Default)
 
@@ -378,7 +447,7 @@ mise run dev-sse
 # Access at http://localhost:8808/sse
 ```
 
-## Troubleshooting
+## 14. Troubleshooting
 
 ### Common Issues
 
