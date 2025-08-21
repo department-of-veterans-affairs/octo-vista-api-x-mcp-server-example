@@ -4,30 +4,55 @@ This guide covers deploying the Vista API MCP Server to AWS and Azure cloud envi
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [Prerequisites](#prerequisites)
-- [Environment Configuration](#environment-configuration)
-- [Deployment Options](#deployment-options)
-  - [Docker](#docker)
-  - [AWS ECS](#aws-ecs)
-  - [Azure Container Instances](#azure-container-instances)
-- [Security Considerations](#security-considerations)
-- [Monitoring & Logging](#monitoring--logging)
-- [Scaling](#scaling)
-- [Troubleshooting](#troubleshooting)
+1. [Overview](#overview)
+2. [Prerequisites](#prerequisites)
+3. [Simple Docker Deployment](#simple-docker-deployment)
+4. [Environment Configuration](#environment-configuration)
+5. [Deployment Options](#deployment-options)
+    - [Docker](#docker)
+    - [AWS ECS](#aws-ecs)
+    - [Azure Container Instances](#azure-container-instances)
+6. [Security Considerations](#security-considerations)
+7. [Monitoring & Logging](#monitoring--logging)
+8. [Scaling](#scaling)
+9. [Troubleshooting](#troubleshooting)
+10. [Production Checklist](#production-checklist)
+11. [Support](#support)
 
-## Overview
+## 1. Overview
 
 The Vista API MCP Server can be deployed using the HTTP transport for remote access. The server runs as a stateless container that connects to your Vista API X instance.
 
-## Prerequisites
+## 2. Prerequisites
 
 - Docker image built and pushed to a container registry (ECR for AWS, ACR for Azure)
 - Access to Vista API X production instance
 - Valid API keys and credentials
 - SSL/TLS certificates for HTTPS (recommended)
 
-## Environment Configuration
+## 3. Simple Docker Deployment
+
+### Production
+
+```bash
+# Set your production Vista API endpoint
+export VISTA_API_BASE_URL=https://your-vista-api.va.gov
+export VISTA_API_KEY=your-production-api-key
+
+# Run the HTTP server (recommended)
+VISTA_MCP_TRANSPORT=http docker-compose up -d
+```
+
+### Local Development with Mock
+
+```bash
+# Run with the included development override
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+```
+
+This automatically connects to the Vista API X mock server if it's running.
+
+## 4. Environment Configuration
 
 ### Required Environment Variables
 
@@ -82,7 +107,7 @@ docker tag vista-mcp-server:latest myregistry.azurecr.io/vista-mcp-server:v1.0.0
 docker push myregistry.azurecr.io/vista-mcp-server:v1.0.0
 ```
 
-## Deployment Options
+## 5. Deployment Options
 
 ### Docker
 
@@ -233,7 +258,7 @@ az container create \
   --restart-policy Always
 ```
 
-## Security Considerations
+## 6. Security Considerations
 
 ### 1. API Key Management
 
@@ -286,7 +311,7 @@ server {
 - Use API Gateway for additional security layers
 - Monitor and log all access attempts
 
-## Monitoring & Logging
+## 7. Monitoring & Logging
 
 ### 1. Health Checks
 
@@ -351,7 +376,7 @@ az container create \
   --log-analytics-workspace-key $WORKSPACE_KEY
 ```
 
-## Scaling
+## 8. Scaling
 
 ### Horizontal Scaling
 
@@ -417,7 +442,7 @@ az containerapp create \
     vista-api-key="$VISTA_API_KEY"
 ```
 
-## Troubleshooting
+## 9. Troubleshooting
 
 ### Common Issues
 
@@ -463,7 +488,7 @@ docker run -e VISTA_MCP_DEBUG=true myregistry.azurecr.io/vista-mcp-server:v1.0.0
    - Configure connection limits
    - Implement rate limiting
 
-## Production Checklist
+## 10. Production Checklist
 
 - [ ] SSL/TLS certificates configured
 - [ ] API keys stored securely
@@ -476,7 +501,7 @@ docker run -e VISTA_MCP_DEBUG=true myregistry.azurecr.io/vista-mcp-server:v1.0.0
 - [ ] Load testing completed
 - [ ] Documentation updated
 
-## Support
+## 11. Support
 
 For production issues:
 1. Check container logs
