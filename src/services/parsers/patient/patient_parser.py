@@ -353,7 +353,7 @@ class PatientDataParser:
     def _parse_visits(
         self,
         visit_items: list[dict[str, Any]],
-        orders: list = None,  # type: ignore
+        orders: list[Order] | None = None,
     ) -> list[Visit]:
         """Parse visits from visit items and populate order/treatment UIDs"""
         visits: list[Visit] = []

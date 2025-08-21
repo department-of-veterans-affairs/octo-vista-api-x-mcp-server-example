@@ -4,29 +4,37 @@ This guide covers everything you need to develop, test, and extend the Vista API
 
 ## Table of Contents
 
-1. [Prerequisites](#prerequisites)
-2. [Initial Setup](#initial-setup)
-3. [Running the Server](#running-the-server)
-4. [Client Setup](#client-setup)
-5. [Example Usage](#example-usage)
-6. [Configuration](#configuration)
-7. [Project Structure](#project-structure)
-8. [Development Workflow](#development-workflow)
-9. [Adding New Tools](#adding-new-tools)
-10. [Testing](#testing)
-11. [Code Quality](#code-quality)
-12. [Architecture Overview](#architecture-overview)
-13. [Transport Modes](#transport-modes)
-14. [Troubleshooting](#troubleshooting)
+1. [Prerequisites](#1-prerequisites)
+2. [Initial Setup](#2-initial-setup)
+3. [Running the Server](#3-running-the-server)
+4. [Client Setup](#4-client-setup)
+5. [Example Usage](#5-example-usage)
+6. [Configuration](#6-configuration)
+7. [Project Structure](#7-project-structure)
+8. [Development Workflow](#8-development-workflow)
+9. [Adding New Tools](#9-adding-new-tools)
+10. [Testing](#10-testing)
+11. [Code Quality](#11-code-quality)
+12. [Architecture Overview](#12-architecture-overview)
+13. [Transport Modes](#13-transport-modes)
+14. [Troubleshooting](#14-troubleshooting)
 
 ## 1. Prerequisites
 
 - Python 3.12 or higher
-- [mise](https://mise.jdx.dev/) (formerly rtx) for environment management
-- Docker (optional, for Redis)
+- Docker (Mac/Linux) or Podman (Windows GFE)
 - Vista API credentials (contact your Vista administrator)
 
+**Optional:**
+
+- [mise](https://mise.jdx.dev/) for environment management (recommended for Mac/Linux)
+- [uv](https://github.com/astral-sh/uv) for faster Python package management
+
 ## 2. Initial Setup
+
+### Quick Start (Universal - Works Everywhere)
+
+This approach works on all platforms (Mac, Windows, Linux) using standard Python tools:
 
 1. **Clone the repository:**
 
@@ -35,7 +43,25 @@ This guide covers everything you need to develop, test, and extend the Vista API
    cd vista-api-mcp-server
    ```
 
-2. **Install mise and trust the configuration:**
+2. **Setup and install dependencies:**
+
+   ```bash
+   # One-time setup (creates venv, installs dependencies)
+   python run.py setup
+   ```
+
+3. **Set up environment variables:**
+
+   ```bash
+   cp .env.example .env
+   # Edit .env with your Vista API credentials
+   ```
+
+### Alternative: Using mise (Mac/Linux)
+
+If you prefer using mise for tool management:
+
+1. **Install mise:**
 
    ```bash
    # Install mise (if not already installed)
@@ -45,48 +71,73 @@ This guide covers everything you need to develop, test, and extend the Vista API
    mise trust
    ```
 
-3. **Install dependencies (automatic with mise):**
+2. **Run with mise commands:**
 
    ```bash
-   # Dependencies are automatically installed when you run any mise command
+   # Dependencies are automatically installed
    mise run dev  # This will trigger installation if needed
-   ```
-
-4. **Set up environment variables:**
-
-   ```bash
-   cp .env.example .env
-   # Edit .env with your Vista API credentials
    ```
 
 ## 3. Running the Server
 
-### With Mock Server (Development)
-
-The mock server simulates the Vista API for local development without needing real Vista access:
+### Using Python run.py (Universal)
 
 ```bash
-# Start both mock server and MCP server
-mise run dev-with-mock
+# Run with both transports (stdio + HTTP, with inspector)
+python run.py dev
 
-# Or run them separately:
-mise run mock-server  # In one terminal
-mise run dev         # In another terminal
+# Same as dev but with mock server
+python run.py dev-with-mock
+
+# Run tests
+python run.py test
+
+# Run linting
+python run.py lint
+
+# View all commands
+python run.py help
 ```
 
-### Without Mock Server (Production/Staging)
+**Note for Windows with Podman:** The script automatically sets up and starts a Podman machine with 8GB RAM if needed.
 
-When connecting to a real Vista API instance:
+### Using mise (Mac/Linux)
 
 ```bash
-# Standard stdio mode
+# Run without mock server
 mise run dev
 
-# HTTP mode for remote access
-mise run dev-http
+# Run with mock server
+mise run dev-with-mock
+
+# Run tests
+mise run test
+
+# Run linting
+mise run lint
 ```
 
-### Available mise Commands
+### Available Commands
+
+#### Python run.py Commands (Universal)
+
+```bash
+python run.py help       # Show all commands
+
+# Key commands:
+python run.py setup          # Setup environment
+python run.py dev            # Run MCP server (stdio + HTTP, with inspector)
+python run.py dev-with-mock  # Same as dev but with mock Vista API
+python run.py test           # Run tests
+python run.py lint           # Run linting and formatting
+python run.py stop-mock      # Stop mock server
+python run.py stop-servers   # Stop any background MCP servers
+python run.py logs           # View mock server logs
+python run.py http           # Run HTTP server only (no stdio)
+python run.py http-with-mock # Run HTTP server with mock Vista API
+```
+
+#### mise Commands (Mac/Linux)
 
 ```bash
 mise tasks  # List all available commands
@@ -95,11 +146,8 @@ mise tasks  # List all available commands
 mise run dev              # Run MCP server in stdio mode
 mise run dev-http         # Run MCP server in HTTP mode
 mise run dev-with-mock    # Run with mock Vista API
-mise run mock-server      # Run mock server only
 mise run test            # Run tests
 mise run lint            # Run linting and formatting
-mise run format          # Format code with black
-mise run typecheck       # Run mypy type checking
 ```
 
 ## 4. Client Setup
@@ -108,7 +156,7 @@ Once you have the Vista API MCP Server running, you need to configure your LLM c
 
 ### Claude Desktop
 
-Claude Desktop has native MCP support and works best with the stdio transport mode. 
+Claude Desktop has native MCP support and works best with the stdio transport mode.
 
 ```bash
 # Run the setup script
@@ -118,7 +166,8 @@ python scripts/setup_claude_desktop.py
 python scripts/test_config.py --client=claude
 ```
 
-Verifying Claude Desktop Connection:
+**Verifying Claude Desktop Connection:**
+
 1. Restart Claude Desktop after configuration changes
 2. Start a new conversation
 3. Look for the Vista API tools in the available tools list
@@ -128,7 +177,7 @@ Verifying Claude Desktop Connection:
 
 Once configured in your LLM client:
 
-```
+```text
 You: "Search for patients with last name ANDERSON"
 Assistant: I'll search for patients with the last name Anderson...
 [Uses search_patients tool]
@@ -140,7 +189,7 @@ Assistant: I'll retrieve the medications for patient 100022...
 
 ## 6. Configuration
 
-This section covers configuration for local development, testing, and client connections. For production deployment configuration, see the [Deployment Guide](add link).
+This section covers configuration for local development, testing, and client connections. For production deployment configuration, see the [Deployment Guide](DEPLOYMENT.md).
 
 ### Environment Variables
 
@@ -202,7 +251,7 @@ asyncio.run(test())
 
 ## 7. Project Structure
 
-```
+```text
 vista-api-mcp-server/
 ├── src/
 │   ├── __main__.py              # Entry point
@@ -411,7 +460,7 @@ Imports are automatically organized by `ruff`. Standard order:
 
 ### Data Flow
 
-```
+```text
 LLM Client → MCP Server → Tool Function → Services → Vista Client → Vista API
                 ↑                              ↓
                 └──────── Response ────────────┘
@@ -436,15 +485,15 @@ LLM Client → MCP Server → Tool Function → Services → Vista Client → Vi
 mise run dev
 ```
 
-### HTTP/SSE Mode
+### HTTP Mode
 
-- Server-Sent Events over HTTP
+- Streamable HTTP transport
 - Enables remote connections
 - Better for debugging
 
 ```bash
-mise run dev-sse
-# Access at http://localhost:8808/sse
+python run.py http
+# Access at http://localhost:8000/mcp
 ```
 
 ## 14. Troubleshooting
@@ -587,15 +636,3 @@ Get Vista version information.
 **Parameters:**
 
 - `station`: Vista station number (optional)
-
-### Authentication Tool
-
-#### authenticate_user
-
-Authenticate and get JWT token.
-
-**Parameters:**
-
-- `access_code`: Vista access code
-- `verify_code`: Vista verify code
-- `station`: Vista station number

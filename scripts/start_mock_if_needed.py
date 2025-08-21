@@ -38,6 +38,26 @@ def check_mock_server():
         return False
 
 
+def get_compose_command(container_runtime):
+    """Get the appropriate compose command for the container runtime"""
+    # Check if compose is available as a subcommand (newer versions)
+    try:
+        subprocess.run(
+            [container_runtime, "compose", "--version"],
+            capture_output=True,
+            check=True,
+        )
+        return [container_runtime, "compose"]
+    except Exception:
+        # Fall back to standalone docker-compose or podman-compose
+        compose_cmd = (
+            f"{container_runtime}-compose"
+            if container_runtime == "podman"
+            else "docker-compose"
+        )
+        return [compose_cmd]
+
+
 def main():
     """Start mock server if needed"""
     if check_mock_server():
@@ -81,13 +101,31 @@ def main():
 
     print("🚀 Starting mock server...")
 
-    # Check if Docker is running (works with both Docker and Podman via socket)
+    # Detect container runtime (Docker or Podman)
+    container_runtime = None
+
+    # First check for docker
     try:
-        subprocess.run(["docker", "info"], capture_output=True, check=True)
+        result = subprocess.run(
+            ["docker", "version"], capture_output=True, text=True, check=True
+        )
+        # Check if it's actually Podman masquerading as Docker
+        container_runtime = "podman" if "podman" in result.stdout.lower() else "docker"
     except (subprocess.CalledProcessError, FileNotFoundError):
-        print("❌ Docker is not running. Please start Docker Desktop or Podman.")
-        print("   If using Podman on Windows, run: .\\scripts\\mock-server.ps1 start")
+        # Try podman directly
+        try:
+            subprocess.run(["podman", "version"], capture_output=True, check=True)
+            container_runtime = "podman"
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            pass
+
+    if not container_runtime:
+        print("❌ No container runtime found. Please install Docker or Podman.")
+        if os.name == "nt":
+            print("   For Windows with Podman, run: python run.py dev-with-mock")
         sys.exit(1)
+
+    print(f"✅ Using {container_runtime} for containers")
 
     project_root = Path(__file__).parent.parent
 
@@ -276,9 +314,14 @@ def main():
 
         print("✅ Mock server setup complete")
     else:
-        # Normal docker-compose (Mac or Linux with Docker)
+        # Normal docker-compose (Mac/Linux with Docker or Podman)
+        # Use the detected container runtime
+        compose_cmd_list = get_compose_command(container_runtime)
+
         subprocess.run(
-            ["docker-compose", "up", "-d"], cwd=project_root / "mock_server", check=True
+            compose_cmd_list + ["up", "-d"],
+            cwd=project_root / "mock_server",
+            check=True,
         )
 
     # Wait for it to be ready

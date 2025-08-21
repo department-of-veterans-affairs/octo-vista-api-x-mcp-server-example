@@ -34,8 +34,10 @@ Review our roadmap in [VA Mural](https://app.mural.co/t/departmentofveteransaffa
 
 ## Get started
 
-- [Development guide](https://github.com/department-of-veterans-affairs/octo-vista-api-x-mcp-server/blob/master/docs/DEVELOPMENT.md) includes comprehensive instructions and workflows
-- [Deployment guide](https://github.com/department-of-veterans-affairs/octo-vista-api-x-mcp-server/blob/master/docs/DEPLOYMENT.md) explains production deployment
+- [Development guide](docs/DEVELOPMENT.md) - Setup instructions and development workflows
+- [Deployment guide](docs/DEPLOYMENT.md) - Production deployment instructions
+- [Test data guide](docs/TEST_DATA.md) - Test patient IDs and sample data
+- [Logging guide](docs/LOGGING.md) - Logging configuration and best practices
 
 ## Connect with us
 

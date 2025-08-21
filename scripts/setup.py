@@ -40,17 +40,31 @@ def setup_venv():
     # Check if we're in a container (devcontainer environment)
     in_container = is_in_container()
 
+    # Check if uv is available
+    has_uv = shutil.which("uv") is not None
+
     if in_container:
         # In container, create venv in /tmp to avoid permission issues
         venv_path = "/tmp/workspace-venv"
-        env = os.environ.copy()
-        env["UV_CACHE_DIR"] = "/tmp/uv-cache"
-        result = subprocess.run(
-            ["uv", "venv", venv_path, "--python", "3.12"],
-            capture_output=True,
-            text=True,
-            env=env,
-        )
+
+        if has_uv:
+            env = os.environ.copy()
+            env["UV_CACHE_DIR"] = "/tmp/uv-cache"
+            result = subprocess.run(
+                ["uv", "venv", venv_path, "--python", "3.12"],
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+        else:
+            # Use standard venv module
+            import venv
+
+            venv.create(venv_path, with_pip=True)
+            result = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="", stderr=""
+            )
+
         if result.returncode == 0:
             # Create symlink from .venv to actual venv location
             project_root = Path(__file__).parent.parent
@@ -73,15 +87,28 @@ def setup_venv():
                 print("    The virtual environment is available at /tmp/workspace-venv")
     else:
         # Normal environment
-        result = subprocess.run(
-            ["uv", "venv", "--python", "3.12"], capture_output=True, text=True
-        )
+        if has_uv:
+            result = subprocess.run(
+                ["uv", "venv", "--python", "3.12"], capture_output=True, text=True
+            )
+        else:
+            # Use standard venv module
+            import venv
+
+            project_root = Path(__file__).parent.parent
+            venv_path_obj = project_root / ".venv"
+            if not venv_path_obj.exists():
+                venv.create(str(venv_path_obj), with_pip=True)
+            result = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="", stderr=""
+            )
 
     if result.returncode == 0:
         print("✅ Virtual environment created")
     else:
         print("❌ Failed to create virtual environment")
-        print(result.stderr)
+        if hasattr(result, "stderr"):
+            print(result.stderr)
         return False
     return True
 
@@ -93,42 +120,101 @@ def install_dependencies():
     # Check if we're in a container
     in_container = is_in_container()
 
-    if in_container:
-        # In container, use venv from /tmp and different cache directory
-        venv_path = "/tmp/workspace-venv"
-        env = os.environ.copy()
-        env["UV_CACHE_DIR"] = "/tmp/uv-cache"
-        env["VIRTUAL_ENV"] = venv_path
-        result = subprocess.run(
-            ["uv", "pip", "install", "--python", venv_path, "-e", "."],
-            capture_output=True,
-            text=True,
-            env=env,
-        )
-    else:
-        # Normal environment
-        result = subprocess.run(
-            ["uv", "pip", "install", "-e", "."], capture_output=True, text=True
-        )
+    # Check if uv is available
+    has_uv = shutil.which("uv") is not None
 
-    if result.returncode == 0:
-        print("✅ Dependencies installed")
-        # Also ensure cryptography is installed for the mock server
-        if in_container:
+    # Check if requirements.txt exists (for pip fallback)
+    project_root = Path(__file__).parent.parent
+    has_requirements = (project_root / "requirements.txt").exists()
+
+    if in_container:
+        # In container, use venv from /tmp
+        venv_path = "/tmp/workspace-venv"
+
+        if has_uv:
             env = os.environ.copy()
             env["UV_CACHE_DIR"] = "/tmp/uv-cache"
-            venv_path = "/tmp/workspace-venv"
             env["VIRTUAL_ENV"] = venv_path
-            subprocess.run(
-                ["uv", "pip", "install", "--python", venv_path, "cryptography"],
+            result = subprocess.run(
+                ["uv", "pip", "install", "--python", venv_path, "-e", "."],
                 capture_output=True,
                 text=True,
                 env=env,
             )
         else:
-            subprocess.run(
-                ["uv", "pip", "install", "cryptography"], capture_output=True, text=True
+            # Use pip directly
+            pip_exe = f"{venv_path}/bin/pip"
+            if has_requirements:
+                # Install from requirements.txt first
+                subprocess.run(
+                    [pip_exe, "install", "-r", "requirements.txt"], capture_output=True
+                )
+            result = subprocess.run(
+                [pip_exe, "install", "-e", "."],
+                capture_output=True,
+                text=True,
             )
+    else:
+        # Normal environment
+        if has_uv:
+            result = subprocess.run(
+                ["uv", "pip", "install", "-e", "."], capture_output=True, text=True
+            )
+        else:
+            # Use pip directly
+            venv_path_obj = project_root / ".venv"
+            if os.name == "nt":  # Windows
+                pip_exe = str(venv_path_obj / "Scripts" / "pip.exe")
+            else:
+                pip_exe = str(venv_path_obj / "bin" / "pip")
+
+            if has_requirements:
+                # Install from requirements.txt first
+                subprocess.run(
+                    [pip_exe, "install", "-r", "requirements.txt"], capture_output=True
+                )
+            result = subprocess.run(
+                [pip_exe, "install", "-e", "."],
+                capture_output=True,
+                text=True,
+            )
+
+    if result.returncode == 0:
+        print("✅ Dependencies installed")
+        # Also ensure cryptography is installed for the mock server
+        if in_container:
+            if has_uv:
+                env = os.environ.copy()
+                env["UV_CACHE_DIR"] = "/tmp/uv-cache"
+                venv_path = "/tmp/workspace-venv"
+                env["VIRTUAL_ENV"] = venv_path
+                subprocess.run(
+                    ["uv", "pip", "install", "--python", venv_path, "cryptography"],
+                    capture_output=True,
+                    text=True,
+                    env=env,
+                )
+            else:
+                pip_exe = f"{venv_path}/bin/pip"
+                subprocess.run(
+                    [pip_exe, "install", "cryptography"], capture_output=True
+                )
+        else:
+            if has_uv:
+                subprocess.run(
+                    ["uv", "pip", "install", "cryptography"],
+                    capture_output=True,
+                    text=True,
+                )
+            else:
+                venv_path_obj = project_root / ".venv"
+                if os.name == "nt":
+                    pip_exe = str(venv_path_obj / "Scripts" / "pip.exe")
+                else:
+                    pip_exe = str(venv_path_obj / "bin" / "pip")
+                subprocess.run(
+                    [pip_exe, "install", "cryptography"], capture_output=True
+                )
     else:
         print("❌ Failed to install dependencies")
         print(result.stderr)

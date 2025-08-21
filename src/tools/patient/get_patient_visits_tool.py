@@ -143,11 +143,13 @@ async def get_patient_visits(
         inpatient_visits = [
             v for v in visits if v.is_inpatient and v.duration_days is not None
         ]
-        average_inpatient_duration_days = (
-            sum(v.duration_days for v in inpatient_visits) / len(inpatient_visits)  # type: ignore
-            if inpatient_visits
-            else None
-        )
+        average_inpatient_duration_days: float | None = None
+        if inpatient_visits:
+            # We know duration_days is not None for all visits in inpatient_visits
+            total_days = sum(
+                v.duration_days for v in inpatient_visits if v.duration_days is not None
+            )
+            average_inpatient_duration_days = total_days / len(inpatient_visits)
 
         # Use the paginated visits for the response
         visit_summaries = visits_page

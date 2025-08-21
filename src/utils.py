@@ -196,10 +196,8 @@ def create_rpc_parameter(
         return {"string": value}
     elif isinstance(value, list):
         return {"array": value}
-    elif isinstance(value, dict):
+    else:  # dict[str, str]
         return {"named_array": value}
-    else:
-        return {"string": str(value)}  # type: ignore[unreachable]
 
 
 def is_debug_mode() -> bool:
