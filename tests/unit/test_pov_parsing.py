@@ -338,7 +338,7 @@ class TestPOVParsing:
 
         povs = parser._parse_povs([])
 
-        assert povs == []
+        assert povs == {}
 
     def test_parse_povs_with_valid_data(self):
         """Test parsing POVs with valid data."""
@@ -362,9 +362,10 @@ class TestPOVParsing:
         povs = parser._parse_povs(raw_povs)
 
         assert len(povs) == 1
-        assert isinstance(povs[0], PurposeOfVisit)
-        assert povs[0].name == "Essential hypertension"
-        assert povs[0].is_primary is True
+        pov_list = list(povs.values())
+        assert isinstance(pov_list[0], PurposeOfVisit)
+        assert pov_list[0].name == "Essential hypertension"
+        assert pov_list[0].is_primary is True
 
     def test_parse_povs_with_invalid_data(self):
         """Test parsing POVs with invalid data (should skip invalid items)."""
@@ -392,7 +393,8 @@ class TestPOVParsing:
 
         # Should only return the valid POV
         assert len(povs) == 1
-        assert povs[0].name == "Valid POV"
+        pov_list = list(povs.values())
+        assert pov_list[0].name == "Valid POV"
 
 
 class TestPOVTypeClassification:

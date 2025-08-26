@@ -315,8 +315,11 @@ class TestHealthFactorParser:
 
         health_factors = parser._parse_health_factors(factor_items)
 
+        # Now returns dict keyed by UID
+        assert isinstance(health_factors, dict)
         assert len(health_factors) == 1
-        factor = health_factors[0]
+        assert "urn:va:factor:84F0:237:863" in health_factors
+        factor = health_factors["urn:va:factor:84F0:237:863"]
         assert factor.factor_name == "VA-COVID-19 PCR LAB OUTSIDE POSITIVE"
         assert factor.category == "VA-COVID-19 [C]"
         assert factor.local_id == "863"
@@ -335,8 +338,10 @@ class TestHealthFactorParser:
 
         health_factors = parser._parse_health_factors(factor_items)
 
+        assert isinstance(health_factors, dict)
         assert len(health_factors) == 1
-        factor = health_factors[0]
+        assert "urn:va:factor:84F0:237:999" in health_factors
+        factor = health_factors["urn:va:factor:84F0:237:999"]
         assert factor.factor_name == "UNKNOWN HEALTH FACTOR"
         assert factor.category == "GENERAL"
         assert factor.facility_name == "UNKNOWN FACILITY"
@@ -362,5 +367,9 @@ class TestHealthFactorParser:
 
         # Should parse the valid one and skip the invalid one
         health_factors = parser._parse_health_factors(factor_items)
+        assert isinstance(health_factors, dict)
         assert len(health_factors) == 1
-        assert health_factors[0].factor_name == "VALID FACTOR"
+        assert "urn:va:factor:84F0:237:863" in health_factors
+        assert (
+            health_factors["urn:va:factor:84F0:237:863"].factor_name == "VALID FACTOR"
+        )

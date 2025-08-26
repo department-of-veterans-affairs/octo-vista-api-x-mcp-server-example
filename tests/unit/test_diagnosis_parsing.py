@@ -435,16 +435,22 @@ class TestDiagnosisParser:
 
         diagnoses = parser._parse_diagnoses(problem_items)
 
+        # Now returns dict keyed by UID
+        assert isinstance(diagnoses, dict)
         assert len(diagnoses) == 2
 
-        # Check first diagnosis
-        first_dx = diagnoses[0]  # Should be sorted by date (newest first)
+        # Convert to list and sort by diagnosis_date desc to assert order
+        dx_list = list(diagnoses.values())
+        dx_list.sort(key=lambda d: d.diagnosis_date, reverse=True)
+
+        # Check first diagnosis (newest)
+        first_dx = dx_list[0]
         assert first_dx.icd_code == "E11.9"
         assert first_dx.description == "Type 2 diabetes"
         assert first_dx.body_system == "endocrine"
 
         # Check second diagnosis
-        second_dx = diagnoses[1]
+        second_dx = dx_list[1]
         assert second_dx.icd_code == "I25.10"
         assert second_dx.description == "Atherosclerotic heart disease"
         assert second_dx.body_system == "cardiovascular"

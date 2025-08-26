@@ -106,7 +106,7 @@ def mock_patient_data():
     # Create patient data collection
     return PatientDataCollection(
         demographics=demographics,
-        problems=problems,
+        problems_dict={problem.uid: problem for problem in problems},
         source_station="84F0",
         source_dfn="237",
         total_items=3,

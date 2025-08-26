@@ -141,14 +141,7 @@ def sample_patient_data():
 
     return PatientDataCollection(
         demographics=demographics,
-        visits=visits,
-        medications=[],
-        vital_signs=[],
-        lab_results=[],
-        orders=[],
-        health_factors=[],
-        diagnoses=[],
-        documents=[],
+        visits_dict={v.uid: v for v in visits},
         source_station="500",
         source_dfn="100022",
     )

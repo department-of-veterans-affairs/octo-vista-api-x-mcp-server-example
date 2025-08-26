@@ -163,7 +163,7 @@ def sample_patient_data():
         orders=[],
         lab_results=[],
         consults=[],
-        documents=documents,
+        documents_dict={doc.uid: doc for doc in documents},
         source_station="500",
         source_dfn="237",
     )

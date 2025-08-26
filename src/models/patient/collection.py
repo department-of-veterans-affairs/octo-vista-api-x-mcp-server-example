@@ -30,21 +30,21 @@ class PatientDataCollection(BasePatientModel):
     # Core demographics - always present
     demographics: PatientDemographics
 
-    # Clinical data arrays - may be empty
-    vital_signs: list[VitalSign] = Field(default_factory=list)
-    lab_results: list[LabResult] = Field(default_factory=list)
-    consults: list[Consult] = Field(default_factory=list)
-    medications: list[Medication] = Field(default_factory=list)
-    visits: list[Visit] = Field(default_factory=list)
-    health_factors: list[HealthFactor] = Field(default_factory=list)
-    treatments: list[Treatment] = Field(default_factory=list)
-    diagnoses: list[Diagnosis] = Field(default_factory=list)
-    orders: list[Order] = Field(default_factory=list)
-    documents: list[Document] = Field(default_factory=list)
-    cpt_codes: list[CPTCode] = Field(default_factory=list)
-    allergies: list[Allergy] = Field(default_factory=list)
-    povs: list[PurposeOfVisit] = Field(default_factory=list)
-    problems: list[Problem] = Field(default_factory=list)
+    # Clinical data - stored as dictionaries for O(1) lookups by ID
+    vital_signs_dict: dict[str, VitalSign] = Field(default_factory=dict)
+    lab_results_dict: dict[str, LabResult] = Field(default_factory=dict)
+    consults_dict: dict[str, Consult] = Field(default_factory=dict)
+    medications_dict: dict[str, Medication] = Field(default_factory=dict)
+    visits_dict: dict[str, Visit] = Field(default_factory=dict)
+    health_factors_dict: dict[str, HealthFactor] = Field(default_factory=dict)
+    treatments_dict: dict[str, Treatment] = Field(default_factory=dict)
+    diagnoses_dict: dict[str, Diagnosis] = Field(default_factory=dict)
+    orders_dict: dict[str, Order] = Field(default_factory=dict)
+    documents_dict: dict[str, Document] = Field(default_factory=dict)
+    cpt_codes_dict: dict[str, CPTCode] = Field(default_factory=dict)
+    allergies_dict: dict[str, Allergy] = Field(default_factory=dict)
+    povs_dict: dict[str, PurposeOfVisit] = Field(default_factory=dict)
+    problems_dict: dict[str, Problem] = Field(default_factory=dict)
 
     # Future expansion (stubs for now)
     # immunizations: List[Immunization] = Field(default_factory=list)
@@ -61,6 +61,25 @@ class PatientDataCollection(BasePatientModel):
     raw_data: dict[str, Any] | None = Field(default=None, exclude=True)
 
     @property
+    def all_items(self) -> dict[str, BasePatientModel]:
+        """Get all items in the collection"""
+        return {
+            **self.vital_signs_dict,
+            **self.lab_results_dict,
+            **self.consults_dict,
+            **self.medications_dict,
+            **self.visits_dict,
+            **self.health_factors_dict,
+            **self.diagnoses_dict,
+            **self.orders_dict,
+            **self.documents_dict,
+            **self.cpt_codes_dict,
+            **self.allergies_dict,
+            **self.povs_dict,
+            **self.problems_dict,
+        }
+
+    @property
     def patient_name(self) -> str:
         """Convenience property for patient name"""
         return self.demographics.full_name
@@ -69,6 +88,76 @@ class PatientDataCollection(BasePatientModel):
     def patient_dfn(self) -> str:
         """Convenience property for patient DFN"""
         return self.demographics.dfn or self.source_dfn
+
+    @property
+    def vital_signs(self) -> list[VitalSign]:
+        """Vital signs as a list (backed by vital_signs_dict)"""
+        return list(self.vital_signs_dict.values())
+
+    @property
+    def lab_results(self) -> list[LabResult]:
+        """Lab results as a list (backed by lab_results_dict)"""
+        return list(self.lab_results_dict.values())
+
+    @property
+    def consults(self) -> list[Consult]:
+        """Consults as a list (backed by consults_dict)"""
+        return list(self.consults_dict.values())
+
+    @property
+    def medications(self) -> list[Medication]:
+        """Medications as a list (backed by medications_dict)"""
+        return list(self.medications_dict.values())
+
+    @property
+    def visits(self) -> list[Visit]:
+        """Visits as a list (backed by visits_dict)"""
+        return list(self.visits_dict.values())
+
+    @property
+    def health_factors(self) -> list[HealthFactor]:
+        """Health factors as a list (backed by health_factors_dict)"""
+        return list(self.health_factors_dict.values())
+
+    @property
+    def treatments(self) -> list[Treatment]:
+        """Treatments as a list (backed by treatments_dict)"""
+        return list(self.treatments_dict.values())
+
+    @property
+    def diagnoses(self) -> list[Diagnosis]:
+        """Diagnoses as a list (backed by diagnoses_dict)"""
+        return list(self.diagnoses_dict.values())
+
+    @property
+    def orders(self) -> list[Order]:
+        """Orders as a list (backed by orders_dict)"""
+        return list(self.orders_dict.values())
+
+    @property
+    def documents(self) -> list[Document]:
+        """Documents as a list (backed by documents_dict)"""
+        return list(self.documents_dict.values())
+
+    @property
+    def cpt_codes(self) -> list[CPTCode]:
+        """CPT codes as a list (backed by cpt_codes_dict)"""
+        return list(self.cpt_codes_dict.values())
+
+    @property
+    def allergies(self) -> list[Allergy]:
+        """Allergies as a list (backed by allergies_dict)"""
+        return list(self.allergies_dict.values())
+
+    @property
+    def povs(self) -> list[PurposeOfVisit]:
+        """Purposes of visit as a list (backed by povs_dict)"""
+        return list(self.povs_dict.values())
+
+    @property
+    def problems(self) -> list[Problem]:
+        """Problems as a list (backed by problems_dict)"""
+        return list(self.problems_dict.values())
 
     @property
     def has_clinical_data(self) -> bool:

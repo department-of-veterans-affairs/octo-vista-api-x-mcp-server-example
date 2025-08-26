@@ -25,17 +25,17 @@ class DateRangeFilter:
         self.start_date = start_date
         self.end_date = end_date
 
-    def filter(self, items: list[T]) -> list[T]:
+    def filter(self, items: dict[str, T]) -> dict[str, T]:
         """Filter items by date range
 
         Args:
-            items: List of items with datetime field
+            items: Dictionary of items with datetime field, keyed by UID
 
         Returns:
-            Filtered items within date range
+            Filtered dictionary of items within date range
         """
-        filtered = []
-        for item in items:
+        filtered = {}
+        for uid, item in items.items():
             # Get the datetime attribute - try different names
             dt = None
             if hasattr(item, "datetime"):
@@ -54,7 +54,7 @@ class DateRangeFilter:
             if self.end_date and dt > self.end_date:
                 continue
 
-            filtered.append(item)
+            filtered[uid] = item
 
         return filtered
 
@@ -71,9 +71,9 @@ class DateRangeFilter:
         """
         return PatientDataCollection(
             demographics=collection.demographics,
-            vital_signs=self.filter(collection.vital_signs),
-            lab_results=self.filter(collection.lab_results),
-            consults=self.filter(collection.consults),
+            vital_signs_dict=self.filter(collection.vital_signs_dict),
+            lab_results_dict=self.filter(collection.lab_results_dict),
+            consults_dict=self.filter(collection.consults_dict),
             source_station=collection.source_station,
             source_dfn=collection.source_dfn,
             total_items=collection.total_items,
@@ -83,10 +83,10 @@ class DateRangeFilter:
 
 
 def filter_by_date_range(
-    items: list[T],
+    items: dict[str, T],
     start_date: datetime | None = None,
     end_date: datetime | None = None,
-) -> list[T]:
+) -> dict[str, T]:
     """Convenience function to filter items by date range
 
     Args:

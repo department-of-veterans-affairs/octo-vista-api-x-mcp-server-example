@@ -3,6 +3,7 @@
 from mcp.server.fastmcp import FastMCP
 
 from ...vista.base import BaseVistaClient
+from .get_items_by_uid_tool import register_get_items_by_uid_tool
 from .get_patient_allergies_tool import register_get_patient_allergies_tool
 from .get_patient_consults_tool import register_get_patient_consults_tool
 from .get_patient_diagnoses_tool import register_get_patient_diagnoses_tool
@@ -37,3 +38,4 @@ def register_patient_tools(mcp: FastMCP, vista_client: BaseVistaClient):
     register_get_patient_procedures_tool(mcp, vista_client)
     register_get_patient_treatments_tool(mcp, vista_client)
     register_get_patient_visits_tool(mcp, vista_client)
+    register_get_items_by_uid_tool(mcp, vista_client)

@@ -337,9 +337,13 @@ class TestProblemParsing:
 
         problems = parser._parse_problems(raw_problems)
 
+        # Now returns dict keyed by UID
+        assert isinstance(problems, dict)
         assert len(problems) == 1
-        assert problems[0].uid == "urn:va:problem:84F0:237:268"
-        assert len(problems[0].comments) == 1
+        assert "urn:va:problem:84F0:237:268" in problems
+        prob = list(problems.values())[0]
+        assert prob.uid == "urn:va:problem:84F0:237:268"
+        assert len(prob.comments) == 1
 
     def test_parse_problems_with_comments(self):
         """Test parsing Problems with comments."""
@@ -369,10 +373,13 @@ class TestProblemParsing:
 
         problems = parser._parse_problems(raw_problems)
 
+        assert isinstance(problems, dict)
         assert len(problems) == 1
-        assert problems[0].uid == "urn:va:problem:84F0:237:268"
-        assert len(problems[0].comments) == 1
-        assert problems[0].comments[0].comment == "Anterior"
+        assert "urn:va:problem:84F0:237:268" in problems
+        prob = list(problems.values())[0]
+        assert prob.uid == "urn:va:problem:84F0:237:268"
+        assert len(prob.comments) == 1
+        assert prob.comments[0].comment == "Anterior"
 
 
 class TestProblemStatusClassification:

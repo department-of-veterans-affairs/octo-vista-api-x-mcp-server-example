@@ -116,7 +116,7 @@ def sample_patient_data():
 
     return PatientDataCollection(
         demographics=demographics,
-        medications=medications,
+        medications_dict={med.uid: med for med in medications},
         vital_signs=[],
         lab_results=[],
         consults=[],

@@ -87,12 +87,7 @@ class TestGetPatientDiagnosesIntegration:
 
         return PatientDataCollection(
             demographics=demographics,
-            diagnoses=sample_diagnoses,
-            vital_signs=[],
-            lab_results=[],
-            consults=[],
-            medications=[],
-            health_factors=[],
+            diagnoses_dict={dx.uid: dx for dx in sample_diagnoses},
             source_station="500",
             source_dfn="100022",
             total_items=5,

@@ -109,7 +109,7 @@ def sample_patient_data():
         demographics=demographics,
         patient_name="HARRIS,SHEBA",
         medications=[],
-        orders=orders,
+        orders_dict={order.uid: order for order in orders},
         lab_results=[],
         consults=[],
         documents=[],

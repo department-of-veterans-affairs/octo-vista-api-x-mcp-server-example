@@ -29,6 +29,7 @@ from ....models.patient import (
     PatientTelecom,
     Problem,
     PurposeOfVisit,
+    Treatment,
     VeteranInfo,
     Visit,
     VitalSign,
@@ -126,20 +127,20 @@ class PatientDataParser:
         # Create collection
         collection = PatientDataCollection(
             demographics=demographics,
-            vital_signs=vital_signs,
-            lab_results=lab_results,
-            consults=consults,
-            medications=medications,
-            visits=visits,
-            health_factors=health_factors,
-            treatments=treatments,
-            diagnoses=diagnoses,
-            orders=orders,
-            documents=documents,
-            cpt_codes=cpt_codes,
-            allergies=allergies,
-            povs=povs,
-            problems=problems,
+            vital_signs_dict=vital_signs,
+            lab_results_dict=lab_results,
+            consults_dict=consults,
+            medications_dict=medications,
+            visits_dict=visits,
+            health_factors_dict=health_factors,
+            treatments_dict=treatments,
+            diagnoses_dict=diagnoses,
+            orders_dict=orders,
+            documents_dict=documents,
+            cpt_codes_dict=cpt_codes,
+            allergies_dict=allergies,
+            povs_dict=povs,
+            problems_dict=problems,
             source_station=self.station,
             source_dfn=self.dfn,
             total_items=len(items),
@@ -283,7 +284,9 @@ class PatientDataParser:
             logger.error(f"Failed to parse demographics: {e}")
             raise
 
-    def _parse_vital_signs(self, vital_items: list[dict[str, Any]]) -> list[VitalSign]:
+    def _parse_vital_signs(
+        self, vital_items: list[dict[str, Any]]
+    ) -> dict[str, VitalSign]:
         """Parse vital signs from vital items"""
         vitals = []
 
@@ -297,9 +300,11 @@ class PatientDataParser:
         # Sort by observed date (newest first)
         vitals.sort(key=lambda v: v.observed, reverse=True)
 
-        return vitals
+        return {vital.uid: vital for vital in vitals}
 
-    def _parse_lab_results(self, lab_items: list[dict[str, Any]]) -> list[LabResult]:
+    def _parse_lab_results(
+        self, lab_items: list[dict[str, Any]]
+    ) -> dict[str, LabResult]:
         """Parse lab results from lab items"""
         labs = []
 
@@ -313,9 +318,11 @@ class PatientDataParser:
         # Sort by observed date (newest first)
         labs.sort(key=lambda lab: lab.observed, reverse=True)
 
-        return labs
+        return {lab.uid: lab for lab in labs}
 
-    def _parse_consults(self, consult_items: list[dict[str, Any]]) -> list[Consult]:
+    def _parse_consults(
+        self, consult_items: list[dict[str, Any]]
+    ) -> dict[str, Consult]:
         """Parse consultations from consult items"""
         consults = []
 
@@ -329,9 +336,11 @@ class PatientDataParser:
         # Sort by date (newest first)
         consults.sort(key=lambda c: c.date_time, reverse=True)
 
-        return consults
+        return {consult.uid: consult for consult in consults}
 
-    def _parse_medications(self, med_items: list[dict[str, Any]]) -> list[Medication]:
+    def _parse_medications(
+        self, med_items: list[dict[str, Any]]
+    ) -> dict[str, Medication]:
         """Parse medications from med items"""
         medications = []
 
@@ -348,22 +357,22 @@ class PatientDataParser:
         # Sort by start date (newest first), handling None dates
         medications.sort(key=lambda m: m.start_date or datetime.min, reverse=True)
 
-        return medications
+        return {medication.uid: medication for medication in medications}
 
     def _parse_visits(
         self,
         visit_items: list[dict[str, Any]],
-        orders: list[Order] | None = None,
-    ) -> list[Visit]:
+        orders: dict[str, Order] | None = None,
+    ) -> dict[str, Visit]:
         """Parse visits from visit items and populate order/treatment UIDs"""
         visits: list[Visit] = []
-        orders = orders or []
+        orders = orders or {}
 
         # Create a mapping of visit UIDs to order UIDs for efficient lookup
         visit_to_orders: dict[str, list[str]] = {}
         visit_to_treatments: dict[str, list[str]] = {}
 
-        for order in orders:
+        for order in orders.values():
             encounter_uid = getattr(order, "encounter_uid", None)
             if encounter_uid:
                 # Initialize lists if not present
@@ -406,7 +415,7 @@ class PatientDataParser:
         # Sort by visit date (newest first)
         visits.sort(key=lambda v: v.visit_date or datetime.min, reverse=True)
 
-        return visits
+        return {visit.uid: visit for visit in visits}
 
     def _preprocess_medication_item(self, item: dict[str, Any]) -> dict[str, Any]:
         """Preprocess medication item using JSONPath for nested field extraction"""
@@ -469,7 +478,7 @@ class PatientDataParser:
 
     def _parse_health_factors(
         self, factor_items: list[dict[str, Any]]
-    ) -> list[HealthFactor]:
+    ) -> dict[str, HealthFactor]:
         """Parse health factors from factor items"""
         health_factors = []
 
@@ -491,7 +500,7 @@ class PatientDataParser:
         # Sort by recorded date (newest first)
         health_factors.sort(key=lambda f: f.recorded_date, reverse=True)
 
-        return health_factors
+        return {health_factor.uid: health_factor for health_factor in health_factors}
 
     def _preprocess_health_factor_item(
         self, item: dict[str, Any]
@@ -539,10 +548,10 @@ class PatientDataParser:
 
         return processed
 
-    def _parse_treatments(self, treatment_items: list[dict[str, Any]]) -> list:
+    def _parse_treatments(
+        self, treatment_items: list[dict[str, Any]]
+    ) -> dict[str, Treatment]:
         """Parse treatments from treatment items"""
-        from ....models.patient.treatment import Treatment
-
         treatments = []
 
         for item in treatment_items:
@@ -558,7 +567,7 @@ class PatientDataParser:
         # Sort by treatment date (newest first)
         treatments.sort(key=lambda t: t.date, reverse=True)
 
-        return treatments
+        return {treatment.uid: treatment for treatment in treatments}
 
     def _preprocess_treatment_item(self, item: dict[str, Any]) -> dict[str, Any]:
         """Preprocess treatment item for field normalization"""
@@ -589,7 +598,9 @@ class PatientDataParser:
 
         return processed
 
-    def _parse_diagnoses(self, problem_items: list[dict[str, Any]]) -> list[Diagnosis]:
+    def _parse_diagnoses(
+        self, problem_items: list[dict[str, Any]]
+    ) -> dict[str, Diagnosis]:
         """Parse diagnoses from problem items"""
         diagnoses: list[Diagnosis] = []
 
@@ -606,7 +617,7 @@ class PatientDataParser:
         # Sort by diagnosis date (newest first)
         diagnoses.sort(key=lambda d: d.diagnosis_date or datetime.min, reverse=True)
 
-        return diagnoses
+        return {diagnosis.uid: diagnosis for diagnosis in diagnoses}
 
     def _preprocess_diagnosis_item(self, item: dict[str, Any]) -> dict[str, Any]:
         """Preprocess diagnosis item for field normalization"""
@@ -686,17 +697,19 @@ class PatientDataParser:
 
         return processed
 
-    def _parse_orders(self, order_items: list[dict[str, Any]]) -> list[Order]:
+    def _parse_orders(self, order_items: list[dict[str, Any]]) -> dict[str, Order]:
         """Parse orders from order items"""
         try:
-            parsed = [Order(**order) for order in order_items]
+            parsed = {order["uid"]: Order(**order) for order in order_items}
             logger.info(f"Parsed {len(parsed)} orders")
             return parsed
         except Exception as e:
             logger.warning(f"Failed to parse orders: {e}")
-            return []
+            return {}
 
-    def _parse_documents(self, document_items: list[dict[str, Any]]) -> list[Document]:
+    def _parse_documents(
+        self, document_items: list[dict[str, Any]]
+    ) -> dict[str, Document]:
         """Parse documents from document items"""
         try:
             # Preprocess each document item
@@ -705,12 +718,12 @@ class PatientDataParser:
                 processed = self._preprocess_document_item(item)
                 processed_items.append(processed)
 
-            parsed = [Document(**doc) for doc in processed_items]
+            parsed = {doc["uid"]: Document(**doc) for doc in processed_items}
             logger.info(f"Parsed {len(parsed)} documents")
             return parsed
         except Exception as e:
             logger.warning(f"Failed to parse documents: {e}")
-            return []
+            return {}
 
     def _preprocess_document_item(self, doc_data: dict[str, Any]) -> dict[str, Any]:
         """Preprocess document item before creating Document model"""
@@ -769,7 +782,7 @@ class PatientDataParser:
 
         return processed
 
-    def _parse_cpt_codes(self, cpt_items: list[dict[str, Any]]) -> list[CPTCode]:
+    def _parse_cpt_codes(self, cpt_items: list[dict[str, Any]]) -> dict[str, CPTCode]:
         """Parse CPT codes from cpt items"""
         cpt_codes = []
 
@@ -791,7 +804,7 @@ class PatientDataParser:
         # Sort by procedure date (newest first)
         cpt_codes.sort(key=lambda c: c.procedure_date, reverse=True)
 
-        return cpt_codes
+        return {cpt_code.uid: cpt_code for cpt_code in cpt_codes}
 
     def _preprocess_cpt_code_item(self, item: dict[str, Any]) -> dict[str, Any] | None:
         """Preprocess CPT code item for model creation"""
@@ -845,7 +858,9 @@ class PatientDataParser:
 
         return processed
 
-    def _parse_allergies(self, allergy_items: list[dict[str, Any]]) -> list[Allergy]:
+    def _parse_allergies(
+        self, allergy_items: list[dict[str, Any]]
+    ) -> dict[str, Allergy]:
         """Parse allergy items from VPR JSON"""
         allergies = []
 
@@ -866,7 +881,7 @@ class PatientDataParser:
             key=lambda a: a.entered or datetime.min.replace(tzinfo=UTC), reverse=True
         )
 
-        return allergies
+        return {allergy.uid: allergy for allergy in allergies}
 
     def _preprocess_allergy_item(self, item: dict[str, Any]) -> dict[str, Any] | None:
         """Preprocess allergy item for model creation"""
@@ -923,7 +938,7 @@ class PatientDataParser:
 
         return processed
 
-    def _parse_povs(self, pov_items: list[dict[str, Any]]) -> list[PurposeOfVisit]:
+    def _parse_povs(self, pov_items: list[dict[str, Any]]) -> dict[str, PurposeOfVisit]:
         """Parse POV (Purpose of Visit) items from VPR data"""
         povs = []
 
@@ -944,7 +959,7 @@ class PatientDataParser:
             key=lambda p: p.entered or datetime.min.replace(tzinfo=UTC), reverse=True
         )
 
-        return povs
+        return {pov.uid: pov for pov in povs}
 
     def _preprocess_pov_item(self, item: dict[str, Any]) -> dict[str, Any] | None:
         """Preprocess POV item for model creation"""
@@ -989,7 +1004,9 @@ class PatientDataParser:
 
         return processed
 
-    def _parse_problems(self, problem_items: list[dict[str, Any]]) -> list[Problem]:
+    def _parse_problems(
+        self, problem_items: list[dict[str, Any]]
+    ) -> dict[str, Problem]:
         """Parse Problem items from VPR data"""
         problems = []
 
@@ -1010,7 +1027,7 @@ class PatientDataParser:
             key=lambda p: p.entered or datetime.min.replace(tzinfo=UTC), reverse=True
         )
 
-        return problems
+        return {problem.uid: problem for problem in problems}
 
     def _preprocess_problem_item(self, item: dict[str, Any]) -> dict[str, Any] | None:
         """Preprocess problem item for model creation"""

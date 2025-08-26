@@ -102,7 +102,7 @@ def sample_patient_data(sample_cpt_codes):
 
     return PatientDataCollection(
         demographics=demographics,
-        cpt_codes=sample_cpt_codes,
+        cpt_codes_dict={code.uid: code for code in sample_cpt_codes},
         source_station="500",
         source_dfn="123",
     )
@@ -359,7 +359,7 @@ class TestCPTErrorHandling:
 
         empty_patient_data = PatientDataCollection(
             demographics=demographics,
-            cpt_codes=[],  # No CPT codes
+            cpt_codes_dict={},  # No CPT codes
             source_station="500",
             source_dfn="123",
         )
