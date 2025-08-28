@@ -46,14 +46,31 @@ class RedisCacheBackend(CacheBackend):
         self._redis: Redis | None = None
         self._connection_pool_kwargs = connection_pool_kwargs or {}
 
+    @property
+    def default_ttl(self) -> timedelta:
+        """Get default TTL for this cache backend."""
+        return timedelta(hours=1)  # Default 1 hour TTL for Redis
+
     async def _get_redis(self) -> Redis:
         """Get or create Redis connection."""
         if self._redis is None:
+            # Configure connection pool for Redis
+            pool_kwargs = {
+                "max_connections": 10,
+                "retry_on_timeout": True,
+                "health_check_interval": 30,
+                **self._connection_pool_kwargs,
+            }
+
             self._redis = redis.from_url(
                 self.redis_url,
-                decode_responses=False,  # We'll handle encoding/decoding
-                **self._connection_pool_kwargs,
+                decode_responses=True,
+                **pool_kwargs,
             )
+
+        if self._redis is None:
+            raise RuntimeError("Failed to initialize Redis client")
+
         return self._redis
 
     def _make_key(self, key: str) -> str:
@@ -162,7 +179,7 @@ class RedisCacheBackend(CacheBackend):
 
     async def close(self) -> None:
         """Close Redis connection."""
-        if self._redis:
+        if self._redis is not None:
             await self._redis.close()
             self._redis = None
             logger.debug("Closed Redis connection")

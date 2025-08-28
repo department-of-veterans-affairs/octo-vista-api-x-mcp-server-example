@@ -77,6 +77,17 @@ class CacheBackend(ABC):
         """Close any connections or cleanup resources."""
         pass
 
+    @abstractmethod
+    async def ping(self) -> bool:
+        """Check if cache is available."""
+        pass
+
+    @property
+    @abstractmethod
+    def default_ttl(self) -> timedelta:
+        """Get default TTL for this cache backend."""
+        pass
+
 
 class PatientDataCache:
     """High-level interface for caching patient data"""

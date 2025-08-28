@@ -33,6 +33,28 @@ def initialize_server():
     """Initialize the server components"""
     log_mcp_message(mcp, "info", "Initializing Vista API MCP Server...")
 
+    # Initialize local cache infrastructure if needed
+    try:
+        from src.services.cache.local_cache_manager import (
+            initialize_local_cache_for_server,
+        )
+
+        cache_init_success = initialize_local_cache_for_server()
+        if cache_init_success:
+            log_mcp_message(mcp, "info", "Local cache infrastructure initialized")
+        else:
+            log_mcp_message(
+                mcp, "warning", "Local cache infrastructure failed, using fallback"
+            )
+    except ImportError:
+        log_mcp_message(
+            mcp,
+            "debug",
+            "Local cache manager not available, skipping cache initialization",
+        )
+    except Exception as e:
+        log_mcp_message(mcp, "warning", f"Local cache initialization error: {e}")
+
     # Create Vista client
     try:
         config = get_vista_config()

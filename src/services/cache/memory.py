@@ -82,6 +82,15 @@ class MemoryCacheBackend(CacheBackend):
         """No cleanup needed for memory cache."""
         pass
 
+    async def ping(self) -> bool:
+        """Check if cache is available."""
+        return True
+
+    @property
+    def default_ttl(self) -> timedelta:
+        """Get default TTL for this cache backend."""
+        return timedelta(minutes=5)  # Default 5 minutes TTL for memory cache
+
     def get_stats(self) -> dict[str, Any]:
         """Get cache statistics (for debugging)."""
         total_keys = len(self._cache)
