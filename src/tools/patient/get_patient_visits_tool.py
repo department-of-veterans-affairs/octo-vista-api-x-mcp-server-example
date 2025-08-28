@@ -112,7 +112,9 @@ async def get_patient_visits(
 
         # Filter by active status
         if active_only:
-            visits = [v for v in visits if v.is_active]
+            visits = [
+                v for v in visits if v.status_code and v.status_code.lower() == "active"
+            ]
 
         # Filter by date range
         cutoff_date = datetime.now(UTC) - timedelta(days=days_back)
@@ -120,36 +122,6 @@ async def get_patient_visits(
 
         # Apply pagination
         visits_page, total_visits_after_filtering = paginate_list(visits, offset, limit)
-
-        # Group visits by type for summary (use all filtered visits for stats)
-        visits_by_type: dict[str, list] = {}
-        for visit in visits:
-            visit_type_key = (
-                visit.visit_type.value
-                if hasattr(visit.visit_type, "value")
-                else str(visit.visit_type)
-            )
-            if visit_type_key not in visits_by_type:
-                visits_by_type[visit_type_key] = []
-            visits_by_type[visit_type_key].append(visit)
-
-        # Calculate summary statistics (based on all filtered visits, not just the page)
-        total_count = total_visits_after_filtering
-        active_count = len([v for v in visits if v.is_active])
-        inpatient_count = len([v for v in visits if v.is_inpatient])
-        emergency_count = len([v for v in visits if v.is_emergency])
-
-        # Calculate average inpatient duration
-        inpatient_visits = [
-            v for v in visits if v.is_inpatient and v.duration_days is not None
-        ]
-        average_inpatient_duration_days: float | None = None
-        if inpatient_visits:
-            # We know duration_days is not None for all visits in inpatient_visits
-            total_days = sum(
-                v.duration_days for v in inpatient_visits if v.duration_days is not None
-            )
-            average_inpatient_duration_days = total_days / len(inpatient_visits)
 
         # Use the paginated visits for the response
         visit_summaries = visits_page
@@ -176,7 +148,7 @@ async def get_patient_visits(
         ]
 
         visits_summary = VisitSummary(
-            total_visits=total_count,
+            total_visits=total_visits_after_filtering,
             last_visit=visits[0].visit_date if visits else None,
             visit_types=unique_visit_types,
             facilities=facility_infos,
@@ -202,16 +174,6 @@ async def get_patient_visits(
                 "visit_type": visit_type,
                 "active_only": active_only,
                 "days_back": days_back,
-            },
-            # API response-specific summary fields
-            total_count=total_count,
-            active_count=active_count,
-            inpatient_count=inpatient_count,
-            emergency_count=emergency_count,
-            average_inpatient_duration_days=average_inpatient_duration_days,
-            by_type={
-                visit_type: len(visits_list)
-                for visit_type, visits_list in visits_by_type.items()
             },
         )
 

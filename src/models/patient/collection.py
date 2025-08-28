@@ -196,16 +196,28 @@ class PatientDataCollection(BasePatientModel):
         return [consult for consult in self.consults if consult.is_overdue]
 
     def get_active_visits(self) -> list[Visit]:
-        """Get active visit records"""
-        return [visit for visit in self.visits if visit.is_active]
+        """Get active visit records based on VistA status"""
+        return [
+            visit
+            for visit in self.visits
+            if visit.status_code and visit.status_code.lower() == "active"
+        ]
 
     def get_inpatient_visits(self) -> list[Visit]:
-        """Get inpatient visit records"""
-        return [visit for visit in self.visits if visit.is_inpatient]
+        """Get inpatient visit records based on VistA visit type"""
+        return [
+            visit
+            for visit in self.visits
+            if visit.visit_type and visit.visit_type.value == "inpatient"
+        ]
 
     def get_emergency_visits(self) -> list[Visit]:
-        """Get emergency visit records"""
-        return [visit for visit in self.visits if visit.is_emergency]
+        """Get emergency visit records based on VistA visit type"""
+        return [
+            visit
+            for visit in self.visits
+            if visit.visit_type and visit.visit_type.value == "emergency"
+        ]
 
     def get_completed_documents(self) -> list[Document]:
         """Get completed document records"""

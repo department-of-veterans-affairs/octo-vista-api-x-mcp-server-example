@@ -138,7 +138,10 @@ def get_logger(name: str = "mcp-server") -> logging.Logger:
     # File handler (always enabled)
     log_file = os.getenv("LOG_FILE", "logs/octo-vista.log")
     file_handler = logging.handlers.RotatingFileHandler(
-        log_file, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"  # 10MB
+        log_file,
+        maxBytes=10 * 1024 * 1024,  # 10MB
+        backupCount=5,
+        encoding="utf-8",
     )
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)

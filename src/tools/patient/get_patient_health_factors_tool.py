@@ -37,12 +37,10 @@ def register_get_patient_health_factors_tool(
         patient_dfn: str,
         station: str | None = None,
         category_filter: str | None = None,
-        risk_category: str | None = None,
-        severity_filter: str | None = None,
         offset: Annotated[int, Field(default=0, ge=0)] = 0,
         limit: Annotated[int, Field(default=10, ge=1, le=200)] = 10,
     ) -> HealthFactorsResponse:
-        """Get patient health factors and risk assessments."""
+        """Get patient health factors."""
         start_time = datetime.now(UTC)
         station = station or get_default_station()
         caller_duz = get_default_duz()
@@ -71,54 +69,17 @@ def register_get_patient_health_factors_tool(
                 vista_client, station, patient_dfn, caller_duz
             )
 
-            # Filter health factors with combined conditions
+            # Filter health factors by category if specified
             health_factors = [
                 f
                 for f in patient_data.health_factors
-                if (
-                    not category_filter or category_filter.upper() in f.category.upper()
-                )
-                and (
-                    not risk_category
-                    or f.risk_category.lower() == risk_category.lower()
-                )
-                and (
-                    not severity_filter
-                    or f.severity_level.lower() == severity_filter.lower()
-                )
+                if not category_filter or category_filter.upper() in f.category.upper()
             ]
 
             # Apply pagination
             health_factors_page, total_health_factors_after_filtering = paginate_list(
                 health_factors, offset, limit
             )
-
-            # Group factors by risk category
-            from ...services.validators.clinical_validators import (
-                get_health_factor_trends,
-            )
-
-            factor_groups: dict[str, list[str]] = {}
-            for factor in health_factors_page:
-                group_key = factor.risk_category
-                if group_key not in factor_groups:
-                    factor_groups[group_key] = []
-                factor_groups[group_key].append(factor.uid)
-
-            # Identify high-risk factors
-            high_risk_factors = [
-                f.uid for f in health_factors_page if f.risk_score >= 7
-            ]
-
-            # Calculate trending for common factors
-            trending_data = {}
-            common_factor_names = list({f.factor_name for f in health_factors_page})[
-                :10
-            ]  # Top 10
-            for factor_name in common_factor_names:
-                trending_data[factor_name] = get_health_factor_trends(
-                    health_factors, factor_name
-                )
 
             # Build typed metadata inline
             end_time = datetime.now(UTC)
@@ -145,8 +106,6 @@ def register_get_patient_health_factors_tool(
                 ),
                 filters=HealthFactorsFiltersMetadata(
                     category_filter=category_filter,
-                    risk_category=risk_category,
-                    severity_filter=severity_filter,
                 ),
                 pagination=PaginationMetadata(
                     total_available_items=total_health_factors_after_filtering,
@@ -160,8 +119,6 @@ def register_get_patient_health_factors_tool(
 
             # Build response data
             data = HealthFactorsResponseData(
-                by_risk_category=dict(factor_groups),
-                high_risk_factors=high_risk_factors,
                 health_factors=health_factors_page,
             )
 

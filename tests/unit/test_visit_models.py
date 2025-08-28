@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 from datetime import datetime, timedelta, timezone
 
-from src.models.patient.visits import Visit, VisitType
+from src.models.patient.visits import Visit
 
 
 def test_visit_model():
@@ -32,32 +32,12 @@ def test_visit_model():
 
     print(f"Visit created: {visit.uid}")
     print(f"Visit type: {visit.visit_type}")
-    print(f"Is inpatient: {visit.is_inpatient}")
-    print(f"Is active: {visit.is_active}")
-    print(f"Duration: {visit.duration_days} days")
+    print(f"Status: {visit.status_code}")
+    print(f"Location: {visit.location_name}")
     print(f"Display location: {visit.display_location}")
     print(f"Display dates: {visit.display_dates}")
 
 
-def test_visit_type_classification():
-    """Test visit type classification"""
-    print("\nTesting VisitType classification...")
-
-    test_cases = [
-        ("ER", "EMERGENCY ROOM", VisitType.EMERGENCY),
-        ("WARD", "MEDICAL WARD", VisitType.INPATIENT),
-        ("OR", "OPERATING ROOM", VisitType.SURGERY),
-        ("OBS", "OBSERVATION UNIT", VisitType.OBSERVATION),
-        ("CLINIC", "PRIMARY CARE CLINIC", VisitType.OUTPATIENT),
-    ]
-
-    for location_code, location_name, expected in test_cases:
-        result = VisitType.from_location_code(location_code, location_name)
-        status = "✓" if result == expected else "✗"
-        print(f"{status} {location_code} - {location_name} -> {result}")
-
-
 if __name__ == "__main__":
     test_visit_model()
-    test_visit_type_classification()
     print("\nAll tests passed!")

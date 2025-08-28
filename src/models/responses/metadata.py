@@ -113,12 +113,6 @@ class HealthFactorsFiltersMetadata(FiltersMetadata):
     category_filter: str | None = Field(
         default=None, description="Filter by health factor category"
     )
-    risk_category: str | None = Field(
-        default=None, description="Filter by risk category"
-    )
-    severity_filter: str | None = Field(
-        default=None, description="Filter by severity level"
-    )
 
 
 class VisitsFiltersMetadata(FiltersMetadata):

@@ -39,7 +39,7 @@ def register_get_patient_allergies_tool(mcp: FastMCP, vista_client: BaseVistaCli
         offset: Annotated[int, Field(default=0, ge=0)] = 0,
         limit: Annotated[int, Field(default=10, ge=1, le=200)] = 10,
     ) -> AllergiesResponse:
-        """Get patient allergies and adverse reactions with analysis."""
+        """Get patient allergies and adverse reactions."""
         start_time = datetime.now(timezone.utc)
         station = station or get_default_station()
         caller_duz = get_default_duz()
@@ -88,100 +88,13 @@ def register_get_patient_allergies_tool(mcp: FastMCP, vista_client: BaseVistaCli
                 and (not omit_historical or not allergy.historical)
             ]
 
-            # Generate analysis
-            verified_count = sum(1 for a in filtered_allergies if a.is_verified)
-            unverified_count = len(filtered_allergies) - verified_count
-
-            # Analyze by product type
-            by_product_type: dict[str, int] = {}
-            for allergy in filtered_allergies:
-                for product in allergy.products:
-                    product_name = product.name.upper()
-                    # Categorize common allergen types
-                    if any(
-                        med in product_name
-                        for med in ["PENICILLIN", "AMOXICILLIN", "ANTIBIOTIC"]
-                    ):
-                        category = "ANTIBIOTICS"
-                    elif any(
-                        food in product_name
-                        for food in ["CHOCOLATE", "NUTS", "SHELLFISH", "DAIRY"]
-                    ):
-                        category = "FOODS"
-                    elif any(env in product_name for env in ["MOLD", "POLLEN", "DUST"]):
-                        category = "ENVIRONMENTAL"
-                    elif any(
-                        med in product_name for med in ["ASPIRIN", "IBUPROFEN", "NSAID"]
-                    ):
-                        category = "PAIN_MEDICATIONS"
-                    else:
-                        category = "OTHER"
-
-                    by_product_type[category] = by_product_type.get(category, 0) + 1
-
-            # Analyze by reaction type
-            by_reaction_type: dict[str, int] = {}
-            for allergy in filtered_allergies:
-                for reaction in allergy.reactions:
-                    reaction_name = reaction.name.upper()
-                    # Categorize reaction types
-                    if any(
-                        resp in reaction_name
-                        for resp in ["BREATHING", "WHEEZING", "SHORTNESS"]
-                    ):
-                        category = "RESPIRATORY"
-                    elif any(
-                        skin in reaction_name
-                        for skin in ["RASH", "ITCHING", "HIVES", "SWELLING"]
-                    ):
-                        category = "DERMATOLOGIC"
-                    elif any(
-                        gi in reaction_name for gi in ["NAUSEA", "VOMITING", "DIARRHEA"]
-                    ):
-                        category = "GASTROINTESTINAL"
-                    elif any(
-                        severe in reaction_name for severe in ["ANAPHYLAXIS", "SHOCK"]
-                    ):
-                        category = "SEVERE"
-                    else:
-                        category = "OTHER"
-
-                    by_reaction_type[category] = by_reaction_type.get(category, 0) + 1
-
             # Apply pagination to filtered allergies
             allergies_page, total_allergies_after_filtering = paginate_list(
                 filtered_allergies, offset, limit
             )
 
-            # Identify severe allergies (those with multiple reactions or severe reaction types)
-            severe_allergies = []
-            for allergy in filtered_allergies:  # Use full list for analysis
-                is_severe = False
-
-                # Check for multiple reactions
-                if allergy.reaction_count > 2:
-                    is_severe = True
-
-                # Check for severe reaction types
-                for reaction in allergy.reactions:
-                    reaction_name = reaction.name.upper()
-                    if any(
-                        severe in reaction_name
-                        for severe in ["ANAPHYLAXIS", "SHOCK", "BREATHING"]
-                    ):
-                        is_severe = True
-                        break
-
-                if is_severe:
-                    severe_allergies.append(allergy.uid)
-
             # Build response data
             response_data = AllergiesResponseData(
-                verified_count=verified_count,
-                unverified_count=unverified_count,
-                by_product_type=by_product_type,
-                by_reaction_type=by_reaction_type,
-                severe_allergies=severe_allergies,
                 allergies=allergies_page,  # Use paginated list
             )
 

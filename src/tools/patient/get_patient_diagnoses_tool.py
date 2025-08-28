@@ -16,14 +16,11 @@ from ...models.responses.metadata import (
     StationMetadata,
 )
 from ...models.responses.tool_responses import (
-    BodySystem,
     DiagnosesResponse,
     DiagnosesResponseData,
-    DiagnosisTrend,
 )
 from ...services.data import get_patient_data
 from ...services.validators import validate_dfn
-from ...services.validators.clinical_validators import get_diagnosis_trends
 from ...utils import get_default_duz, get_default_station, get_logger, paginate_list
 from ...vista.base import BaseVistaClient
 
@@ -135,26 +132,6 @@ def register_get_patient_diagnoses_tool(mcp: FastMCP, vista_client: BaseVistaCli
                 d.uid for d in filtered_diagnoses_page if d.status.lower() == "active"
             ]
 
-            # Calculate trending for common diagnoses
-            trending_data = {}
-            common_icd_codes = list(
-                {d.icd_code for d in filtered_diagnoses_page if d.icd_code}
-            )[
-                :10
-            ]  # Top 10
-            for icd_code in common_icd_codes:
-                trend_dict = get_diagnosis_trends(filtered_diagnoses_page, icd_code)
-                # Convert body_system string to enum if present
-                if "body_system" in trend_dict and trend_dict["body_system"]:
-                    try:
-                        trend_dict["body_system"] = BodySystem(
-                            trend_dict["body_system"]
-                        )
-                    except ValueError:
-                        # If the string doesn't match any enum value, default to OTHER
-                        trend_dict["body_system"] = BodySystem.OTHER
-                trending_data[icd_code] = DiagnosisTrend(**trend_dict)
-
             # Build typed metadata inline
             end_time = datetime.now(UTC)
             duration_ms = int((end_time - start_time).total_seconds() * 1000)
@@ -215,7 +192,6 @@ def register_get_patient_diagnoses_tool(mcp: FastMCP, vista_client: BaseVistaCli
                 by_body_system=diagnosis_groups,
                 primary_diagnoses=primary_diagnoses,
                 chronic_conditions=chronic_diagnoses,
-                trending=trending_data,
                 diagnoses=filtered_diagnoses_page,
             )
 

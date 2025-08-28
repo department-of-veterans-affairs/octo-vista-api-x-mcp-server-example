@@ -1,12 +1,10 @@
 """Visit data models for patient records"""
 
-from datetime import UTC, datetime
+from datetime import datetime
 from enum import Enum
-from typing import Any
 
 from pydantic import Field, field_validator
 
-from ...services.formatters.location_mapper import LocationMapper
 from ...services.parsers.patient.datetime_parser import parse_datetime
 from ..base.common import BaseVistaModel
 from .base import BasePatientModel, FacilityInfo
@@ -22,49 +20,6 @@ class VisitType(str, Enum):
     SURGERY = "surgery"
     CONSULTATION = "consultation"
     UNKNOWN = "unknown"
-
-    @classmethod
-    def from_location_code(cls, location_code: str, location_name: str) -> "VisitType":
-        """Classify visit type based on location code and name"""
-        if not location_code or not location_name:
-            return cls.UNKNOWN
-
-        location_code = location_code.upper()
-        location_name = location_name.upper()
-
-        # Surgery - check first to avoid conflicts with emergency
-        if any(
-            term in location_name
-            for term in ["OPERATING ROOM", "SURGERY SUITE", "PREOP", "POSTOP"]
-        ):
-            return cls.SURGERY
-
-        # Observation - check before emergency to avoid conflicts
-        if any(term in location_name for term in ["OBSERVATION", "OBS", "SHORT STAY"]):
-            return cls.OBSERVATION
-
-        # Emergency/Urgent care - be specific to avoid conflicts
-        if any(
-            term in location_name
-            for term in ["EMERGENCY ROOM", "ER", "URGENT CARE", "TRAUMA CENTER"]
-        ):
-            return cls.EMERGENCY
-
-        # Inpatient units
-        if any(
-            term in location_name
-            for term in ["WARD", "UNIT", "FLOOR", "ICU", "CCU", "STEPDOWN"]
-        ):
-            return cls.INPATIENT
-
-        # Outpatient clinics
-        if any(
-            term in location_name for term in ["CLINIC", "AMBULATORY", "OUTPATIENT"]
-        ):
-            return cls.OUTPATIENT
-
-        # Default to outpatient for most other cases
-        return cls.OUTPATIENT
 
 
 class Visit(BasePatientModel):
@@ -145,50 +100,6 @@ class Visit(BasePatientModel):
                 return VisitType.UNKNOWN
         return VisitType.UNKNOWN
 
-    def model_post_init(self, __context: Any) -> None:
-        """Post-init processing"""
-        super().model_post_init(__context)
-
-        # Auto-classify visit type if not set
-        if self.visit_type == VisitType.UNKNOWN:
-            # Use enhanced location mapper for better classification
-            location_type = LocationMapper.get_location_type(
-                self.location_code, self.location_name
-            )
-            try:
-                self.visit_type = VisitType(location_type)
-            except ValueError:
-                # Fall back to original classification method
-                self.visit_type = VisitType.from_location_code(
-                    self.location_code, self.location_name
-                )
-
-    @property
-    def is_inpatient(self) -> bool:
-        """Check if this is an inpatient visit"""
-        return self.visit_type == VisitType.INPATIENT
-
-    @property
-    def is_emergency(self) -> bool:
-        """Check if this is an emergency visit"""
-        return self.visit_type == VisitType.EMERGENCY
-
-    @property
-    def is_active(self) -> bool:
-        """Check if visit is currently active (admitted but not discharged)"""
-        if not self.is_inpatient:
-            return False
-        return bool(self.admission_date and not self.discharge_date)
-
-    @property
-    def duration_days(self) -> int | None:
-        """Calculate visit duration in days"""
-        if not self.admission_date:
-            return None
-        end_date = self.discharge_date or datetime.now(UTC)
-        delta = end_date - self.admission_date
-        return delta.days
-
     @property
     def display_location(self) -> str:
         """Get display-friendly location name"""
@@ -208,18 +119,6 @@ class Visit(BasePatientModel):
         elif self.visit_date:
             return self.visit_date.strftime("%Y-%m-%d")
         return "Unknown date"
-
-    @property
-    def location_summary(self) -> dict[str, Any]:
-        """Get comprehensive location information using location mapper"""
-        return LocationMapper.get_location_summary(
-            self.location_code, self.location_name
-        )
-
-    @property
-    def standardized_location_name(self) -> str:
-        """Get standardized location name"""
-        return LocationMapper.standardize_location_name(self.location_name)
 
 
 class VisitSummary(BaseVistaModel):

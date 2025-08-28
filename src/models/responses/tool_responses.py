@@ -138,25 +138,16 @@ class DiagnosesResponseData(ResponseData):
     by_body_system: dict[str, list[str]] = Field(default_factory=dict)
     primary_diagnoses: list[str] = Field(default_factory=list)
     chronic_conditions: list[str] = Field(default_factory=list)
-    trending: dict[str, DiagnosisTrend] = Field(default_factory=dict)
     diagnoses: list[Diagnosis] = Field(default_factory=list)
 
 
 class AllergiesResponseData(ResponseData):
     """Response data for patient allergies"""
 
-    verified_count: int = 0
-    unverified_count: int = 0
-    by_product_type: dict[str, int] = Field(default_factory=dict)
-    by_reaction_type: dict[str, int] = Field(default_factory=dict)
-    severe_allergies: list[str] = Field(default_factory=list)
     allergies: list[Allergy] = Field(default_factory=list)
 
 
 class HealthFactorsResponseData(ResponseData):
-    summary: dict[str, int] = Field(default_factory=dict)
-    by_risk_category: dict[str, list[str]] = Field(default_factory=dict)
-    high_risk_factors: list[str] = Field(default_factory=list)
     health_factors: list[HealthFactor] = Field(default_factory=list)
 
 
@@ -181,18 +172,6 @@ class VisitsResponseData(ResponseData):
     summary: VisitSummary
     all_visits: list[Visit] = Field(default_factory=list)
     filters: dict[str, str | bool | int] = Field(default_factory=dict)
-
-    # API response-specific summary fields
-    total_count: int = Field(default=0, description="Total count of visits")
-    active_count: int = Field(default=0, description="Number of active visits")
-    inpatient_count: int = Field(default=0, description="Number of inpatient visits")
-    emergency_count: int = Field(default=0, description="Number of emergency visits")
-    average_inpatient_duration_days: float | None = Field(
-        default=None, description="Average duration of inpatient stays"
-    )
-    by_type: dict[str, int] = Field(
-        default_factory=dict, description="Visit counts by type"
-    )
 
 
 # Response Models (all response models grouped together)

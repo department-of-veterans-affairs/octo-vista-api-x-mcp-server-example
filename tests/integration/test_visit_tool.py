@@ -199,11 +199,6 @@ class TestVisitToolIntegration:
                 # Check visits summary
                 summary = result.data.summary
                 assert summary.total_visits >= 0
-                assert result.data.total_count >= 0
-                assert result.data.active_count >= 0
-                assert result.data.inpatient_count >= 0
-                assert result.data.emergency_count >= 0
-                assert result.data.by_type is not None
 
     @pytest.mark.asyncio
     async def test_get_patient_visits_with_filters(
@@ -468,17 +463,6 @@ class TestVisitToolIntegration:
                 assert patient.summary is not None
                 assert patient.all_visits is not None
 
-                # Check summary structure
-                assert patient.total_count >= 0
-                assert patient.active_count >= 0
-                assert patient.inpatient_count >= 0
-                assert patient.emergency_count >= 0
-                assert patient.by_type is not None
-
-                # Check by_type structure
-                by_type = patient.by_type
-                assert isinstance(by_type, dict)
-
                 # Check all_visits structure
                 all_visits = patient.all_visits
                 assert isinstance(all_visits, list)
@@ -667,10 +651,10 @@ class TestVisitToolIntegration:
                 metadata = result.metadata
                 assert metadata.filters.active_only is True
 
-                # Check that all returned visits are active
+                # Check that all returned visits are active (based on VistA status)
                 all_visits = result.data.all_visits
                 for visit in all_visits:
-                    assert visit.is_active is True
+                    assert visit.status_code and visit.status_code.lower() == "active"
 
             # Test with active_only=False
             with (
