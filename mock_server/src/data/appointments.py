@@ -3,6 +3,7 @@ Appointment data for test patients
 """
 
 from datetime import datetime, timedelta
+from typing import Any
 
 
 # Generate realistic appointment data
@@ -13,7 +14,7 @@ def generate_appointment_date(days_offset: int) -> str:
 
 
 # Appointments by patient
-PATIENT_APPOINTMENTS: dict[str, list[dict[str, any]]] = {
+PATIENT_APPOINTMENTS: dict[str, list[dict[str, Any]]] = {
     # Vietnam Veteran - Regular chronic care
     "100022": [
         {
@@ -324,7 +325,7 @@ PATIENT_APPOINTMENTS: dict[str, list[dict[str, any]]] = {
 }
 
 # Clinic schedules
-CLINIC_SCHEDULES: dict[str, dict[str, any]] = {
+CLINIC_SCHEDULES: dict[str, dict[str, Any]] = {
     "195": {  # Primary Care
         "name": "PRIMARY CARE CLINIC",
         "stopCode": "323",
@@ -366,14 +367,14 @@ CLINIC_SCHEDULES: dict[str, dict[str, any]] = {
 }
 
 
-def get_appointments_for_patient(dfn: str) -> list[dict[str, any]]:
+def get_appointments_for_patient(dfn: str) -> list[dict[str, Any]]:
     """Get appointments for a patient"""
     return PATIENT_APPOINTMENTS.get(dfn, [])
 
 
 def get_appointments_for_clinic(
     clinic_ien: str, _start_date: str, _end_date: str
-) -> list[dict[str, any]]:
+) -> list[dict[str, Any]]:
     """Get appointments for a clinic within date range"""
     from src.data.test_patients import TEST_PATIENTS
 
@@ -396,7 +397,7 @@ def get_appointments_for_clinic(
     return appointments
 
 
-def get_clinic_info(clinic_ien: str) -> dict[str, any]:
+def get_clinic_info(clinic_ien: str) -> dict[str, Any]:
     """Get clinic information"""
     return CLINIC_SCHEDULES.get(
         clinic_ien,

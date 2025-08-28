@@ -2,8 +2,10 @@
 Comprehensive test patients with diverse veteran scenarios
 """
 
+from typing import Any
+
 # Test patients covering various veteran demographics and conditions
-TEST_PATIENTS: dict[str, dict[str, any]] = {
+TEST_PATIENTS: dict[str, dict[str, Any]] = {
     # Vietnam Era Veteran with PTSD and Agent Orange exposure
     "100022": {
         "name": "ANDERSON,JAMES ROBERT",
@@ -402,7 +404,7 @@ TEST_PATIENTS: dict[str, dict[str, any]] = {
 }
 
 
-def get_patient_by_dfn(dfn: str) -> dict[str, any]:
+def get_patient_by_dfn(dfn: str) -> dict[str, Any]:
     """Get patient data by DFN"""
     return TEST_PATIENTS.get(
         dfn,
@@ -423,7 +425,7 @@ def get_patient_by_dfn(dfn: str) -> dict[str, any]:
     )
 
 
-def search_patients_by_name(prefix: str) -> list[dict[str, any]]:
+def search_patients_by_name(prefix: str) -> list[dict[str, Any]]:
     """Search patients by name prefix"""
     prefix_upper = prefix.upper()
     results = []

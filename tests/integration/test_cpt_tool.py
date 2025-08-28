@@ -1,6 +1,6 @@
 """Integration tests for CPT procedures MCP tool"""
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from unittest.mock import Mock, patch
 
 import pytest
@@ -9,7 +9,6 @@ from src.models.patient import CPTCode, PatientDataCollection, PatientDemographi
 from src.tools.patient.get_patient_procedures import (
     _apply_procedure_filters,
     _build_procedure_summary,
-    _format_procedures_list,
     _group_procedures_by_encounter,
     get_patient_procedures_impl,
 )
@@ -36,13 +35,11 @@ def sample_cpt_codes():
             localId="5326",
             cptCode="99213",
             name="Office visit",
-            category="primary_care",
-            dateTime=base_date,
+            entered=base_date,
             facilityCode="500",
             facilityName="Test Hospital",
-            provider="Dr. Smith",
             quantity=1,
-            associated_visit_uid="urn:va:visit:500:123:456",
+            encounter="urn:va:visit:500:123:456",
             encounter_name="Primary Care Visit",
         ),
         CPTCode(
@@ -50,14 +47,11 @@ def sample_cpt_codes():
             localId="5327",
             cptCode="71020",
             name="Chest X-ray",
-            category="radiology",
-            dateTime=base_date,
+            entered=base_date,
             facilityCode="500",
             facilityName="Test Hospital",
-            provider="Dr. Johnson",
             quantity=1,
-            modifiers=["26"],
-            associated_visit_uid="urn:va:visit:500:123:789",
+            encounter="urn:va:visit:500:123:789",
             encounter_name="Radiology Visit",
         ),
         CPTCode(
@@ -65,13 +59,11 @@ def sample_cpt_codes():
             localId="5328",
             cptCode="12001",
             name="Simple repair of superficial wounds",
-            category="surgery",
-            dateTime=base_date,
+            entered=base_date,
             facilityCode="500",
             facilityName="Test Hospital",
-            provider="Dr. Brown",
             quantity=1,
-            associated_visit_uid="urn:va:visit:500:123:456",
+            encounter="urn:va:visit:500:123:456",
             encounter_name="Primary Care Visit",
         ),
     ]
@@ -141,29 +133,6 @@ class TestCPTProceduresImplementation:
             assert any(p.cpt_code == "12001" for p in procedures)
 
     @pytest.mark.asyncio
-    async def test_get_patient_procedures_with_filters(
-        self, mock_vista_client, sample_patient_data
-    ):
-        """Test CPT procedures retrieval with filters"""
-        with patch(
-            "src.tools.patient.get_patient_procedures.get_patient_data"
-        ) as mock_get_data:
-            mock_get_data.return_value = sample_patient_data
-
-            # Filter by radiology category
-            result = await get_patient_procedures_impl(
-                vista_client=mock_vista_client,
-                patient_dfn="123",
-                procedure_category="radiology",
-            )
-
-            assert result.success is True
-            procedures = result.data.procedures
-            assert len(procedures) == 1
-            assert procedures[0].cpt_code == "71020"
-            assert procedures[0].category == "radiology"
-
-    @pytest.mark.asyncio
     async def test_get_patient_procedures_grouped_by_encounter(
         self, mock_vista_client, sample_patient_data
     ):
@@ -176,7 +145,6 @@ class TestCPTProceduresImplementation:
             result = await get_patient_procedures_impl(
                 vista_client=mock_vista_client,
                 patient_dfn="123",
-                group_by_encounter=True,
             )
 
             assert result.success is True
@@ -212,57 +180,23 @@ class TestCPTProceduresImplementation:
 class TestCPTFilteringFunctions:
     """Test CPT filtering helper functions"""
 
-    def test_apply_procedure_filters_category(self, sample_cpt_codes):
-        """Test filtering by procedure category"""
-        # Filter by evaluation category
-        filtered = _apply_procedure_filters(
-            sample_cpt_codes, procedure_category="evaluation"
-        )
-
-        assert len(filtered) == 1
-        assert filtered[0].cpt_code == "99213"
-
     def test_apply_procedure_filters_date_range(self, sample_cpt_codes):
         """Test filtering by date range"""
         filtered = _apply_procedure_filters(
-            sample_cpt_codes, date_from="2024-01-01", date_to="2024-01-31"
+            sample_cpt_codes,
+            date_from=date(2024, 1, 1),
+            date_to=date(2024, 1, 31),
         )
 
         # All sample codes are from 2024-01-01, so all should be included
         assert len(filtered) == 3
 
         # Test excluding date range
-        filtered = _apply_procedure_filters(sample_cpt_codes, date_from="2024-02-01")
+        filtered = _apply_procedure_filters(
+            sample_cpt_codes, date_from=date(2024, 2, 1)
+        )
 
         assert len(filtered) == 0
-
-    def test_format_procedures_list(self, sample_cpt_codes):
-        """Test formatting procedures as list"""
-        formatted = _format_procedures_list(sample_cpt_codes, include_modifiers=True)
-
-        assert len(formatted) == 3
-
-        # Check structure
-        procedure = formatted[0]
-        required_fields = [
-            "cpt_code",
-            "description",
-            "procedure_date",
-            "provider",
-            "quantity",
-            "category",
-            "complexity",
-            "facility",
-            "status",
-        ]
-
-        for field in required_fields:
-            assert field in procedure
-
-        # Check modifiers included
-        xray_procedure = next(p for p in formatted if p["cpt_code"] == "71020")
-        assert "modifiers" in xray_procedure
-        assert xray_procedure["modifiers"] == ["26"]
 
     def test_group_procedures_by_encounter(self, sample_cpt_codes):
         """Test grouping procedures by encounter"""
@@ -295,12 +229,6 @@ class TestCPTFilteringFunctions:
         required_fields = [
             "total_procedures",
             "filtered_procedures",
-            "surgical_procedures",
-            "diagnostic_procedures",
-            "procedures_with_modifiers",
-            "category_breakdown",
-            "complexity_breakdown",
-            "unique_providers",
             "unique_encounters",
         ]
 
@@ -309,10 +237,6 @@ class TestCPTFilteringFunctions:
 
         assert summary["total_procedures"] == 3
         assert summary["filtered_procedures"] == 3
-        assert summary["surgical_procedures"] == 1  # 12001 is surgery
-        assert summary["diagnostic_procedures"] == 1  # 71020 is radiology
-        assert summary["procedures_with_modifiers"] == 1  # 71020 has modifiers
-        assert summary["unique_providers"] == 3  # 3 different providers
         assert summary["unique_encounters"] == 2  # 2 different encounters
 
 

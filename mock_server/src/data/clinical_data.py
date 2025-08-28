@@ -2,6 +2,8 @@
 Comprehensive clinical data for test patients
 """
 
+from typing import Any
+
 # Problems/Diagnoses by patient
 PATIENT_PROBLEMS: dict[str, list[dict[str, str]]] = {
     # Vietnam Veteran with PTSD
@@ -114,7 +116,7 @@ PATIENT_PROBLEMS: dict[str, list[dict[str, str]]] = {
 }
 
 # Medications by patient
-PATIENT_MEDICATIONS: dict[str, list[dict[str, any]]] = {
+PATIENT_MEDICATIONS: dict[str, list[dict[str, Any]]] = {
     "100022": [
         {
             "name": "METFORMIN 1000MG TAB",
@@ -458,7 +460,7 @@ PATIENT_VITALS: dict[str, list[dict[str, any]]] = {
 }
 
 # Lab Results by patient
-PATIENT_LABS: dict[str, list[dict[str, any]]] = {
+PATIENT_LABS: dict[str, list[dict[str, Any]]] = {
     "100022": [
         {
             "test": "HEMOGLOBIN A1C",
@@ -640,7 +642,7 @@ PATIENT_ALLERGIES: dict[str, list[dict[str, str]]] = {
 }
 
 
-def get_clinical_data_for_patient(dfn: str, domain: str) -> list[dict[str, any]]:
+def get_clinical_data_for_patient(dfn: str, domain: str) -> list[dict[str, Any]]:
     """Get clinical data for a patient by domain"""
     domain_map = {
         "problem": PATIENT_PROBLEMS,

@@ -802,7 +802,9 @@ class PatientDataParser:
                 logger.debug(f"CPT code item data: {item}")
 
         # Sort by procedure date (newest first)
-        cpt_codes.sort(key=lambda c: c.procedure_date, reverse=True)
+        cpt_codes.sort(
+            key=lambda c: c.entered or datetime.min.replace(tzinfo=UTC), reverse=True
+        )
 
         return {cpt_code.uid: cpt_code for cpt_code in cpt_codes}
 
@@ -824,37 +826,12 @@ class PatientDataParser:
             if isinstance(cpt_code, str) and cpt_code.startswith("urn:cpt:"):
                 processed["cptCode"] = cpt_code.split(":")[-1]
 
-        # Set defaults for missing fields
-        if "localId" not in processed:
-            processed["localId"] = processed.get("uid", "").split(":")[-1]
-
-        if "name" not in processed:
-            processed["name"] = ""
-
-        if "dateTime" not in processed:
-            # Try to extract from other date fields
-            if "performed" in processed:
-                processed["dateTime"] = processed["performed"]
-            elif "entered" in processed:
-                processed["dateTime"] = processed["entered"]
-            else:
-                logger.warning(
-                    f"CPT code item missing dateTime: {processed.get('uid')}"
-                )
-                return None
-
         # Ensure facility code and name are present
         if "facilityCode" not in processed:
             processed["facilityCode"] = self.station
 
         if "facilityName" not in processed:
             processed["facilityName"] = f"Station {self.station}"
-
-        # Handle modifiers if present
-        if "modifiers" in processed and isinstance(processed["modifiers"], str):
-            from ...validators.cpt_validators import parse_cpt_modifiers
-
-            processed["modifiers"] = parse_cpt_modifiers(processed["modifiers"])
 
         return processed
 

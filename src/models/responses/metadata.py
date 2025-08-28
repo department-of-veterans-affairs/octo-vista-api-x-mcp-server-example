@@ -1,6 +1,6 @@
 """Response metadata models for MCP tools"""
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from pydantic import (
     Field,
@@ -131,17 +131,11 @@ class VisitsFiltersMetadata(FiltersMetadata):
 class ProceduresFiltersMetadata(FiltersMetadata):
     """Filter metadata for procedures tool"""
 
-    procedure_category: str | None = Field(
-        default=None, description="Filter by procedure category"
-    )
-    date_from: str | None = Field(
+    date_from: date | None = Field(
         default=None, description="Start date for procedure filtering"
     )
-    date_to: str | None = Field(
+    date_to: date | None = Field(
         default=None, description="End date for procedure filtering"
-    )
-    group_by_encounter: bool = Field(
-        default=False, description="Group procedures by encounter"
     )
 
 

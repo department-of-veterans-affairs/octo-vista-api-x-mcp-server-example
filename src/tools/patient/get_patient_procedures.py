@@ -1,6 +1,6 @@
 """Get patient procedures tool - retrieve CPT codes and procedure data"""
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Annotated, Any
 
 from pydantic import Field
@@ -21,7 +21,6 @@ from ...models.responses.tool_responses import (
 )
 from ...services.data.patient_data import get_patient_data
 from ...services.validators import validate_dfn
-from ...services.validators.cpt_validators import get_procedure_complexity
 from ...utils import get_default_duz, get_default_station, get_logger, paginate_list
 from ...vista.base import BaseVistaClient, VistaAPIError
 
@@ -33,10 +32,8 @@ async def get_patient_procedures_impl(
     patient_dfn: str,
     station: str | None = None,
     caller_duz: str | None = None,
-    procedure_category: str | None = None,
-    date_from: str | None = None,
-    date_to: str | None = None,
-    group_by_encounter: bool = False,
+    date_from: date | None = None,
+    date_to: date | None = None,
     offset: int = 0,
     limit: int = 50,
 ) -> ProceduresResponse:
@@ -48,10 +45,8 @@ async def get_patient_procedures_impl(
         patient_dfn: Patient DFN
         station: Station number
         caller_duz: Caller DUZ
-        procedure_category: Filter by category (surgery, radiology, pathology, etc.)
-        date_from: Start date filter (YYYY-MM-DD)
-        date_to: End date filter (YYYY-MM-DD)
-        group_by_encounter: Group procedures by encounter
+        date_from: Start date filter
+        date_to: End date filter
         limit: Maximum number of procedures to return
 
     Returns:
@@ -76,7 +71,6 @@ async def get_patient_procedures_impl(
         # Apply filters
         filtered_codes = _apply_procedure_filters(
             all_cpt_codes,
-            procedure_category=procedure_category,
             date_from=date_from,
             date_to=date_to,
         )
@@ -85,9 +79,6 @@ async def get_patient_procedures_impl(
         paginated_codes, total_after_filtering = paginate_list(
             filtered_codes, offset, limit
         )
-
-        # TODO: Implement group_by_encounter functionality using _group_procedures_by_encounter()
-        # Currently, procedures are returned as raw CPTCode objects regardless of this parameter
 
         # Build summary statistics (based on all filtered codes, not just the page)
         summary_stats = _build_procedure_summary(all_cpt_codes, filtered_codes)
@@ -117,10 +108,8 @@ async def get_patient_procedures_impl(
                 patient_age=patient_data.demographics.calculate_age(),
             ),
             filters=ProceduresFiltersMetadata(
-                procedure_category=procedure_category,
                 date_from=date_from,
                 date_to=date_to,
-                group_by_encounter=group_by_encounter,
             ),
             pagination=PaginationMetadata(
                 total_available_items=total_after_filtering,
@@ -136,21 +125,13 @@ async def get_patient_procedures_impl(
         data = ProceduresResponseData(
             total_procedures=summary_stats["total_procedures"],
             filtered_procedures=summary_stats["filtered_procedures"],
-            surgical_procedures=summary_stats["surgical_procedures"],
-            diagnostic_procedures=summary_stats["diagnostic_procedures"],
-            procedures_with_modifiers=summary_stats["procedures_with_modifiers"],
-            category_breakdown=summary_stats["category_breakdown"],
-            complexity_breakdown=summary_stats["complexity_breakdown"],
             date_range=summary_stats["date_range"],
-            unique_providers=summary_stats["unique_providers"],
             unique_encounters=summary_stats["unique_encounters"],
             procedures=paginated_codes,
             filters_applied={
-                "category": procedure_category,
                 "date_from": date_from,
                 "date_to": date_to,
                 "limit": limit,
-                "grouped_by_encounter": group_by_encounter,
             },
         )
 
@@ -203,38 +184,21 @@ async def get_patient_procedures_impl(
 
 def _apply_procedure_filters(
     cpt_codes: list[CPTCode],
-    procedure_category: str | None = None,
-    date_from: str | None = None,
-    date_to: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
 ) -> list[CPTCode]:
     """Apply filters to CPT codes list"""
     filtered = cpt_codes
 
-    # Filter by category
-    if procedure_category:
-        category_lower = procedure_category.lower()
-        filtered = [
-            code
-            for code in filtered
-            if code.procedure_category.lower() == category_lower
-        ]
-
     # Filter by date range
     if date_from or date_to:
         try:
-            from_date = (
-                datetime.fromisoformat(date_from).replace(tzinfo=UTC)
-                if date_from
-                else datetime.min.replace(tzinfo=UTC)
-            )
-            to_date = (
-                datetime.fromisoformat(date_to).replace(tzinfo=UTC)
-                if date_to
-                else datetime.max.replace(tzinfo=UTC)
-            )
-
             filtered = [
-                code for code in filtered if from_date <= code.procedure_date <= to_date
+                code
+                for code in filtered
+                if code.entered is None
+                or (not date_from or date_from <= code.entered.date())
+                and (not date_to or code.entered.date() <= date_to)
             ]
         except ValueError as e:
             logger.warning(f"Invalid date format in filters: {e}")
@@ -243,7 +207,7 @@ def _apply_procedure_filters(
 
 
 def _format_procedures_list(
-    cpt_codes: list[CPTCode], include_modifiers: bool = True
+    cpt_codes: list[CPTCode],
 ) -> list[dict[str, Any]]:
     """Format CPT codes as a list of procedures"""
     procedures = []
@@ -251,43 +215,29 @@ def _format_procedures_list(
     for code in cpt_codes:
         procedure: dict[str, Any] = {
             "cpt_code": code.cpt_code,
-            "description": code.description,
-            "procedure_date": code.procedure_date.isoformat(),
-            "provider": code.provider,
+            "description": code.name,
+            "procedure_date": code.entered.isoformat() if code.entered else None,
             "quantity": code.quantity,
-            "category": code.procedure_category,
-            "complexity": get_procedure_complexity(code.cpt_code, code.description),
             "facility": code.facility_name,
-            "status": code.status,
-            "is_surgical": code.is_surgical,
-            "is_diagnostic": code.is_diagnostic,
         }
 
-        if include_modifiers and code.modifiers:
-            procedure["modifiers"] = list(code.modifiers)
-
-        if code.associated_visit_uid:
-            procedure["encounter_uid"] = code.associated_visit_uid
+        if code.encounter:
+            procedure["encounter_uid"] = code.encounter
             procedure["encounter_name"] = code.encounter_name
-
-        if code.comments:
-            procedure["comments"] = code.comments
 
         procedures.append(procedure)
 
     return procedures
 
 
-def _group_procedures_by_encounter(
-    cpt_codes: list[CPTCode], include_modifiers: bool = True
-) -> dict[str, Any]:
+def _group_procedures_by_encounter(cpt_codes: list[CPTCode]) -> dict[str, Any]:
     """Group procedures by encounter"""
     encounters: dict[str, dict[str, Any]] = {}
     no_encounter_codes = []
 
     for code in cpt_codes:
-        if code.associated_visit_uid:
-            encounter_key = code.associated_visit_uid
+        if code.encounter:
+            encounter_key = code.encounter
             if encounter_key not in encounters:
                 encounters[encounter_key] = {
                     "encounter_uid": encounter_key,
@@ -299,18 +249,10 @@ def _group_procedures_by_encounter(
 
             procedure: dict[str, Any] = {
                 "cpt_code": code.cpt_code,
-                "description": code.description,
-                "procedure_date": code.procedure_date.isoformat(),
-                "provider": code.provider,
+                "description": code.name,
+                "procedure_date": code.entered.isoformat() if code.entered else None,
                 "quantity": code.quantity,
-                "category": code.procedure_category,
-                "complexity": get_procedure_complexity(code.cpt_code, code.description),
-                "is_surgical": code.is_surgical,
-                "is_diagnostic": code.is_diagnostic,
             }
-
-            if include_modifiers and code.modifiers:
-                procedure["modifiers"] = list(code.modifiers)
 
             encounters[encounter_key]["procedures"].append(procedure)
             encounters[encounter_key]["procedure_count"] += 1
@@ -330,9 +272,7 @@ def _group_procedures_by_encounter(
 
     # Add procedures without encounters
     if no_encounter_codes:
-        no_encounter_procedures = _format_procedures_list(
-            no_encounter_codes, include_modifiers
-        )
+        no_encounter_procedures = _format_procedures_list(no_encounter_codes)
         return {
             "encounters": encounter_list,
             "procedures_without_encounter": no_encounter_procedures,
@@ -350,22 +290,14 @@ def _build_procedure_summary(
     category_counts: dict[str, int] = {}
     complexity_counts = {"low": 0, "moderate": 0, "high": 0}
 
-    for code in filtered_codes:
-        # Category counts
-        category = code.procedure_category
-        category_counts[category] = category_counts.get(category, 0) + 1
-
-        # Complexity counts
-        complexity = get_procedure_complexity(code.cpt_code, code.description)
-        if complexity in complexity_counts:
-            complexity_counts[complexity] += 1
-
     # Calculate date range
     if filtered_codes:
-        dates = [code.procedure_date for code in filtered_codes]
+        dates = [
+            entered_date for code in filtered_codes if (entered_date := code.entered)
+        ]
         date_range = {
-            "earliest": min(dates).isoformat(),
-            "latest": max(dates).isoformat(),
+            "earliest": min(dates).isoformat() if dates else None,
+            "latest": max(dates).isoformat() if dates else None,
         }
     else:
         date_range = None
@@ -373,18 +305,10 @@ def _build_procedure_summary(
     return {
         "total_procedures": len(all_codes),
         "filtered_procedures": len(filtered_codes),
-        "surgical_procedures": len([c for c in filtered_codes if c.is_surgical]),
-        "diagnostic_procedures": len([c for c in filtered_codes if c.is_diagnostic]),
-        "procedures_with_modifiers": len(
-            [c for c in filtered_codes if c.has_modifiers]
-        ),
         "category_breakdown": category_counts,
         "complexity_breakdown": complexity_counts,
         "date_range": date_range,
-        "unique_providers": len({c.provider for c in filtered_codes if c.provider}),
-        "unique_encounters": len(
-            {c.associated_visit_uid for c in filtered_codes if c.associated_visit_uid}
-        ),
+        "unique_encounters": len({c.encounter for c in filtered_codes if c.encounter}),
     }
 
 
@@ -395,10 +319,8 @@ def register_get_patient_procedures_tool(mcp, vista_client: BaseVistaClient):
     async def get_patient_procedures(
         patient_dfn: str,
         station: str | None = None,
-        procedure_category: str | None = None,
-        date_from: str | None = None,
-        date_to: str | None = None,
-        group_by_encounter: bool = False,
+        date_from: Annotated[date | None, Field(default=None)] = None,
+        date_to: Annotated[date | None, Field(default=None)] = None,
         offset: Annotated[int, Field(default=0, ge=0)] = 0,
         limit: Annotated[int, Field(default=10, ge=1, le=200)] = 10,
     ) -> ProceduresResponse:
@@ -424,91 +346,6 @@ def register_get_patient_procedures_tool(mcp, vista_client: BaseVistaClient):
                 metadata=md,
             )
 
-        # Validate limit
-        if limit < 1 or limit > 200:
-            end_time = datetime.now(UTC)
-            md = ResponseMetadata(
-                request_id=f"req_{int(start_time.timestamp())}",
-                performance=PerformanceMetrics(
-                    duration_ms=int((end_time - start_time).total_seconds() * 1000),
-                    start_time=start_time,
-                    end_time=end_time,
-                ),
-                station=StationMetadata(station_number=station),
-            )
-            return ProceduresResponse(
-                success=False,
-                error="Limit must be between 1 and 200",
-                metadata=md,
-            )
-
-        # Validate date formats if provided
-        if date_from:
-            try:
-                datetime.fromisoformat(date_from)
-            except ValueError:
-                end_time = datetime.now(UTC)
-                md = ResponseMetadata(
-                    request_id=f"req_{int(start_time.timestamp())}",
-                    performance=PerformanceMetrics(
-                        duration_ms=int((end_time - start_time).total_seconds() * 1000),
-                        start_time=start_time,
-                        end_time=end_time,
-                    ),
-                    station=StationMetadata(station_number=station),
-                )
-                return ProceduresResponse(
-                    success=False,
-                    error="Invalid date_from format. Use YYYY-MM-DD",
-                    metadata=md,
-                )
-
-        if date_to:
-            try:
-                datetime.fromisoformat(date_to)
-            except ValueError:
-                end_time = datetime.now(UTC)
-                md = ResponseMetadata(
-                    request_id=f"req_{int(start_time.timestamp())}",
-                    performance=PerformanceMetrics(
-                        duration_ms=int((end_time - start_time).total_seconds() * 1000),
-                        start_time=start_time,
-                        end_time=end_time,
-                    ),
-                    station=StationMetadata(station_number=station),
-                )
-                return ProceduresResponse(
-                    success=False,
-                    error="Invalid date_to format. Use YYYY-MM-DD",
-                    metadata=md,
-                )
-
-        # Validate procedure category
-        valid_categories = [
-            "surgery",
-            "radiology",
-            "pathology",
-            "evaluation",
-            "therapy",
-            "other",
-        ]
-        if procedure_category and procedure_category.lower() not in valid_categories:
-            end_time = datetime.now(UTC)
-            md = ResponseMetadata(
-                request_id=f"req_{int(start_time.timestamp())}",
-                performance=PerformanceMetrics(
-                    duration_ms=int((end_time - start_time).total_seconds() * 1000),
-                    start_time=start_time,
-                    end_time=end_time,
-                ),
-                station=StationMetadata(station_number=station),
-            )
-            return ProceduresResponse(
-                success=False,
-                error=f"Invalid procedure_category. Must be one of: {', '.join(valid_categories)}",
-                metadata=md,
-            )
-
         # Use default DUZ
         caller_duz = get_default_duz()
 
@@ -517,10 +354,8 @@ def register_get_patient_procedures_tool(mcp, vista_client: BaseVistaClient):
             patient_dfn=patient_dfn,
             station=str(station),
             caller_duz=str(caller_duz),
-            procedure_category=procedure_category,
             date_from=date_from,
             date_to=date_to,
-            group_by_encounter=group_by_encounter,
             offset=offset,
             limit=limit,
         )

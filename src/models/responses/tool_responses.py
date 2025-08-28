@@ -1,5 +1,6 @@
 """API response models (typed)"""
 
+from datetime import date
 from enum import Enum
 from typing import Generic, TypeVar
 
@@ -162,16 +163,12 @@ class HealthFactorsResponseData(ResponseData):
 class ProceduresResponseData(ResponseData):
     total_procedures: int = 0
     filtered_procedures: int = 0
-    surgical_procedures: int = 0
-    diagnostic_procedures: int = 0
-    procedures_with_modifiers: int = 0
-    category_breakdown: dict[str, int] = Field(default_factory=dict)
-    complexity_breakdown: dict[str, int] = Field(default_factory=dict)
     date_range: dict[str, str] | None = None
-    unique_providers: int = 0
     unique_encounters: int = 0
     procedures: list[CPTCode] = Field(default_factory=list)
-    filters_applied: dict[str, str | int | bool | None] = Field(default_factory=dict)
+    filters_applied: dict[str, str | int | bool | date | None] = Field(
+        default_factory=dict
+    )
 
 
 class VisitsResponseData(ResponseData):
