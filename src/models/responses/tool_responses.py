@@ -6,6 +6,7 @@ from typing import Generic, TypeVar
 
 from pydantic import Field, computed_field
 
+from src.models.patient.appointment import Appointment
 from src.models.patient.treatment import Treatment
 
 from ..base import BaseVistaModel
@@ -174,6 +175,21 @@ class VisitsResponseData(ResponseData):
     filters: dict[str, str | bool | int] = Field(default_factory=dict)
 
 
+class AppointmentsResponseData(ResponseData):
+    """Response data for patient appointments"""
+
+    future_count: int = Field(default=0, description="Count of upcoming appointments")
+    past_count: int = Field(default=0, description="Count of past appointments")
+    total_count: int = Field(default=0, description="Total count of appointments")
+    by_status: dict[str, int] = Field(
+        default_factory=dict, description="Appointment counts by status"
+    )
+    by_clinic: dict[str, int] = Field(
+        default_factory=dict, description="Appointment counts by clinic"
+    )
+    appointments: list[Appointment] = Field(default_factory=list)
+
+
 # Response Models (all response models grouped together)
 class PatientSearchResponse(ToolResponse[PatientSearchResponseData]):
     """Patient search response"""
@@ -225,6 +241,12 @@ class DiagnosesResponse(ToolResponse[DiagnosesResponseData]):
 
 class VisitsResponse(ToolResponse[VisitsResponseData]):
     """Visits response"""
+
+    pass
+
+
+class AppointmentsResponse(ToolResponse[AppointmentsResponseData]):
+    """Appointments response"""
 
     pass
 

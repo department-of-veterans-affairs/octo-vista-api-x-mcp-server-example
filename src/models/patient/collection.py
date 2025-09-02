@@ -6,6 +6,7 @@ from typing import Any
 from pydantic import Field
 
 from .allergy import Allergy
+from .appointment import Appointment
 from .base import BasePatientModel
 from .clinical import Consult, LabResult, VitalSign
 from .cpt_code import CPTCode
@@ -45,10 +46,10 @@ class PatientDataCollection(BasePatientModel):
     allergies_dict: dict[str, Allergy] = Field(default_factory=dict)
     povs_dict: dict[str, PurposeOfVisit] = Field(default_factory=dict)
     problems_dict: dict[str, Problem] = Field(default_factory=dict)
+    appointments_dict: dict[str, Appointment] = Field(default_factory=dict)
 
     # Future expansion (stubs for now)
     # immunizations: List[Immunization] = Field(default_factory=list)
-    # appointments: List[Appointment] = Field(default_factory=list)
 
     # Metadata
     source_station: str
@@ -158,6 +159,11 @@ class PatientDataCollection(BasePatientModel):
     def problems(self) -> list[Problem]:
         """Problems as a list (backed by problems_dict)"""
         return list(self.problems_dict.values())
+
+    @property
+    def appointments(self) -> list[Appointment]:
+        """Appointments as a list (backed by appointments_dict)"""
+        return list(self.appointments_dict.values())
 
     @property
     def has_clinical_data(self) -> bool:

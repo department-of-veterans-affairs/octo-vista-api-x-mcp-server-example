@@ -1,6 +1,16 @@
 """Patient data models"""
 
 from .allergy import Allergy, AllergyProduct, AllergyReaction
+from .appointment import (
+    Appointment,
+    AppointmentCategory,
+    AppointmentNamedType,
+    AppointmentPatientClass,
+    AppointmentProvider,
+    AppointmentStatus,
+    AppointmentStopCode,
+    AppointmentType,
+)
 from .base import (
     BasePatientModel,
     ConsultStatus,
@@ -85,6 +95,15 @@ __all__ = [
     "Allergy",
     "AllergyProduct",
     "AllergyReaction",
+    # Appointments
+    "Appointment",
+    "AppointmentCategory",
+    "AppointmentNamedType",
+    "AppointmentPatientClass",
+    "AppointmentProvider",
+    "AppointmentStatus",
+    "AppointmentStopCode",
+    "AppointmentType",
     # Collection
     "PatientDataCollection",
     "CPTCode",

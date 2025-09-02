@@ -13,6 +13,8 @@ from ....models.patient import (
     Allergy,
     AllergyProduct,
     AllergyReaction,
+    Appointment,
+    AppointmentType,
     Consult,
     CPTCode,
     Diagnosis,
@@ -36,6 +38,7 @@ from ....models.patient import (
 )
 from ....models.patient.pov import POVType
 from ....utils import get_logger
+from ...parsers.patient.datetime_parser import parse_datetime
 
 logger = get_logger()
 
@@ -118,6 +121,7 @@ class PatientDataParser:
         allergies = self._parse_allergies(grouped_items.get("allergy", []))
         povs = self._parse_povs(grouped_items.get("pov", []))
         problems = self._parse_problems(grouped_items.get("problem", []))
+        appointments = self._parse_appointments(grouped_items.get("appointment", []))
 
         problem_items = grouped_items.get("problem", [])
         pov_items = grouped_items.get("pov", [])
@@ -141,6 +145,7 @@ class PatientDataParser:
             allergies_dict=allergies,
             povs_dict=povs,
             problems_dict=problems,
+            appointments_dict=appointments,
             source_station=self.station,
             source_dfn=self.dfn,
             total_items=len(items),
@@ -1071,6 +1076,111 @@ class PatientDataParser:
 
         if "unverified" not in processed:
             processed["unverified"] = False
+
+        return processed
+
+    def _parse_appointments(
+        self, appointment_items: list[dict[str, Any]]
+    ) -> dict[str, Appointment]:
+        """Parse appointment items from VPR data"""
+        appointments = []
+
+        for item in appointment_items:
+            try:
+                processed_item = self._preprocess_appointment_item(item)
+                if processed_item is None:
+                    continue
+
+                appointments.append(Appointment(**processed_item))
+            except Exception as e:
+                logger.warning(f"Failed to parse appointment: {e}")
+                logger.debug(f"Appointment item data: {item}")
+
+        # Sort by appointment date (newest first)
+        appointments.sort(
+            key=lambda p: p.appointment_date or datetime.min.replace(tzinfo=UTC),
+            reverse=True,
+        )
+
+        return {appointment.uid: appointment for appointment in appointments}
+
+    def _preprocess_appointment_item(
+        self, item: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """Preprocess appointment item for model creation"""
+        if not item:
+            return None
+
+        processed = item.copy()
+
+        # Handle required fields
+        if "uid" not in processed:
+            logger.warning("Appointment item missing UID")
+            return None
+
+        # Parse datetime fields
+        for field in ["dateTime", "checkOut"]:
+            if field in processed and processed[field]:
+                processed[field] = parse_datetime(processed[field])
+
+        # Convert categoryName to AppointmentType enum if present
+        if "categoryName" in processed and processed["categoryName"]:
+            category_name = processed["categoryName"]
+
+            # Try to match the category name to an enum value
+            try:
+                # First try exact match
+                processed["categoryName"] = AppointmentType(category_name)
+            except ValueError:
+                # If exact match fails, try to find a matching enum by value
+                matching_type = None
+                for appointment_type in AppointmentType:
+                    if appointment_type.value == category_name:
+                        matching_type = appointment_type
+                        break
+
+                if matching_type:
+                    processed["categoryName"] = matching_type
+                else:
+                    # If no match found, keep as string and log warning
+                    logger.warning(f"Unknown appointment type: {category_name}")
+                    # Keep the original string value for now
+                    processed["categoryName"] = category_name
+
+        # Handle localId - ensure it's present
+        if "localId" not in processed:
+            # Extract from UID if possible
+            uid = processed.get("uid", "")
+            if uid:
+                parts = uid.split(":")
+                if len(parts) >= 4:
+                    processed["localId"] = parts[-1]  # Last part of UID
+                else:
+                    processed["localId"] = "0"
+            else:
+                processed["localId"] = "0"
+
+        # Create facility structure - CRITICAL FIX for appointment parsing
+        # The Appointment model requires a facility object with code and name fields
+        if "facility" not in processed:
+            facility_code = processed.get("facilityCode", self.station)
+            facility_name = processed.get("facilityName", f"Station {self.station}")
+
+            processed["facility"] = {
+                "code": facility_code,
+                "name": facility_name,
+            }
+
+        # Ensure facility fields are also available at top level for backward compatibility
+        if "facilityCode" not in processed:
+            processed["facilityCode"] = processed["facility"].get(
+                "facilityCode", self.station
+            )
+
+        if "facilityName" not in processed:
+            processed["facilityName"] = processed["facility"].get(
+                "facilityName", f"Station {self.station}"
+            )
 
         return processed
 

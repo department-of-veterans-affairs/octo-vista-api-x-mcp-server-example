@@ -122,6 +122,27 @@ class VisitsFiltersMetadata(FiltersMetadata):
     active_only: bool = Field(default=False, description="Show only active visits")
 
 
+class AppointmentsFiltersMetadata(FiltersMetadata):
+    """Filter metadata for appointments tool"""
+
+    status_filter: str | None = Field(
+        default=None, description="Filter by appointment status"
+    )
+    clinic_filter: str | None = Field(
+        default=None, description="Filter by clinic/facility"
+    )
+    appointment_type: str | None = Field(
+        default=None, description="Filter by appointment type"
+    )
+    provider_filter: str | None = Field(
+        default=None, description="Filter by provider name"
+    )
+    upcoming_only: bool = Field(
+        default=False, description="Show only upcoming appointments"
+    )
+    past_only: bool = Field(default=False, description="Show only past appointments")
+
+
 class ProceduresFiltersMetadata(FiltersMetadata):
     """Filter metadata for procedures tool"""
 
