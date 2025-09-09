@@ -72,9 +72,6 @@ class MedicationsFiltersMetadata(FiltersMetadata):
     """Filter metadata for medications tool"""
 
     active_only: bool = Field(default=True, description="Show only active medications")
-    therapeutic_class: str | None = Field(
-        default=None, description="Filter by therapeutic class"
-    )
 
 
 class OrdersFiltersMetadata(FiltersMetadata):

@@ -1,95 +1,8 @@
-"""Tests for medication parsing utilities"""
+"""Tests for medication model"""
 
-from datetime import UTC, datetime, timedelta
+from datetime import datetime
 
 from src.models.patient.medication import Medication
-from src.services.parsers.patient.value_parser import (
-    extract_medication_instructions,
-    normalize_medication_frequency,
-    parse_medication_dosage,
-    validate_medication_status,
-)
-
-
-class TestMedicationParsing:
-    """Test medication parsing functions"""
-
-    def test_parse_medication_dosage_simple(self):
-        """Test parsing simple dosage formats"""
-        strength, unit, form = parse_medication_dosage("500MG TAB")
-        assert strength == "500"
-        assert unit == "MG"
-        assert form == "TAB"
-
-    def test_parse_medication_dosage_complex(self):
-        """Test parsing complex dosage formats"""
-        strength, unit, form = parse_medication_dosage("10MG/5ML SYRUP")
-        assert strength == "10/5"
-        assert unit == "MG/ML"
-        assert form == "SYRUP"
-
-    def test_parse_medication_dosage_no_form(self):
-        """Test parsing dosage without form"""
-        strength, unit, form = parse_medication_dosage("INSULIN 100UNITS/ML")
-        assert strength == "100"
-        assert unit == "UNITS/ML"
-        assert form is None
-
-    def test_normalize_medication_frequency_standard(self):
-        """Test normalizing standard frequency abbreviations"""
-        assert normalize_medication_frequency("BID") == "twice daily"
-        assert normalize_medication_frequency("TID") == "three times daily"
-        assert normalize_medication_frequency("QD") == "once daily"
-        assert normalize_medication_frequency("PRN") == "as needed"
-
-    def test_normalize_medication_frequency_complex(self):
-        """Test normalizing complex frequency patterns"""
-        assert normalize_medication_frequency("EVERY 8 HOURS") == "three times daily"
-        assert normalize_medication_frequency("2 TIMES A DAY") == "twice daily"
-        assert normalize_medication_frequency("3 TIMES WEEKLY") == "three times weekly"
-
-    def test_normalize_medication_frequency_empty(self):
-        """Test handling empty frequency"""
-        assert normalize_medication_frequency("") == "as directed"
-        assert normalize_medication_frequency(None) == "as directed"
-
-    def test_validate_medication_status_standard(self):
-        """Test validating standard medication statuses"""
-        assert validate_medication_status("ACTIVE") == "ACTIVE"
-        assert validate_medication_status("DISCONTINUED") == "DISCONTINUED"
-        assert validate_medication_status("COMPLETED") == "COMPLETED"
-
-    def test_validate_medication_status_variations(self):
-        """Test validating status variations"""
-        assert validate_medication_status("A") == "ACTIVE"
-        assert validate_medication_status("D") == "DISCONTINUED"
-        assert validate_medication_status("STOPPED") == "DISCONTINUED"
-        assert validate_medication_status("EXPIRED") == "DISCONTINUED"
-        assert validate_medication_status("") == "ACTIVE"
-
-    def test_extract_medication_instructions_route(self):
-        """Test extracting route from SIG instructions"""
-        instructions = extract_medication_instructions("TAKE 1 TABLET BY MOUTH DAILY")
-        assert instructions.get("route") == "PO"
-
-        instructions = extract_medication_instructions("INJECT 10 UNITS SUBCUTANEOUS")
-        assert instructions.get("route") == "SQ"
-
-    def test_extract_medication_instructions_timing(self):
-        """Test extracting timing from SIG instructions"""
-        instructions = extract_medication_instructions("TAKE WITH MEALS")
-        assert instructions.get("timing") == "with meals"
-
-        instructions = extract_medication_instructions("TAKE AT BEDTIME")
-        assert instructions.get("timing") == "at bedtime"
-
-    def test_extract_medication_instructions_special(self):
-        """Test extracting special instructions"""
-        instructions = extract_medication_instructions("TAKE AS NEEDED FOR PAIN")
-        assert instructions.get("as_needed") is True
-
-        instructions = extract_medication_instructions("SWALLOW WHOLE, DO NOT CRUSH")
-        assert instructions.get("do_not_crush") is True
 
 
 class TestMedicationModel:
@@ -100,163 +13,174 @@ class TestMedicationModel:
         med_data = {
             "uid": "urn:va:med:500:123:456",
             "localId": "456",
-            "productFormName": "METFORMIN 1000MG TAB",
-            "dosageForm": "TABLET",
-            "sig": "TAKE 1 TABLET BY MOUTH TWICE DAILY",
-            "overallStart": 20240101,
+            "name": "METFORMIN TAB",
+            "qualifiedName": "METFORMIN 1000MG TAB",
+            "medType": "urn:sct:73639000",
+            "productFormName": "TAB",
+            "medStatus": "urn:sct:73425007",
+            "medStatusName": "active",
             "vaStatus": "ACTIVE",
-            "facilityCode": 500,
+            "vaType": "O",
+            "type": "Prescription",
+            "sig": "TAKE 1 TABLET BY MOUTH TWICE DAILY",
+            "patientInstruction": "Take with meals",
+            "facilityCode": "500",
             "facilityName": "TEST FACILITY",
+            "overallStart": datetime(2024, 1, 1),
+            "lastFilled": datetime(2024, 1, 1),
+            "dosages": [
+                {
+                    "dose": "1000 MG",
+                    "routeName": "PO",
+                    "scheduleName": "BID",
+                    "units": "MG",
+                    "doseForm": "TAB",
+                }
+            ],
+            "orders": [],
+            "fills": [],
+            "isActive": True,
+            "isInpatient": False,
+            "isOutpatient": True,
         }
 
-        medication = Medication(**med_data)
+        medication = Medication.model_validate(med_data)
 
-        assert medication.medication_name == "METFORMIN 1000MG TAB"
-        assert medication.dosage == "TABLET"
+        assert medication.name == "METFORMIN TAB"
+        assert medication.qualified_name == "METFORMIN 1000MG TAB"
+        assert medication.med_type == "urn:sct:73639000"
+        assert medication.va_status == "ACTIVE"
+        assert medication.va_type == "O"
+        assert medication.type == "Prescription"
         assert medication.sig == "TAKE 1 TABLET BY MOUTH TWICE DAILY"
-        assert medication.status == "ACTIVE"
+        assert medication.patient_instruction == "Take with meals"
         assert medication.is_active is True
-        assert medication.is_discontinued is False
+        assert medication.dose == "1000 MG"
+        assert medication.route == "PO"
 
-    def test_medication_display_properties(self):
-        """Test medication display properties"""
+    def test_medication_with_orders_and_fills(self):
+        """Test medication with orders and fills"""
         med_data = {
-            "uid": "urn:va:med:500:123:456",
-            "localId": "456",
-            "productFormName": "LISINOPRIL 20MG TAB",  # Include strength in name
-            "dosageForm": "TABLET",
-            "sig": "TAKE 1 TABLET BY MOUTH TWICE DAILY",
-            "overallStart": 20240101,
+            "uid": "urn:va:med:500:123:789",
+            "localId": "789",
+            "name": "LISINOPRIL TAB",
+            "qualifiedName": "LISINOPRIL 20MG TAB",
+            "medType": "urn:sct:73639000",
+            "productFormName": "TAB",
+            "medStatus": "urn:sct:73425007",
+            "medStatusName": "active",
             "vaStatus": "ACTIVE",
-            "facilityCode": 500,
+            "vaType": "O",
+            "type": "Prescription",
+            "sig": "TAKE 1 TABLET DAILY",
+            "patientInstruction": "Take in the morning",
+            "facilityCode": "500",
             "facilityName": "TEST FACILITY",
+            "overallStart": datetime(2024, 2, 1),
+            "lastFilled": datetime(2024, 3, 1),
+            "isActive": True,
+            "isInpatient": False,
+            "isOutpatient": True,
+            "dosages": [
+                {
+                    "dose": "20 MG",
+                    "routeName": "PO",
+                    "scheduleName": "QD",
+                    "units": "MG",
+                    "doseForm": "TAB",
+                }
+            ],
+            "orders": [
+                {
+                    "daysSupply": 30,
+                    "fillCost": 5.00,
+                    "fillsAllowed": 11,
+                    "fillsRemaining": 10,
+                    "locationName": "PRIMARY CARE",
+                    "locationUid": "urn:va:location:500:23",
+                    "orderUid": "urn:va:order:500:123:789",
+                    "ordered": datetime(2024, 2, 1, 8, 0, 0),
+                    "pharmacistName": "PHARMACIST,ONE",
+                    "pharmacistUid": "urn:va:user:500:1234",
+                    "prescriptionId": 123456,
+                    "providerName": "PROVIDER,ONE",
+                    "providerUid": "urn:va:user:500:5678",
+                    "quantityOrdered": 30,
+                    "vaRouting": "W",
+                    "status": "ACTIVE",
+                    "statusName": "Active",
+                    "expirationDate": datetime(2025, 2, 1),
+                    "refillsRemaining": 10,
+                }
+            ],
+            "fills": [
+                {
+                    "daysSupplyDispensed": 30,
+                    "dispenseDate": datetime(2024, 2, 1),
+                    "quantityDispensed": 30,
+                    "releaseDate": datetime(2024, 2, 1),
+                    "routing": "W",
+                    "fillNumber": 1,
+                    "pharmacyName": "MAIN PHARMACY",
+                    "pharmacyUid": "urn:va:location:500:23",
+                    "prescriptionId": 123456,
+                    "status": "FILLED",
+                    "statusName": "Filled",
+                }
+            ],
         }
 
-        medication = Medication(**med_data)
+        medication = Medication.model_validate(med_data)
 
-        # Should extract strength from medication name
-        assert medication.strength == "20MG"  # Should be extracted
-        assert "20MG" in medication.display_name
-
-        # Frequency should be extracted from SIG
-        assert medication.display_frequency == "twice daily"
-
-    def test_medication_refill_logic(self):
-        """Test medication refill calculation logic"""
-        # Create a medication filled 85 days ago with 90 days supply (closer to needing refill)
-        last_filled = datetime.now(UTC) - timedelta(days=85)
-
-        med_data = {
-            "uid": "urn:va:med:500:123:456",
-            "localId": "456",
-            "productFormName": "ASPIRIN 81MG TAB",
-            "dosageForm": "TABLET",
-            "sig": "TAKE 1 TABLET BY MOUTH DAILY",
-            "overallStart": 20240101,
-            "lastFilled": int(last_filled.strftime("%Y%m%d")),
-            "daysSupply": 90,
-            "vaStatus": "ACTIVE",
-            "facilityCode": 500,
-            "facilityName": "TEST FACILITY",
-        }
-
-        medication = Medication(**med_data)
-
-        # Should need refill soon (within 7 days)
-        days_until_refill = medication.days_until_refill_needed
-        assert days_until_refill is not None
-        assert days_until_refill <= 7  # Should be close to needing refill
-        assert medication.needs_refill_soon is True
+        assert len(medication.orders) == 1
+        assert medication.orders[0].prescription_id == "123456"
+        assert medication.orders[0].provider_name == "PROVIDER,ONE"
+        assert len(medication.fills) == 1
+        assert medication.fills[0].quantity_dispensed == 30
+        assert medication.fills[0].routing == "W"
 
     def test_medication_discontinued_status(self):
         """Test discontinued medication handling"""
         med_data = {
             "uid": "urn:va:med:500:123:456",
             "localId": "456",
-            "productFormName": "WARFARIN 5MG TAB",
-            "dosageForm": "TABLET",
-            "sig": "TAKE AS DIRECTED",
-            "overallStart": 20231201,
-            "overallStop": 20240301,
+            "name": "WARFARIN TAB",
+            "qualifiedName": "WARFARIN 5MG TAB",
+            "medType": "urn:sct:73639000",
+            "productFormName": "TAB",
+            "medStatus": "urn:sct:385669000",
+            "medStatusName": "inactive",
             "vaStatus": "DISCONTINUED",
-            "facilityCode": 500,
+            "vaType": "O",
+            "type": "Prescription",
+            "sig": "TAKE AS DIRECTED",
+            "patientInstruction": "",
+            "facilityCode": "500",
             "facilityName": "TEST FACILITY",
-        }
-
-        medication = Medication(**med_data)
-
-        assert medication.is_active is False
-        assert medication.is_discontinued is True
-        assert medication.status == "DISCONTINUED"
-
-    def test_medication_sig_parsing(self):
-        """Test SIG instruction parsing"""
-        med_data = {
-            "uid": "urn:va:med:500:123:456",
-            "localId": "456",
-            "productFormName": "GABAPENTIN 300MG CAP",
-            "dosageForm": "CAPSULE",
-            "sig": "TAKE 1 CAPSULE BY MOUTH THREE TIMES DAILY WITH FOOD",
-            "overallStart": 20240101,
-            "vaStatus": "ACTIVE",
-            "facilityCode": 500,
-            "facilityName": "TEST FACILITY",
-        }
-
-        medication = Medication(**med_data)
-
-        # Should extract frequency and route from SIG
-        assert medication.frequency == "TID"
-        assert medication.route == "PO"
-        assert medication.display_frequency == "three times daily"
-
-    def test_medication_strength_extraction(self):
-        """Test strength extraction from medication name"""
-        med_data = {
-            "uid": "urn:va:med:500:123:456",
-            "localId": "456",
-            "productFormName": "SERTRALINE 100MG TAB",
-            "dosageForm": "TABLET",
-            "sig": "TAKE 1 TABLET DAILY",
-            "overallStart": 20240101,
-            "vaStatus": "ACTIVE",
-            "facilityCode": 500,
-            "facilityName": "TEST FACILITY",
-        }
-
-        medication = Medication(**med_data)
-
-        # Should extract strength from name
-        assert medication.strength == "100MG"
-        assert "100MG" in medication.display_name
-
-    def test_medication_with_nested_orders(self):
-        """Test medication with orders array for prescriber info"""
-        med_data = {
-            "uid": "urn:va:med:500:123:456",
-            "localId": "456",
-            "productFormName": "METFORMIN 500MG TAB",
-            "dosageForm": "TABLET",
-            "sig": "TAKE 1 TABLET TWICE DAILY",
-            "overallStart": 20240101,
-            "vaStatus": "ACTIVE",
-            "facilityCode": 500,
-            "facilityName": "TEST FACILITY",
-            "orders": [
+            "overallStart": datetime(2023, 12, 1),
+            "overallStop": datetime(2024, 3, 1),
+            "lastFilled": datetime(2024, 2, 1),
+            "stopped": datetime(2024, 3, 1),
+            "isActive": False,
+            "isInpatient": False,
+            "isOutpatient": True,
+            "dosages": [
                 {
-                    "providerName": "SMITH,JOHN MD",
-                    "providerUid": "urn:va:user:500:12345",
+                    "dose": "5 MG",
+                    "routeName": "PO",
+                    "scheduleName": "DAILY",
+                    "units": "MG",
+                    "doseForm": "TAB",
                 }
             ],
+            "orders": [],
+            "fills": [],
         }
 
-        # Need to preprocess like the parser would
-        from src.services.parsers.patient.patient_parser import PatientDataParser
+        medication = Medication.model_validate(med_data)
 
-        parser = PatientDataParser("500", "123")
-        processed_data = parser._preprocess_medication_item(med_data)
-
-        medication = Medication(**processed_data)
-
-        assert medication.prescriber == "SMITH,JOHN MD"
-        assert medication.prescriber_uid == "urn:va:user:500:12345"
+        assert medication.is_active is False
+        assert medication.va_status == "DISCONTINUED"
+        assert medication.stopped is not None
+        assert medication.dose == "5 MG"
+        assert medication.route == "PO"

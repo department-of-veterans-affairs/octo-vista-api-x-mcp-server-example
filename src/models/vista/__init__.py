@@ -1,7 +1,7 @@
 """Vista domain models"""
 
 from .admin import Appointment, Provider, RpcParameter, Station
-from .clinical import Allergy, LabResult, Medication, Problem, VitalSign
+from .clinical import Allergy, LabResult, Problem, VitalSign
 from .patient import PatientDemographics, PatientSearchResult
 
 __all__ = [
@@ -11,7 +11,6 @@ __all__ = [
     "Station",
     "RpcParameter",
     # Clinical models
-    "Medication",
     "LabResult",
     "VitalSign",
     "Problem",

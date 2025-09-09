@@ -57,16 +57,6 @@ class VprDomain(str, Enum):
     FACTOR = "factor"
 
 
-class MedicationStatus(str, Enum):
-    """Medication status values"""
-
-    ACTIVE = "ACTIVE"
-    INACTIVE = "INACTIVE"
-    PENDING = "PENDING"
-    EXPIRED = "EXPIRED"
-    DISCONTINUED = "DISCONTINUED"
-
-
 class AllergyType(str, Enum):
     """Allergy types"""
 

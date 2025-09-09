@@ -5,7 +5,6 @@ from .common import (
     BaseVistaModel,
     Gender,
     LabResultFlag,
-    MedicationStatus,
     VprDomain,
 )
 
@@ -13,7 +12,6 @@ __all__ = [
     "BaseVistaModel",
     "Gender",
     "VprDomain",
-    "MedicationStatus",
     "AllergyType",
     "LabResultFlag",
 ]

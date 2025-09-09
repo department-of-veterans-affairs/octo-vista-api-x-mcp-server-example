@@ -104,7 +104,6 @@ class PatientSearchResponseData(ResponseData):
 
 class MedicationsResponseData(ResponseData):
     medications: list[Medication]
-    refill_alerts: list[Medication] = Field(default_factory=list)
 
 
 class LabResultsResponseData(ResponseData):

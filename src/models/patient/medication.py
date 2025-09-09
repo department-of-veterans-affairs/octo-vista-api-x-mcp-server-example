@@ -1,21 +1,138 @@
-"""Medication data models for patient records"""
+from datetime import datetime
 
-from datetime import UTC, datetime, timedelta
-from typing import Any
-
-from pydantic import Field, field_serializer, field_validator
+from pydantic import BaseModel, Field, computed_field, field_validator
 
 from ...services.parsers.patient.datetime_parser import parse_datetime
-from ...services.parsers.patient.value_parser import (
-    extract_frequency_from_sig,
-    extract_route,
-    normalize_medication_frequency,
-)
-from ...utils import get_logger
-from ..utils import format_datetime_for_mcp_response
 from .base import BasePatientModel
 
-logger = get_logger()
+
+class MedicationDosage(BaseModel):
+    """Represents dosage information for a medication"""
+
+    dose: str | None = Field(default=None)
+    relative_start: int | None = Field(default=None, alias="relativeStart")
+    relative_stop: int | None = Field(default=None, alias="relativeStop")
+    route_name: str | None = Field(default=None, alias="routeName")
+    schedule_freq: int | None = Field(default=None, alias="scheduleFreq")
+    schedule_name: str | None = Field(default=None, alias="scheduleName")
+    schedule_type: str | None = Field(default=None, alias="scheduleType")
+    start: datetime | None = Field(default=None)
+    stop: datetime | None = Field(default=None)
+    units: str | None = Field(default=None)
+
+    @field_validator(
+        "units",
+        "schedule_type",
+        "schedule_name",
+        "route_name",
+        "dose",
+        mode="before",
+    )
+    @classmethod
+    def ensure_string_fields(cls, v):
+        """Ensure these fields are strings"""
+        return str(v) if v is not None else ""
+
+    @field_validator("start", "stop", mode="before")
+    @classmethod
+    def validate_int_dates(cls, v):
+        """Validate date fields from VistA format"""
+        return parse_datetime(v)
+
+
+class MedicationFill(BaseModel):
+    """Represents a medication fill/dispense event"""
+
+    days_supply_dispensed: int | None = Field(default=None, alias="daysSupplyDispensed")
+    dispense_date: datetime | None = Field(default=None, alias="dispenseDate")
+    quantity_dispensed: int | None = Field(default=None, alias="quantityDispensed")
+    release_date: datetime | None = Field(default=None, alias="releaseDate")
+    routing: str | None = Field(default=None)
+
+    @field_validator("routing", mode="before")
+    @classmethod
+    def ensure_string_fields(cls, v):
+        """Ensure these fields are strings"""
+        return str(v) if v is not None else ""
+
+    @field_validator("dispense_date", "release_date", mode="before")
+    @classmethod
+    def validate_int_dates(cls, v):
+        """Validate date fields from VistA format"""
+        return parse_datetime(v)
+
+
+class MedicationOrder(BaseModel):
+    """Represents a medication order/prescription"""
+
+    days_supply: int | None = Field(default=None, alias="daysSupply")
+    fill_cost: float | None = Field(default=None, alias="fillCost")
+    fills_allowed: int | None = Field(default=None, alias="fillsAllowed")
+    fills_remaining: int | None = Field(default=None, alias="fillsRemaining")
+    location_name: str | None = Field(default=None, alias="locationName")
+    location_uid: str | None = Field(default=None, alias="locationUid")
+    order_uid: str = Field(default="", alias="orderUid")
+    ordered: datetime | None = Field(default=None)
+    pharmacist_name: str | None = Field(default=None, alias="pharmacistName")
+    pharmacist_uid: str | None = Field(default=None, alias="pharmacistUid")
+    prescription_id: str | None = Field(default=None, alias="prescriptionId")
+    provider_name: str | None = Field(default=None, alias="providerName")
+    provider_uid: str | None = Field(default=None, alias="providerUid")
+    quantity_ordered: int | None = Field(default=None, alias="quantityOrdered")
+    va_routing: str | None = Field(default=None, alias="vaRouting")
+
+    @field_validator(
+        "prescription_id",
+        "location_name",
+        "location_uid",
+        "order_uid",
+        "pharmacist_name",
+        "pharmacist_uid",
+        "provider_name",
+        "provider_uid",
+        "va_routing",
+        mode="before",
+    )
+    @classmethod
+    def ensure_string_fields(cls, v):
+        """Ensure these fields are strings"""
+        return str(v) if v is not None else ""
+
+    @field_validator("ordered", mode="before")
+    @classmethod
+    def validate_int_dates(cls, v):
+        """Validate date fields from VistA format"""
+        return parse_datetime(v)
+
+
+class MedicationProduct(BaseModel):
+    """Represents a medication product with its details"""
+
+    drug_class_code: str | None = Field(default=None, alias="drugClassCode")
+    drug_class_name: str | None = Field(default=None, alias="drugClassName")
+    ingredient_code: str | None = Field(default=None, alias="ingredientCode")
+    ingredient_code_name: str | None = Field(default=None, alias="ingredientCodeName")
+    ingredient_name: str | None = Field(default=None, alias="ingredientName")
+    ingredient_role: str | None = Field(default=None, alias="ingredientRole")
+    strength: str | None = Field(default=None)
+    supplied_code: str | None = Field(default=None, alias="suppliedCode")
+    supplied_name: str | None = Field(default=None, alias="suppliedName")
+
+    @field_validator(
+        "drug_class_code",
+        "drug_class_name",
+        "ingredient_code",
+        "ingredient_code_name",
+        "ingredient_name",
+        "ingredient_role",
+        "supplied_code",
+        "supplied_name",
+        mode="before",
+    )
+    @classmethod
+    def ensure_string_fields(cls, v):
+        """Ensure these fields are strings"""
+        return str(v) if v is not None else ""
 
 
 class Medication(BasePatientModel):
@@ -25,156 +142,80 @@ class Medication(BasePatientModel):
     local_id: str = Field(alias="localId")
 
     # Medication identification
-    medication_name: str = Field(alias="productFormName")  # "METFORMIN TAB"
-    generic_name: str | None = Field(None, alias="genericName")  # "Metformin HCl"
-    brand_name: str | None = Field(None, alias="brandName")  # "Glucophage"
-    strength: str | None = None  # "500MG", "10MG/5ML"
+    name: str
+    qualified_name: str = Field(alias="qualifiedName")
+    med_type: str = Field(alias="medType")
+    product_form_name: str = Field(alias="productFormName")
 
-    # Dosing information
-    dosage: str = Field(alias="dosageForm")  # "TABLET", "CAPSULE", "LIQUID"
-    sig: str = Field(default="")  # Dosing instructions
-    frequency: str | None = None  # "BID", "QD", "Q8H"
-    route: str | None = None  # "PO", "IV", "IM"
+    # Status and type
+    med_status: str = Field(alias="medStatus")
+    med_status_name: str = Field(alias="medStatusName")
+    va_status: str = Field(alias="vaStatus")
+    va_type: str = Field(alias="vaType")
+    type: str | None = None
+
+    # Dosage and administration
+    sig: str = ""
+    patient_instruction: str | None = Field(default=None, alias="patientInstruction")
+    dosages: list[MedicationDosage] = Field(default_factory=list)
+
+    # Orders and fills
+    orders: list[MedicationOrder] = Field(default_factory=list)
+    fills: list[MedicationFill] = Field(default_factory=list)
+
+    # Products and ingredients
+    products: list[MedicationProduct] = Field(default_factory=list)
+
+    # Facility information
+    facility_code: str = Field(alias="facilityCode")
+    facility_name: str = Field(alias="facilityName")
 
     # Dates
     start_date: datetime | None = Field(default=None, alias="overallStart")
     end_date: datetime | None = Field(default=None, alias="overallStop")
     last_filled: datetime | None = Field(default=None, alias="lastFilled")
+    stopped: datetime | None = Field(default=None)
 
-    # Status and supply information
-    status: str = Field(alias="vaStatus")  # "ACTIVE", "DISCONTINUED", "COMPLETED"
-    quantity: str | None = None  # "90"
-    days_supply: int | None = Field(None, alias="daysSupply")  # 90
-    refills_remaining: int | None = Field(None, alias="fillsRemaining")  # 5
-
-    # Provider and pharmacy info
-    prescriber: str | None = Field(None, alias="orders[0].providerName")
-    prescriber_uid: str | None = Field(None, alias="orders[0].providerUid")
-    pharmacy: str | None = Field(None, alias="pharmacyId")
-
-    # Location
-    facility_code: str | int = Field(alias="facilityCode")
-    facility_name: str = Field(alias="facilityName")
-
-    # Clinical classification
-    va_class: str | None = Field(None, alias="vaClass")  # Drug class
-    therapeutic_class: str | None = None
-
-    # Instructions and notes
-    patient_instructions: str | None = Field(None, alias="patientInstructions")
-    provider_instructions: str | None = Field(None, alias="providerInstructions")
-
-    @field_validator("local_id", "facility_code", mode="before")
+    @field_validator(
+        "local_id",
+        "facility_code",
+        "sig",
+        "type",
+        "va_type",
+        "patient_instruction",
+        mode="before",
+    )
     @classmethod
     def ensure_string_fields(cls, v):
         """Ensure these fields are strings"""
         return str(v) if v is not None else ""
 
-    @field_validator("start_date", "end_date", "last_filled", mode="before")
+    @field_validator("start_date", "end_date", "last_filled", "stopped", mode="before")
     @classmethod
-    def parse_datetime_field(cls, v):
-        """Parse datetime format"""
-        if v is None or isinstance(v, datetime):
-            return v
+    def validate_int_dates(cls, v):
+        """Validate date fields from VistA format"""
         return parse_datetime(v)
-
-    @field_serializer("start_date", "end_date", "last_filled")
-    def serialize_datetime_fields(self, value: datetime | None) -> str | None:
-        """Serialize datetime fields to ISO format for JSON schema compliance"""
-        return format_datetime_for_mcp_response(value)
-
-    @field_validator("medication_name", mode="before")
-    @classmethod
-    def ensure_string_medication_name(cls, v):
-        """Ensure medication name is string"""
-        return str(v) if v is not None else ""
-
-    @field_validator("sig", mode="before")
-    @classmethod
-    def parse_sig_instructions(cls, v):
-        """Parse SIG instructions from various formats"""
-        if not v:
-            return ""
-        if isinstance(v, list) and v:
-            return " ".join(str(item) for item in v)
-        return str(v)
-
-    def model_post_init(self, __context: Any) -> None:
-        """Post-init processing for derived fields"""
-        super().model_post_init(__context)
-
-        # Extract strength from medication name if not provided
-        if not self.strength and self.medication_name:
-            import re
-
-            # Look for patterns like "500MG", "10MG/5ML", "0.25MG"
-            strength_match = re.search(
-                r"(\d+(?:\.\d+)?(?:MG|MCG|ML|GM|UNITS?)(?:/\d+(?:ML|TAB)?)?)",
-                self.medication_name.upper(),
-            )
-            if strength_match:
-                self.strength = strength_match.group(1)
-
-        # Parse frequency from sig if not provided
-        if not self.frequency and self.sig:
-            self.frequency = self._extract_frequency_from_sig(self.sig)
-
-        # Parse route from sig if not provided
-        if not self.route and self.sig:
-            self.route = self._extract_route_from_sig(self.sig)
-
-    def _extract_frequency_from_sig(self, sig: str) -> str | None:
-        """Extract frequency from SIG instructions using centralized patterns"""
-        return extract_frequency_from_sig(sig)
-
-    def _extract_route_from_sig(self, sig: str) -> str | None:
-        """Extract route of administration from SIG using centralized mappings"""
-        return extract_route(sig)
 
     @property
     def is_active(self) -> bool:
-        """Check if medication is currently active"""
-        if self.status.upper() != "ACTIVE":
-            return False
+        """Check if the medication is active"""
+        va_status = self.va_status.upper()
+        return va_status.startswith("ACTIVE")
 
-        # Check if end date has passed
-        return not (self.end_date and self.end_date < datetime.now(UTC))
-
+    @computed_field  # type: ignore[prop-decorator]
     @property
-    def is_discontinued(self) -> bool:
-        """Check if medication is discontinued"""
-        return self.status.upper() in ["DISCONTINUED", "STOPPED", "EXPIRED"]
+    def dose(self) -> str:
+        """Get the dose of the medication"""
+        try:
+            return self.dosages[0].dose or ""
+        except (AttributeError, IndexError):
+            return ""
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
-    def display_name(self) -> str:
-        """Get display-friendly medication name with strength"""
-        name = self.medication_name
-        if self.strength and self.strength not in name:
-            name = f"{name} {self.strength}"
-        return name
-
-    @property
-    def display_frequency(self) -> str:
-        """Get human-readable frequency using centralized mappings"""
-        if not self.frequency:
-            return "as directed"
-
-        # Use centralized frequency normalization
-        return normalize_medication_frequency(self.frequency)
-
-    @property
-    def days_until_refill_needed(self) -> int | None:
-        """Calculate days until refill is needed"""
-        if not self.last_filled or not self.days_supply:
-            return None
-
-        refill_due = self.last_filled + timedelta(days=self.days_supply)
-        days_remaining = (refill_due - datetime.now(UTC)).days
-
-        return max(0, days_remaining)
-
-    @property
-    def needs_refill_soon(self) -> bool:
-        """Check if medication needs refill within 7 days"""
-        days_left = self.days_until_refill_needed
-        return days_left is not None and days_left <= 7
+    def route(self) -> str:
+        """Get the route of the medication"""
+        try:
+            return self.dosages[0].route_name or ""
+        except (AttributeError, IndexError):
+            return ""

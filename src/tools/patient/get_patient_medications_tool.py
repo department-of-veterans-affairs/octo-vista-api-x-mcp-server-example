@@ -1,7 +1,7 @@
 """Get patient medications tool for MCP server"""
 
 from datetime import UTC, datetime
-from typing import Annotated, Any
+from typing import Annotated
 
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
@@ -34,10 +34,9 @@ def register_get_patient_medications_tool(mcp: FastMCP, vista_client: BaseVistaC
     async def get_patient_medications(
         patient_dfn: str,
         station: str | None = None,
-        active_only: bool = True,
-        therapeutic_class: str | None = None,
+        active_only: bool = False,
         offset: Annotated[int, Field(default=0, ge=0)] = 0,
-        limit: Annotated[int, Field(default=10, ge=1, le=200)] = 10,
+        limit: Annotated[int, Field(default=100, ge=1, le=1000)] = 100,
     ) -> MedicationsResponse:
         """Get patient medications with dosing and refill information."""
         start_time = datetime.now(UTC)
@@ -73,33 +72,10 @@ def register_get_patient_medications_tool(mcp: FastMCP, vista_client: BaseVistaC
             if active_only:
                 medications = [m for m in medications if m.is_active]
 
-            # Filter by therapeutic class
-            if therapeutic_class:
-                medications = [
-                    m
-                    for m in medications
-                    if (
-                        m.therapeutic_class
-                        and therapeutic_class.upper() in m.therapeutic_class.upper()
-                    )
-                    or (m.va_class and therapeutic_class.upper() in m.va_class.upper())
-                ]
-
             # Apply pagination
             medications_page, total_medications_after_filtering = paginate_list(
                 medications, offset, limit
             )
-
-            # Group medications by therapeutic class for better organization
-            medication_groups: dict[str, list[Any]] = {}
-            for med in medications_page:
-                group_key = med.therapeutic_class or med.va_class or "Other"
-                if group_key not in medication_groups:
-                    medication_groups[group_key] = []
-                medication_groups[group_key].append(med)
-
-            # Identify medications needing refills soon (from paginated results)
-            refill_alerts = [m for m in medications_page if m.needs_refill_soon]
 
             # Build typed metadata inline
             end_time = datetime.now(UTC)
@@ -126,7 +102,6 @@ def register_get_patient_medications_tool(mcp: FastMCP, vista_client: BaseVistaC
                 ),
                 filters=MedicationsFiltersMetadata(
                     active_only=active_only,
-                    therapeutic_class=therapeutic_class,
                 ),
                 pagination=PaginationMetadata(
                     total_available_items=total_medications_after_filtering,
@@ -141,7 +116,6 @@ def register_get_patient_medications_tool(mcp: FastMCP, vista_client: BaseVistaC
             # Build response data
             data = MedicationsResponseData(
                 medications=medications_page,
-                refill_alerts=refill_alerts,
             )
 
             return MedicationsResponse(

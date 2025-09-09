@@ -6,7 +6,6 @@ from .legacy_parsers import (
     parse_current_user,
     parse_fileman_date,
     parse_lab_results,
-    parse_medications,
     parse_patient_demographics,
     parse_patient_search,
     parse_problems,

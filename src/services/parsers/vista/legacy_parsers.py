@@ -8,7 +8,6 @@ from ....models.vista import (
     Allergy,
     Appointment,
     LabResult,
-    Medication,
     PatientDemographics,
     PatientSearchResult,
     Problem,
@@ -295,41 +294,6 @@ def parse_patient_demographics(result: str, dfn: str) -> PatientDemographics | N
         demographics.address = address_data
 
     return demographics
-
-
-# Clinical Parsers
-def parse_medications(result: str) -> list[Medication]:
-    """
-    Parse ORWPS ACTIVE response
-
-    Format: ~Active Medications
-    ID^NAME^SIG^START_DATE^STOP_DATE^QTY^REFILLS^STATUS
-    """
-    medications = []
-    rows = parse_delimited_string(result)
-
-    for row in rows:
-        if len(row) >= 3 and not row[0].startswith("~"):
-            try:
-                med = Medication(
-                    id=row[0] if row[0] else None,
-                    name=row[1],
-                    sig=row[2],
-                    start_date=(
-                        parse_fileman_date(row[3]) if len(row) > 3 and row[3] else None
-                    ),
-                    stop_date=(
-                        parse_fileman_date(row[4]) if len(row) > 4 and row[4] else None
-                    ),
-                    quantity=row[5] if len(row) > 5 else None,
-                    refills=int(row[6]) if len(row) > 6 and row[6].isdigit() else None,
-                    status="ACTIVE" if len(row) > 7 and row[7] == "Y" else "INACTIVE",
-                )
-                medications.append(med)
-            except Exception as e:
-                logger.error(f"Failed to parse medication row, error: {e}")
-
-    return medications
 
 
 def parse_lab_results(result: str) -> list[LabResult]:

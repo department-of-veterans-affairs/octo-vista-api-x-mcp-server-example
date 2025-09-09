@@ -8,27 +8,6 @@ from ...services.parsers.patient.datetime_parser import parse_datetime
 from ..base import BaseVistaModel
 
 
-class Medication(BaseVistaModel):
-    """Medication information"""
-
-    id: str | None = None
-    name: str = Field(..., description="Medication name and strength")
-    sig: str = Field(..., description="Dosing instructions")
-    start_date: str | None = None
-    stop_date: str | None = None
-    status: str = Field(default="ACTIVE")
-    quantity: str | None = None
-    refills: int | None = None
-    prescriber: str | None = None
-    pharmacy: str | None = None
-
-    @field_validator("status")
-    @classmethod
-    def validate_status(cls, v):
-        """Ensure status is uppercase"""
-        return v.upper() if v else "ACTIVE"
-
-
 class LabResult(BaseVistaModel):
     """Laboratory result"""
 

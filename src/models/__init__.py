@@ -6,7 +6,6 @@ from .base import (
     BaseVistaModel,
     Gender,
     LabResultFlag,
-    MedicationStatus,
     VprDomain,
 )
 
@@ -24,7 +23,6 @@ from .vista import (
     Allergy,
     Appointment,
     LabResult,
-    Medication,
     PatientDemographics,
     PatientSearchResult,
     Problem,
@@ -39,7 +37,6 @@ __all__ = [
     "BaseVistaModel",
     "Gender",
     "VprDomain",
-    "MedicationStatus",
     "AllergyType",
     "LabResultFlag",
     # Responses
@@ -53,7 +50,6 @@ __all__ = [
     "Provider",
     "Station",
     "RpcParameter",
-    "Medication",
     "LabResult",
     "VitalSign",
     "Problem",

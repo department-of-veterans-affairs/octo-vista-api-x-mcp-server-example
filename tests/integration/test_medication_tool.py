@@ -1,7 +1,7 @@
 """Integration tests for medication MCP tool"""
 
 import time
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -60,57 +60,165 @@ def sample_patient_data():
         Medication(
             uid="urn:va:med:84F0:237:15023",
             localId="15023",
+            name="METFORMIN 1000MG TAB",
+            qualifiedName="METFORMIN 1000MG TAB",
+            medType="urn:sct:73639000",
             productFormName="METFORMIN 1000MG TAB",
-            genericName="Metformin HCl",
-            dosageForm="TABLET",
-            sig="TAKE 1 TABLET BY MOUTH TWICE DAILY WITH MEALS",
-            overallStart="20240101",
+            medStatus="urn:sct:73425007",
+            medStatusName="Active",
             vaStatus="ACTIVE",
-            quantity="180",
-            daysSupply=90,
-            fillsRemaining=5,
-            facilityCode=500,
+            vaType="O",
+            type="Prescription",
+            sig="TAKE 1 TABLET BY MOUTH TWICE DAILY WITH MEALS",
+            patientInstruction="Take with food to reduce stomach upset",
+            facilityCode="500",
             facilityName="CAMP MASTER",
-            vaClass="HS502:ANTIDIABETIC AGENTS,ORAL",
-            patientInstructions="Take with food to reduce stomach upset",
-            prescriber="SMITH,JENNIFER A",
+            dosages=[
+                {
+                    "dose": "1000",
+                    "units": "mg",
+                    "route_name": "ORAL",
+                    "schedule_name": "BID",
+                }
+            ],
+            orders=[
+                {
+                    "orderUid": "urn:va:order:84F0:237:15023",
+                    "daysSupply": 90,
+                    "fillCost": 0.0,
+                    "fillsAllowed": 6,
+                    "fillsRemaining": 5,
+                    "locationName": "PHARMACY",
+                    "locationUid": "urn:va:location:500:23",
+                    "ordered": "20240101",
+                    "pharmacistName": "PHARMACIST,ONE",
+                    "pharmacistUid": "urn:va:user:500:1234",
+                    "prescriptionId": "15023",
+                    "providerName": "SMITH,JENNIFER A",
+                    "providerUid": "urn:va:user:500:5678",
+                    "quantityOrdered": 180,
+                    "vaRouting": "W",
+                }
+            ],
+            fills=[
+                {
+                    "daysSupplyDispensed": 90,
+                    "dispenseDate": "20240101",
+                    "quantityDispensed": 180,
+                    "releaseDate": "20240101",
+                    "routing": "W",
+                }
+            ],
         ),
         Medication(
             uid="urn:va:med:84F0:237:15024",
             localId="15024",
+            name="LISINOPRIL 20MG TAB",
+            qualifiedName="LISINOPRIL 20MG TAB",
+            medType="urn:sct:73639000",
             productFormName="LISINOPRIL 20MG TAB",
-            genericName="Lisinopril",
-            dosageForm="TABLET",
-            sig="TAKE 1 TABLET BY MOUTH DAILY",
-            overallStart="20240101",
+            medStatus="urn:sct:73425007",
+            medStatusName="Active",
             vaStatus="ACTIVE",
-            quantity="90",
-            daysSupply=90,
-            fillsRemaining=3,
-            facilityCode=500,
+            vaType="O",
+            type="Prescription",
+            sig="TAKE 1 TABLET BY MOUTH DAILY",
+            patientInstruction="Take at the same time each day",
+            facilityCode="500",
             facilityName="CAMP MASTER",
-            vaClass="CV800:ACE INHIBITORS",
-            patientInstructions="Take at the same time each day",
-            prescriber="SMITH,JENNIFER A",
+            dosages=[
+                {
+                    "dose": "20",
+                    "units": "mg",
+                    "route_name": "ORAL",
+                    "schedule_name": "DAILY",
+                }
+            ],
+            orders=[
+                {
+                    "orderUid": "urn:va:order:84F0:237:15024",
+                    "daysSupply": 90,
+                    "fillCost": 0.0,
+                    "fillsAllowed": 4,
+                    "fillsRemaining": 3,
+                    "locationName": "PHARMACY",
+                    "locationUid": "urn:va:location:500:23",
+                    "ordered": "20240101",
+                    "pharmacistName": "PHARMACIST,ONE",
+                    "pharmacistUid": "urn:va:user:500:1234",
+                    "prescriptionId": "15024",
+                    "providerName": "SMITH,JENNIFER A",
+                    "providerUid": "urn:va:user:500:5678",
+                    "quantityOrdered": 90,
+                    "vaRouting": "W",
+                }
+            ],
+            fills=[
+                {
+                    "daysSupplyDispensed": 90,
+                    "dispenseDate": "20240101",
+                    "quantityDispensed": 90,
+                    "releaseDate": "20240101",
+                    "routing": "W",
+                }
+            ],
         ),
         Medication(
             uid="urn:va:med:84F0:237:15028",
             localId="15028",
+            name="WARFARIN 5MG TAB",
+            qualifiedName="WARFARIN 5MG TAB",
+            medType="urn:sct:73639000",
             productFormName="WARFARIN 5MG TAB",
-            genericName="Warfarin Sodium",
-            dosageForm="TABLET",
-            sig="TAKE 1 TABLET BY MOUTH DAILY AS DIRECTED",
-            overallStart="20231215",
-            overallStop="20240315",
+            medStatus="urn:sct:385655000",
+            medStatusName="Discontinued",
             vaStatus="DISCONTINUED",
-            quantity="30",
-            daysSupply=30,
-            fillsRemaining=0,
-            facilityCode=500,
+            vaType="O",
+            type="Prescription",
+            sig="TAKE 1 TABLET BY MOUTH DAILY AS DIRECTED",
+            patientInstruction="DISCONTINUED - Regular INR monitoring required",
+            facilityCode="500",
             facilityName="CAMP MASTER",
-            vaClass="BL300:ANTICOAGULANTS",
-            patientInstructions="DISCONTINUED - Regular INR monitoring required",
-            prescriber="JOHNSON,MICHAEL R",
+            dosages=[
+                {
+                    "dose": "5",
+                    "units": "mg",
+                    "route_name": "ORAL",
+                    "schedule_name": "DAILY",
+                }
+            ],
+            orders=[
+                {
+                    "orderUid": "urn:va:order:84F0:237:15028",
+                    "daysSupply": 30,
+                    "fillCost": 0.0,
+                    "fillsAllowed": 1,
+                    "fillsRemaining": 0,
+                    "locationName": "PHARMACY",
+                    "locationUid": "urn:va:location:500:23",
+                    "ordered": "20231215",
+                    "pharmacistName": "PHARMACIST,ONE",
+                    "pharmacistUid": "urn:va:user:500:1234",
+                    "prescriptionId": "15028",
+                    "providerName": "JOHNSON,MICHAEL R",
+                    "providerUid": "urn:va:user:500:6789",
+                    "quantityOrdered": 30,
+                    "vaRouting": "W",
+                }
+            ],
+            fills=[
+                {
+                    "daysSupplyDispensed": 30,
+                    "dispenseDate": "20231215",
+                    "quantityDispensed": 30,
+                    "releaseDate": "20231215",
+                    "routing": "W",
+                }
+            ],
+            start_date=datetime(2023, 12, 15, tzinfo=UTC),
+            end_date=datetime(2024, 3, 15, tzinfo=UTC),
+            last_filled=datetime(2023, 12, 15, tzinfo=UTC),
+            status="DISCONTINUED",
         ),
     ]
 
@@ -176,18 +284,9 @@ class TestMedicationTool:
                 )
 
                 # Filter medications (active only by default)
-                medications = [m for m in patient_data.medications if m.is_active]
-
-                # Group medications by therapeutic class
-                medication_groups = {}
-                for med in medications:
-                    group_key = med.therapeutic_class or med.va_class or "Other"
-                    if group_key not in medication_groups:
-                        medication_groups[group_key] = []
-                    medication_groups[group_key].append(med)
-
-                # Identify medications needing refills soon
-                refill_alerts = [m for m in medications if m.needs_refill_soon]
+                medications = [
+                    m for m in patient_data.medications if m.va_status == "ACTIVE"
+                ]
 
                 # Build response structure similar to the actual tool
                 result = {
@@ -202,11 +301,7 @@ class TestMedicationTool:
                         "active": len(
                             [m for m in patient_data.medications if m.is_active]
                         ),
-                        "discontinued": len(
-                            [m for m in patient_data.medications if m.is_discontinued]
-                        ),
                         "filtered_count": len(medications),
-                        "refill_alerts": len(refill_alerts),
                     },
                 }
 
@@ -219,7 +314,6 @@ class TestMedicationTool:
                 meds = result["medications"]
                 assert meds["total"] == 3
                 assert meds["active"] == 2  # Two active medications
-                assert meds["discontinued"] == 1  # One discontinued
                 assert meds["filtered_count"] == 2
 
     @pytest.mark.asyncio
@@ -229,71 +323,18 @@ class TestMedicationTool:
         medications = sample_patient_data.medications
 
         # Find the metformin medication
-        metformin = next(m for m in medications if "METFORMIN" in m.medication_name)
+        metformin = next(m for m in medications if "METFORMIN" in m.name.upper())
 
         # Test basic properties
         assert metformin.is_active is True
-        assert metformin.is_discontinued is False
-        assert metformin.generic_name == "Metformin HCl"
-        assert metformin.prescriber == "SMITH,JENNIFER A"
+        assert metformin.dose == "1000"
 
         # Test display properties
-        assert "METFORMIN" in metformin.display_name
-        assert metformin.display_frequency == "twice daily"  # Should parse from SIG
+        assert "METFORMIN" in metformin.product_form_name
 
         # Test discontinued medication
-        warfarin = next(m for m in medications if "WARFARIN" in m.medication_name)
+        warfarin = next(m for m in medications if "WARFARIN" in m.product_form_name)
         assert warfarin.is_active is False
-        assert warfarin.is_discontinued is True
-
-    @pytest.mark.asyncio
-    async def test_medication_refill_logic(self):
-        """Test medication refill calculation"""
-        # Create a medication that needs refill soon
-        last_filled = datetime.now(UTC) - timedelta(days=85)
-
-        medication = Medication(
-            uid="urn:va:med:500:123:456",
-            localId="456",
-            productFormName="ASPIRIN 81MG TAB",
-            dosageForm="TABLET",
-            sig="TAKE 1 TABLET BY MOUTH DAILY",
-            overallStart="20240101",
-            lastFilled=int(last_filled.strftime("%Y%m%d")),
-            daysSupply=90,
-            vaStatus="ACTIVE",
-            facilityCode=500,
-            facilityName="TEST FACILITY",
-        )
-
-        # Test refill calculations
-        days_left = medication.days_until_refill_needed
-        assert days_left is not None
-        assert days_left <= 10  # Should be close to needing refill
-        assert medication.needs_refill_soon is True
-
-    @pytest.mark.asyncio
-    async def test_medication_grouping_by_class(self, sample_patient_data):
-        """Test medication grouping by therapeutic class"""
-        medications = sample_patient_data.medications
-
-        # Group by therapeutic class like the tool does
-        medication_groups = {}
-        for med in medications:
-            group_key = med.therapeutic_class or med.va_class or "Other"
-            if group_key not in medication_groups:
-                medication_groups[group_key] = []
-            medication_groups[group_key].append(med)
-
-        # Should have multiple groups
-        assert len(medication_groups) >= 3
-
-        # Check that medications are properly grouped
-        for _group_name, meds in medication_groups.items():
-            assert len(meds) > 0
-            # Each medication in the group should have the class info
-            for med in meds:
-                assert med.va_class is not None or med.therapeutic_class is not None
 
     @pytest.mark.asyncio
     async def test_medication_status_filtering(self, sample_patient_data):
@@ -305,12 +346,14 @@ class TestMedicationTool:
         assert len(active_meds) == 2
 
         # Test discontinued filtering
-        discontinued_meds = [m for m in medications if m.is_discontinued]
+        discontinued_meds = [m for m in medications if not m.is_active]
         assert len(discontinued_meds) == 1
 
         # Verify specific medications
-        metformin = next(m for m in active_meds if "METFORMIN" in m.medication_name)
-        assert metformin.status == "ACTIVE"
+        metformin = next(m for m in active_meds if "METFORMIN" in m.product_form_name)
+        assert metformin.va_status == "ACTIVE"
 
-        warfarin = next(m for m in discontinued_meds if "WARFARIN" in m.medication_name)
-        assert warfarin.status == "DISCONTINUED"
+        warfarin = next(
+            m for m in discontinued_meds if "WARFARIN" in m.product_form_name
+        )
+        assert warfarin.va_status == "DISCONTINUED"
