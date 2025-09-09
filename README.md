@@ -28,7 +28,7 @@ Whereas, any application that supports Model Context Protocol can consume this s
 
 Our roadmap provides an overview of how we plan to build this MCP server.
 
-![roadmap](docs/roadmap-august-2025.png)
+![roadmap](docs/roadmap-september-2025.png)
 
 Review our roadmap in [VA Mural](https://app.mural.co/t/departmentofveteransaffairs9999/m/departmentofveteransaffairs9999/1750882921059/550b745268addb245a7f73287ec7645b6fa0d2c7?sender=u65f0a75fc7c68f2a5a2a9545).
 
