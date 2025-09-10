@@ -24,61 +24,6 @@ def format_vital_type(type_name: str) -> str:
     return vital_type_map.get(type_name.upper(), type_name.lower().replace(" ", "_"))
 
 
-def format_lab_type(type_name: str) -> str:
-    """Convert lab type name to snake_case.
-
-    Args:
-        type_name: The lab type name from VistA
-
-    Returns:
-        Formatted lab type in snake_case
-    """
-    if not type_name:
-        return "unknown"
-
-    # Common lab types that need special formatting
-    lab_type_map = {
-        "GLUCOSE": "glucose",
-        "HEMOGLOBIN": "hemoglobin",
-        "HEMATOCRIT": "hematocrit",
-        "WBC": "wbc",
-        "RBC": "rbc",
-        "PLATELET COUNT": "platelet_count",
-        "SODIUM": "sodium",
-        "POTASSIUM": "potassium",
-        "CHLORIDE": "chloride",
-        "CO2": "co2",
-        "BUN": "bun",
-        "CREATININE": "creatinine",
-        "CALCIUM": "calcium",
-        "TOTAL PROTEIN": "total_protein",
-        "ALBUMIN": "albumin",
-        "BILIRUBIN": "bilirubin",
-        "ALT": "alt",
-        "AST": "ast",
-        "CHOLESTEROL": "cholesterol",
-        "TRIGLYCERIDES": "triglycerides",
-        "HDL": "hdl",
-        "LDL": "ldl",
-        "TSH": "tsh",
-        "T4": "t4",
-        "T3": "t3",
-        "HBA1C": "hba1c",
-        "PSA": "psa",
-        "INR": "inr",
-        "PT": "pt",
-        "PTT": "ptt",
-    }
-
-    # Check if we have a specific mapping
-    normalized = type_name.upper()
-    if normalized in lab_type_map:
-        return lab_type_map[normalized]
-
-    # Otherwise, convert to snake_case
-    return type_name.lower().replace(" ", "_").replace("-", "_").replace("/", "_")
-
-
 def format_service_name(service: str) -> str:
     """Convert service name to proper case.
 

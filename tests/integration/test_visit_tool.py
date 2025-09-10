@@ -161,7 +161,9 @@ class TestVisitToolIntegration:
             mock_get_data.return_value = sample_patient_data
 
             # Import the visit tool module
-            from src.tools.patient.get_patient_visits_tool import get_patient_visits
+            from src.tools.patient.get_patient_visits_tool import (
+                get_patient_visits_impl,
+            )
 
             # Test parameters
             station = "500"
@@ -184,7 +186,7 @@ class TestVisitToolIntegration:
                 ),
                 patch("time.time", return_value=time.time()),
             ):
-                result = await get_patient_visits(
+                result = await get_patient_visits_impl(
                     patient_dfn=patient_dfn,
                     station=station,
                     vista_client=mock_vista_client,
@@ -210,7 +212,9 @@ class TestVisitToolIntegration:
         ) as mock_get_data:
             mock_get_data.return_value = sample_patient_data
 
-            from src.tools.patient.get_patient_visits_tool import get_patient_visits
+            from src.tools.patient.get_patient_visits_tool import (
+                get_patient_visits_impl,
+            )
 
             with (
                 patch(
@@ -227,7 +231,7 @@ class TestVisitToolIntegration:
                 ),
                 patch("time.time", return_value=time.time()),
             ):
-                result = await get_patient_visits(
+                result = await get_patient_visits_impl(
                     patient_dfn="100022",
                     station="500",
                     visit_type="inpatient",
@@ -260,7 +264,9 @@ class TestVisitToolIntegration:
         ) as mock_get_data:
             mock_get_data.return_value = sample_patient_data
 
-            from src.tools.patient.get_patient_visits_tool import get_patient_visits
+            from src.tools.patient.get_patient_visits_tool import (
+                get_patient_visits_impl,
+            )
 
             with (
                 patch(
@@ -277,7 +283,7 @@ class TestVisitToolIntegration:
                 ),
                 patch("time.time", return_value=time.time()),
             ):
-                result = await get_patient_visits(
+                result = await get_patient_visits_impl(
                     patient_dfn="999999",
                     station="500",
                     vista_client=mock_vista_client,
@@ -297,7 +303,9 @@ class TestVisitToolIntegration:
         ) as mock_get_data:
             mock_get_data.return_value = sample_patient_data
 
-            from src.tools.patient.get_patient_visits_tool import get_patient_visits
+            from src.tools.patient.get_patient_visits_tool import (
+                get_patient_visits_impl,
+            )
 
             with (
                 patch(
@@ -314,7 +322,7 @@ class TestVisitToolIntegration:
                 ),
                 patch("time.time", return_value=time.time()),
             ):
-                result = await get_patient_visits(
+                result = await get_patient_visits_impl(
                     patient_dfn="100022",
                     station="500",
                     days_back=0,  # Invalid
@@ -335,7 +343,9 @@ class TestVisitToolIntegration:
         ) as mock_get_data:
             mock_get_data.return_value = sample_patient_data
 
-            from src.tools.patient.get_patient_visits_tool import get_patient_visits
+            from src.tools.patient.get_patient_visits_tool import (
+                get_patient_visits_impl,
+            )
 
             with (
                 patch(
@@ -352,7 +362,7 @@ class TestVisitToolIntegration:
                 ),
                 patch("time.time", return_value=time.time()),
             ):
-                result = await get_patient_visits(
+                result = await get_patient_visits_impl(
                     patient_dfn="invalid-dfn",
                     station="500",
                     vista_client=mock_vista_client,
@@ -372,7 +382,9 @@ class TestVisitToolIntegration:
         ) as mock_get_data:
             mock_get_data.return_value = sample_patient_data
 
-            from src.tools.patient.get_patient_visits_tool import get_patient_visits
+            from src.tools.patient.get_patient_visits_tool import (
+                get_patient_visits_impl,
+            )
 
             with (
                 patch(
@@ -389,7 +401,7 @@ class TestVisitToolIntegration:
                 ),
                 patch("time.time", return_value=time.time()),
             ):
-                result = await get_patient_visits(
+                result = await get_patient_visits_impl(
                     patient_dfn="100022",
                     station="500",
                     vista_client=mock_vista_client,
@@ -427,7 +439,9 @@ class TestVisitToolIntegration:
         ) as mock_get_data:
             mock_get_data.return_value = sample_patient_data
 
-            from src.tools.patient.get_patient_visits_tool import get_patient_visits
+            from src.tools.patient.get_patient_visits_tool import (
+                get_patient_visits_impl,
+            )
 
             with (
                 patch(
@@ -444,7 +458,7 @@ class TestVisitToolIntegration:
                 ),
                 patch("time.time", return_value=time.time()),
             ):
-                result = await get_patient_visits(
+                result = await get_patient_visits_impl(
                     patient_dfn="100022",
                     station="500",
                     vista_client=mock_vista_client,
@@ -486,7 +500,9 @@ class TestVisitToolIntegration:
         ) as mock_get_data:
             mock_get_data.return_value = sample_patient_data
 
-            from src.tools.patient.get_patient_visits_tool import get_patient_visits
+            from src.tools.patient.get_patient_visits_tool import (
+                get_patient_visits_impl,
+            )
 
             with (
                 patch(
@@ -503,7 +519,7 @@ class TestVisitToolIntegration:
                 ),
                 patch("time.time", return_value=time.time()),
             ):
-                result = await get_patient_visits(
+                result = await get_patient_visits_impl(
                     patient_dfn="100022",
                     station="500",
                     vista_client=mock_vista_client,
@@ -530,7 +546,9 @@ class TestVisitToolIntegration:
         ) as mock_get_data:
             mock_get_data.return_value = sample_patient_data
 
-            from src.tools.patient.get_patient_visits_tool import get_patient_visits
+            from src.tools.patient.get_patient_visits_tool import (
+                get_patient_visits_impl,
+            )
 
             # Test with different days_back values
             for days_back in [30, 90, 365]:
@@ -549,7 +567,7 @@ class TestVisitToolIntegration:
                     ),
                     patch("time.time", return_value=time.time()),
                 ):
-                    result = await get_patient_visits(
+                    result = await get_patient_visits_impl(
                         patient_dfn="100022",
                         station="500",
                         days_back=days_back,
@@ -570,7 +588,9 @@ class TestVisitToolIntegration:
         ) as mock_get_data:
             mock_get_data.return_value = sample_patient_data
 
-            from src.tools.patient.get_patient_visits_tool import get_patient_visits
+            from src.tools.patient.get_patient_visits_tool import (
+                get_patient_visits_impl,
+            )
 
             visit_types = [
                 "inpatient",
@@ -596,7 +616,7 @@ class TestVisitToolIntegration:
                     ),
                     patch("time.time", return_value=time.time()),
                 ):
-                    result = await get_patient_visits(
+                    result = await get_patient_visits_impl(
                         patient_dfn="100022",
                         station="500",
                         visit_type=visit_type,
@@ -622,7 +642,9 @@ class TestVisitToolIntegration:
         ) as mock_get_data:
             mock_get_data.return_value = sample_patient_data
 
-            from src.tools.patient.get_patient_visits_tool import get_patient_visits
+            from src.tools.patient.get_patient_visits_tool import (
+                get_patient_visits_impl,
+            )
 
             # Test with active_only=True
             with (
@@ -640,7 +662,7 @@ class TestVisitToolIntegration:
                 ),
                 patch("time.time", return_value=time.time()),
             ):
-                result = await get_patient_visits(
+                result = await get_patient_visits_impl(
                     patient_dfn="100022",
                     station="500",
                     active_only=True,
@@ -672,7 +694,7 @@ class TestVisitToolIntegration:
                 ),
                 patch("time.time", return_value=time.time()),
             ):
-                result = await get_patient_visits(
+                result = await get_patient_visits_impl(
                     patient_dfn="100022",
                     station="500",
                     active_only=False,

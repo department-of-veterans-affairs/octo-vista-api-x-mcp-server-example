@@ -6,6 +6,7 @@ from typing import Annotated, Any
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
+from ...models.patient import LabResult
 from ...models.responses.metadata import (
     DemographicsMetadata,
     LabsFiltersMetadata,
@@ -20,7 +21,6 @@ from ...models.responses.tool_responses import (
     LabResultsResponseData,
 )
 from ...services.data import get_patient_data
-from ...services.formatters import format_lab_type
 from ...services.validators import validate_dfn
 from ...utils import get_default_duz, get_default_station, get_logger, paginate_list
 from ...vista.base import BaseVistaClient
@@ -37,6 +37,7 @@ def register_get_patient_labs_tool(mcp: FastMCP, vista_client: BaseVistaClient):
         station: str | None = None,
         abnormal_only: bool = False,
         lab_type: str | None = None,
+        n_most_recent: Annotated[int | None, Field(default=3, ge=0)] = 3,
         days_back: Annotated[int, Field(default=90, ge=0)] = 90,
         offset: Annotated[int, Field(default=0, ge=0)] = 0,
         limit: Annotated[int, Field(default=10, ge=1, le=200)] = 10,
@@ -79,6 +80,17 @@ def register_get_patient_labs_tool(mcp: FastMCP, vista_client: BaseVistaClient):
                 and (not abnormal_only or lab.is_abnormal)
                 and (not lab_type or lab_type.upper() in lab.type_name.upper())
             ]
+
+            # group by type and have at most n per type, then flatten out.
+            # TODO: there are smarter ways to do this
+            if n_most_recent:
+                labs_by_type: dict[str, list[LabResult]] = {}
+                for lab in labs:
+                    lab_list = labs_by_type.setdefault(lab.type_name, [])
+                    if len(lab_list) < n_most_recent:
+                        lab_list.append(lab)
+
+            labs = [lab for lab_list in labs_by_type.values() for lab in lab_list]
 
             # Apply pagination
             labs_page, total_filtered_labs = paginate_list(labs, offset, limit)
@@ -132,10 +144,6 @@ def register_get_patient_labs_tool(mcp: FastMCP, vista_client: BaseVistaClient):
             data = LabResultsResponseData(
                 abnormal_count=len([lab for lab in labs_page if lab.is_abnormal]),
                 critical_count=len([lab for lab in labs_page if lab.is_critical]),
-                by_type={
-                    format_lab_type(test_type): results
-                    for test_type, results in lab_groups.items()
-                },
                 labs=labs_page,
             )
 

@@ -26,7 +26,7 @@ from ...vista.base import BaseVistaClient
 logger = get_logger(__name__)
 
 
-async def get_patient_visits(
+async def get_patient_visits_impl(
     patient_dfn: str,
     vista_client: BaseVistaClient,
     station: str | None = None,
@@ -237,7 +237,7 @@ def register_get_patient_visits_tool(mcp: FastMCP, vista_client: BaseVistaClient
     """Register the get_patient_visits tool with the MCP server"""
 
     @mcp.tool()
-    async def get_patient_visits_tool(
+    async def get_patient_visits(
         patient_dfn: str,
         station: str | None = None,
         visit_type: str = "",
@@ -247,7 +247,7 @@ def register_get_patient_visits_tool(mcp: FastMCP, vista_client: BaseVistaClient
         limit: Annotated[int, Field(default=10, ge=1, le=200)] = 10,
     ) -> VisitsResponse:
         """Get patient visit history with location and duration data."""
-        return await get_patient_visits(
+        return await get_patient_visits_impl(
             patient_dfn=patient_dfn,
             station=station,
             visit_type=visit_type,

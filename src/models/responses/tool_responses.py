@@ -115,7 +115,6 @@ class LabResultsResponseData(ResponseData):
 
 class VitalSignsResponseData(ResponseData):
     vital_signs: list[VitalSign]
-    latest_vitals: dict[str, VitalSign] = Field(default_factory=dict)
 
 
 class DocumentsResponseData(ResponseData):

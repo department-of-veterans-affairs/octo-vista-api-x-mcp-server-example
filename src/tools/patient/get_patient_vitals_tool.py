@@ -6,6 +6,7 @@ from typing import Annotated
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
+from ...models.patient import VitalSign
 from ...models.responses.metadata import (
     DemographicsMetadata,
     PaginationMetadata,
@@ -35,6 +36,7 @@ def register_get_patient_vitals_tool(mcp: FastMCP, vista_client: BaseVistaClient
         patient_dfn: str,
         station: str | None = None,
         vital_type: str | None = None,
+        n_most_recent: Annotated[int | None, Field(default=3, ge=0)] = 3,
         days_back: Annotated[int, Field(default=30, ge=0)] = 30,
         offset: Annotated[int, Field(default=0, ge=0)] = 0,
         limit: Annotated[int, Field(default=10, ge=1, le=200)] = 10,
@@ -78,13 +80,25 @@ def register_get_patient_vitals_tool(mcp: FastMCP, vista_client: BaseVistaClient
                     v for v in vitals if v.type_name.upper() == vital_type.upper()
                 ]
 
+            # group by type and have at most n per type, then flatten out.
+            # TODO: there are smarter ways to do this
+            if n_most_recent:
+                vitals_by_type: dict[str, list[VitalSign]] = {}
+                for vital_sign in vitals:
+                    vitals_list = vitals_by_type.setdefault(vital_sign.type_name, [])
+                    if len(vitals_list) < n_most_recent:
+                        vitals_list.append(vital_sign)
+
+            vitals = [
+                vital_sign
+                for vitals_list in vitals_by_type.values()
+                for vital_sign in vitals_list
+            ]
+
             # Apply pagination
             vitals_page, total_vitals_after_filtering = paginate_list(
                 vitals, offset, limit
             )
-
-            # Get latest of each type
-            latest_vitals = patient_data.get_latest_vitals()
 
             # Build typed metadata inline
             end_time = datetime.now(UTC)
@@ -126,7 +140,6 @@ def register_get_patient_vitals_tool(mcp: FastMCP, vista_client: BaseVistaClient
             # Build response data
             data = VitalSignsResponseData(
                 vital_signs=vitals_page,
-                latest_vitals=latest_vitals,
             )
 
             return VitalSignsResponse(

@@ -172,15 +172,6 @@ class PatientDataCollection(BasePatientModel):
             self.vital_signs or self.lab_results or self.consults or self.visits
         )
 
-    def get_latest_vitals(self) -> dict[str, VitalSign]:
-        """Get most recent vital sign of each type"""
-        latest: dict[str, VitalSign] = {}
-        for vital in self.vital_signs:
-            type_name = vital.type_name
-            if type_name not in latest or vital.observed > latest[type_name].observed:
-                latest[type_name] = vital
-        return latest
-
     def get_abnormal_labs(self) -> list[LabResult]:
         """Get all abnormal lab results"""
         return [lab for lab in self.lab_results if lab.is_abnormal]
@@ -350,7 +341,6 @@ class PatientDataCollection(BasePatientModel):
         Generate a summary view of patient data.
         Useful for quick overview displays.
         """
-        latest_vitals = self.get_latest_vitals()
 
         summary: dict[str, Any] = {
             "patient": {
@@ -362,8 +352,9 @@ class PatientDataCollection(BasePatientModel):
                 "phone": self.demographics.primary_phone,
             },
             "vitals_summary": {
-                "latest_count": len(latest_vitals),
-                "has_abnormal": any(v.is_abnormal for v in latest_vitals.values()),
+                "has_abnormal": any(
+                    v.is_abnormal for v in self.vital_signs_dict.values()
+                ),
             },
             "labs_summary": {
                 "total_count": len(self.lab_results),
@@ -402,15 +393,5 @@ class PatientDataCollection(BasePatientModel):
                 ),
             },
         }
-
-        # Add latest vital values
-        if latest_vitals:
-            summary["latest_vitals"] = {}
-            for type_name, vital in latest_vitals.items():
-                summary["latest_vitals"][type_name] = {
-                    "value": vital.display_value,
-                    "date": vital.observed.strftime("%Y-%m-%d %H:%M"),
-                    "abnormal": vital.is_abnormal,
-                }
 
         return summary
