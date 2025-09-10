@@ -1,6 +1,6 @@
 """Get patient medications tool for MCP server"""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from mcp.server.fastmcp import FastMCP
@@ -35,6 +35,8 @@ def register_get_patient_medications_tool(mcp: FastMCP, vista_client: BaseVistaC
         patient_dfn: str,
         station: str | None = None,
         active_only: bool = False,
+        return_all_active_and_pending: bool = True,  # returns active/pending regardless of cutoff date
+        days_back: Annotated[int, Field(default=183, ge=1, le=36500)] = 183,  # 6 months
         offset: Annotated[int, Field(default=0, ge=0)] = 0,
         limit: Annotated[int, Field(default=100, ge=1, le=1000)] = 100,
     ) -> MedicationsResponse:
@@ -67,10 +69,22 @@ def register_get_patient_medications_tool(mcp: FastMCP, vista_client: BaseVistaC
                 vista_client, station, patient_dfn, caller_duz
             )
 
-            # Filter medications
-            medications = patient_data.medications
-            if active_only:
-                medications = [m for m in medications if m.is_active]
+            # Filter medications based on active status and days back
+            cutoff_date = (
+                datetime.now(UTC) - timedelta(days=days_back) if days_back else None
+            )
+            medications = [
+                m
+                for m in patient_data.medications
+                if (return_all_active_and_pending and (m.is_pending or m.is_active))
+                or (
+                    (not active_only or m.is_active)
+                    and (
+                        cutoff_date is None
+                        or (m.last_filled and m.last_filled >= cutoff_date)
+                    )
+                )
+            ]
 
             # Apply pagination
             medications_page, total_medications_after_filtering = paginate_list(

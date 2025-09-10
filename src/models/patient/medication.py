@@ -153,6 +153,7 @@ class Medication(BasePatientModel):
     va_status: str = Field(alias="vaStatus")
     va_type: str = Field(alias="vaType")
     type: str | None = None
+    indication: str | None = Field(default=None)
 
     # Dosage and administration
     sig: str = ""
@@ -200,7 +201,13 @@ class Medication(BasePatientModel):
     def is_active(self) -> bool:
         """Check if the medication is active"""
         va_status = self.va_status.upper()
-        return va_status.startswith("ACTIVE")
+        return va_status.upper().startswith("ACTIVE")
+
+    @property
+    def is_pending(self) -> bool:
+        """Check if the medication is pending"""
+        va_status = self.va_status.upper()
+        return va_status.upper().startswith("PENDING")
 
     @computed_field  # type: ignore[prop-decorator]
     @property
