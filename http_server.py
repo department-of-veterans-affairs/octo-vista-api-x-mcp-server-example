@@ -23,16 +23,21 @@ if __name__ == "__main__":
     # Get configuration from environment
     host = os.getenv("VISTA_MCP_HTTP_HOST", "0.0.0.0")
     port = int(os.getenv("VISTA_MCP_HTTP_PORT", "8000"))
+    root_path = os.getenv("ROOT_PATH_PREFIX", "")
 
     # Additional configuration for enhanced transport support
     auth_header = os.getenv("VISTA_MCP_AUTH_HEADER")
     cors_origins = os.getenv("VISTA_MCP_CORS_ORIGINS")
 
+    # Build the full MCP endpoint URL
+    mcp_endpoint = f"http://{host}:{port}{root_path}/mcp"
+
     log_mcp_message(
         mcp,
         "info",
-        f"Starting Streamable HTTP server. MCP endpoint: http://{host}:{port}/mcp. "
-        f"Configure your client with: {{'transport': 'http', 'url': 'http://{host}:{port}/mcp'}}",
+        f"Starting Streamable HTTP server. MCP endpoint: {mcp_endpoint}. "
+        f"Root path prefix: '{root_path}'. "
+        f"Configure your client with: {{'transport': 'http', 'url': '{mcp_endpoint}'}}",
     )
 
     # Set environment variables for uvicorn
@@ -51,6 +56,12 @@ if __name__ == "__main__":
         # Get the Streamable HTTP app
         app = mcp.streamable_http_app()
 
+        # Root path is handled by uvicorn, not the app directly
+        if root_path:
+            log_mcp_message(
+                mcp, "info", f"Root path will be configured in uvicorn: {root_path}"
+            )
+
         # Add auth header if specified
         if auth_header:
             log_mcp_message(
@@ -67,7 +78,7 @@ if __name__ == "__main__":
 
         # Run the Streamable HTTP app with uvicorn
         log_mcp_message(mcp, "info", "Starting uvicorn server...")
-        uvicorn.run(app, host=host, port=port, log_level="info")
+        uvicorn.run(app, host=host, port=port, log_level="info", root_path=root_path)
 
     except KeyboardInterrupt:
         log_mcp_message(mcp, "info", "Server stopped by user")
