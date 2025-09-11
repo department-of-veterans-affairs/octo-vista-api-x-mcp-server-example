@@ -1,0 +1,12 @@
+repos:
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 9b9df9f1d3bd9a5e7a52d8f61a3be3e29e73d127  # frozen: 0.33.3
+    hooks:
+      - id: check-github-workflows
+        args: [ "--verbose" ]
+      - id: check-github-actions
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: 9a790d2bbf52124eecb5a71a4bab4884804ffa2a  # frozen: v1.100.0
+    hooks:
+      - id: terraform_fmt
+      - id: terraform_tflint
