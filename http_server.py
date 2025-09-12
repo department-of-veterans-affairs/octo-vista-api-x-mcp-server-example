@@ -4,6 +4,8 @@ import os
 import sys
 
 from dotenv import load_dotenv
+from starlette.responses import JSONResponse
+from starlette.routing import Mount, Route
 
 # Import the MCP server instance from existing server
 from server import mcp
@@ -55,6 +57,24 @@ if __name__ == "__main__":
 
         # Get the MCP Streamable HTTP app
         app = mcp.streamable_http_app()
+
+        # Add health routes directly to the MCP app's router
+        from starlette.responses import JSONResponse
+
+        async def health_check(request):
+            return JSONResponse({"status": "healthy", "service": "vista-mcp-server"})
+
+        async def health(request):
+            return JSONResponse({"status": "healthy", "service": "vista-mcp-server"})
+
+        # Add routes to the existing MCP app
+        health_routes = [
+            Route("/", health_check),
+            Route("/health", health),
+        ]
+
+        # Insert health routes at the beginning
+        app.router.routes = health_routes + app.router.routes
 
         # Root path is handled by uvicorn, not the app directly
         if root_path:
