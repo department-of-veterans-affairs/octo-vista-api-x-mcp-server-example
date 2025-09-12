@@ -5,7 +5,7 @@ import sys
 
 from dotenv import load_dotenv
 from starlette.responses import JSONResponse
-from starlette.routing import Mount, Route
+from starlette.routing import Route
 
 # Import the MCP server instance from existing server
 from server import mcp
