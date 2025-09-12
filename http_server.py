@@ -4,6 +4,7 @@ import os
 import sys
 
 from dotenv import load_dotenv
+from fastapi import FastAPI
 
 # Import the MCP server instance from existing server
 from server import mcp
@@ -53,8 +54,23 @@ if __name__ == "__main__":
             mcp, "info", "Using Streamable HTTP transport and getting app..."
         )
 
-        # Get the Streamable HTTP app
-        app = mcp.streamable_http_app()
+        # Create a wrapper FastAPI app for health endpoints
+        wrapper_app = FastAPI(root_path=root_path)
+
+        # Get the MCP Streamable HTTP app
+        mcp_app = mcp.streamable_http_app()
+
+        # Add health check endpoints
+        @wrapper_app.get("/")
+        async def health_check():
+            return {"status": "healthy", "service": "vista-mcp-server"}
+
+        @wrapper_app.get("/health")
+        async def health():
+            return {"status": "healthy", "service": "vista-mcp-server"}
+
+        # Mount the MCP app at /mcp
+        wrapper_app.mount("/mcp", mcp_app)
 
         # Root path is handled by uvicorn, not the app directly
         if root_path:
@@ -76,9 +92,9 @@ if __name__ == "__main__":
             log_mcp_message(mcp, "info", f"CORS origins: {cors_origins}")
             # Note: CORS configuration would need to be implemented in FastMCP
 
-        # Run the Streamable HTTP app with uvicorn
+        # Run the wrapper app with uvicorn
         log_mcp_message(mcp, "info", "Starting uvicorn server...")
-        uvicorn.run(app, host=host, port=port, log_level="info", root_path=root_path)
+        uvicorn.run(wrapper_app, host=host, port=port, log_level="info")
 
     except KeyboardInterrupt:
         log_mcp_message(mcp, "info", "Server stopped by user")
