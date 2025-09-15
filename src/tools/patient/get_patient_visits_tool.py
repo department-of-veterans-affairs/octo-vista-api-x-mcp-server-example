@@ -244,7 +244,7 @@ def register_get_patient_visits_tool(mcp: FastMCP, vista_client: BaseVistaClient
         active_only: bool = False,
         days_back: Annotated[int, Field(default=365, ge=1)] = 365,
         offset: Annotated[int, Field(default=0, ge=0)] = 0,
-        limit: Annotated[int, Field(default=10, ge=1, le=200)] = 10,
+        limit: Annotated[int, Field(default=200, ge=1, le=200)] = 200,
     ) -> VisitsResponse:
         """Get patient visit history with location and duration data."""
         return await get_patient_visits_impl(

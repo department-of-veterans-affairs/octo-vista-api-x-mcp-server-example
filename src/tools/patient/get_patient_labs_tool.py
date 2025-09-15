@@ -40,7 +40,7 @@ def register_get_patient_labs_tool(mcp: FastMCP, vista_client: BaseVistaClient):
         n_most_recent: Annotated[int | None, Field(default=3, ge=0)] = 3,
         days_back: Annotated[int, Field(default=90, ge=0)] = 90,
         offset: Annotated[int, Field(default=0, ge=0)] = 0,
-        limit: Annotated[int, Field(default=10, ge=1, le=200)] = 10,
+        limit: Annotated[int, Field(default=200, ge=1, le=200)] = 200,
     ) -> LabResultsResponse:
         """Get patient laboratory test results with values and reference ranges."""
         start_time = datetime.now(UTC)

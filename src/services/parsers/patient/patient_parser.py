@@ -305,7 +305,6 @@ class PatientDataParser:
         # Sort by observed date (newest first)
         vitals.sort(key=lambda v: v.observed, reverse=True)
 
-        logger.info(f"Parsed {len(vitals)} vital signs")
         return {vital.uid: vital for vital in vitals}
 
     def _parse_lab_results(
@@ -324,7 +323,6 @@ class PatientDataParser:
         # Sort by observed date (newest first)
         labs.sort(key=lambda lab: lab.observed, reverse=True)
 
-        logger.info(f"Parsed {len(labs)} lab results")
         return {lab.uid: lab for lab in labs}
 
     def _parse_consults(
@@ -343,7 +341,6 @@ class PatientDataParser:
         # Sort by date (newest first)
         consults.sort(key=lambda c: c.date_time, reverse=True)
 
-        logger.info(f"Parsed {len(consults)} consultations")
         return {consult.uid: consult for consult in consults}
 
     def _parse_medications(
@@ -365,7 +362,6 @@ class PatientDataParser:
         # Sort by start date (newest first), handling None dates
         medications.sort(key=lambda m: m.start_date or datetime.min, reverse=True)
 
-        logger.info(f"Parsed {len(medications)} medications")
         return {medication.uid: medication for medication in medications}
 
     def _parse_visits(
@@ -424,7 +420,6 @@ class PatientDataParser:
         # Sort by visit date (newest first)
         visits.sort(key=lambda v: v.visit_date or datetime.min, reverse=True)
 
-        logger.info(f"Parsed {len(visits)} visits")
         return {visit.uid: visit for visit in visits}
 
     def _preprocess_medication_item(self, item: dict[str, Any]) -> dict[str, Any]:
@@ -510,7 +505,6 @@ class PatientDataParser:
         # Sort by recorded date (newest first)
         health_factors.sort(key=lambda f: f.recorded_date, reverse=True)
 
-        logger.info(f"Parsed {len(health_factors)} health factors")
         return {health_factor.uid: health_factor for health_factor in health_factors}
 
     def _preprocess_health_factor_item(
@@ -578,7 +572,6 @@ class PatientDataParser:
         # Sort by treatment date (newest first)
         treatments.sort(key=lambda t: t.date, reverse=True)
 
-        logger.info(f"Parsed {len(treatments)} treatments")
         return {treatment.uid: treatment for treatment in treatments}
 
     def _preprocess_treatment_item(self, item: dict[str, Any]) -> dict[str, Any]:
@@ -629,7 +622,6 @@ class PatientDataParser:
         # Sort by diagnosis date (newest first)
         diagnoses.sort(key=lambda d: d.diagnosis_date or datetime.min, reverse=True)
 
-        logger.info(f"Parsed {len(diagnoses)} diagnoses")
         return {diagnosis.uid: diagnosis for diagnosis in diagnoses}
 
     def _preprocess_diagnosis_item(self, item: dict[str, Any]) -> dict[str, Any]:
@@ -714,7 +706,6 @@ class PatientDataParser:
         """Parse orders from order items"""
         try:
             parsed = {order["uid"]: Order(**order) for order in order_items}
-            logger.info(f"Parsed {len(parsed)} orders")
             return parsed
         except Exception as e:
             logger.warning(f"Failed to parse orders: {e}")
@@ -732,7 +723,6 @@ class PatientDataParser:
                 processed_items.append(processed)
 
             parsed = {doc["uid"]: Document(**doc) for doc in processed_items}
-            logger.info(f"Parsed {len(parsed)} documents")
             return parsed
         except Exception as e:
             logger.warning(f"Failed to parse documents: {e}")
@@ -818,7 +808,6 @@ class PatientDataParser:
         cpt_codes.sort(
             key=lambda c: c.entered or datetime.min.replace(tzinfo=UTC), reverse=True
         )
-        logger.info(f"Parsed {len(cpt_codes)} CPT codes")
         return {cpt_code.uid: cpt_code for cpt_code in cpt_codes}
 
     def _preprocess_cpt_code_item(self, item: dict[str, Any]) -> dict[str, Any] | None:
@@ -871,7 +860,6 @@ class PatientDataParser:
             key=lambda a: a.entered or datetime.min.replace(tzinfo=UTC), reverse=True
         )
 
-        logger.info(f"Parsed {len(allergies)} allergies")
         return {allergy.uid: allergy for allergy in allergies}
 
     def _preprocess_allergy_item(self, item: dict[str, Any]) -> dict[str, Any] | None:
@@ -950,7 +938,6 @@ class PatientDataParser:
             key=lambda p: p.entered or datetime.min.replace(tzinfo=UTC), reverse=True
         )
 
-        logger.info(f"Parsed {len(povs)} POV items")
         return {pov.uid: pov for pov in povs}
 
     def _preprocess_pov_item(self, item: dict[str, Any]) -> dict[str, Any] | None:
@@ -1019,7 +1006,6 @@ class PatientDataParser:
             key=lambda p: p.entered or datetime.min.replace(tzinfo=UTC), reverse=True
         )
 
-        logger.info(f"Parsed {len(problems)} problems")
         return {problem.uid: problem for problem in problems}
 
     def _preprocess_problem_item(self, item: dict[str, Any]) -> dict[str, Any] | None:
@@ -1113,7 +1099,6 @@ class PatientDataParser:
             reverse=True,
         )
 
-        logger.info(f"Parsed {len(appointments)} appointments")
         return {appointment.uid: appointment for appointment in appointments}
 
     def _preprocess_appointment_item(
