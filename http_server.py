@@ -59,21 +59,54 @@ if __name__ == "__main__":
         app = mcp.streamable_http_app()
 
         # Add health routes directly to the MCP app's router
-        from starlette.responses import JSONResponse
-
         async def health_check(request):
             return JSONResponse({"status": "healthy", "service": "vista-mcp-server"})
 
-        async def health(request):
-            return JSONResponse({"status": "healthy", "service": "vista-mcp-server"})
-
-        # Add routes to the existing MCP app
+        # Create base health routes
         health_routes = [
             Route("/", health_check),
-            Route("/health", health),
+            Route("/health", health_check),
         ]
 
-        # Insert health routes at the beginning
+        # Add prefixed routes if root_path is specified
+        if root_path:
+            log_mcp_message(mcp, "info", f"Adding prefixed routes for: {root_path}")
+
+            # Copy the existing MCP route to the prefixed path
+            mcp_routes_to_add = []
+            for route in app.router.routes:
+                if hasattr(route, "path") and route.path == "/mcp":
+                    # Add a prefixed version of the MCP route
+                    from starlette.routing import Route as StarletteRoute
+
+                    # Safely get endpoint and methods from route
+                    if hasattr(route, "endpoint"):
+                        endpoint = route.endpoint
+                        methods = (
+                            route.methods
+                            if hasattr(route, "methods")
+                            else ["GET", "POST"]
+                        )
+
+                        prefixed_mcp_route = StarletteRoute(
+                            f"{root_path}/mcp",
+                            endpoint,
+                            methods=methods,
+                        )
+                        mcp_routes_to_add.append(prefixed_mcp_route)
+                        log_mcp_message(
+                            mcp, "info", f"Added prefixed MCP route: {root_path}/mcp"
+                        )
+
+            # Add prefixed health routes
+            prefixed_routes = [
+                Route(f"{root_path}/", health_check),
+                Route(f"{root_path}/health", health_check),
+            ]
+            health_routes.extend(prefixed_routes)
+            health_routes.extend(mcp_routes_to_add)
+
+        # Insert all routes at the beginning
         app.router.routes = health_routes + app.router.routes
 
         # Root path is handled by uvicorn, not the app directly
@@ -96,9 +129,9 @@ if __name__ == "__main__":
             log_mcp_message(mcp, "info", f"CORS origins: {cors_origins}")
             # Note: CORS configuration would need to be implemented in FastMCP
 
-        # Run the MCP app with uvicorn
+        # Run the MCP app with uvicorn (FastMCP handles root_path internally)
         log_mcp_message(mcp, "info", "Starting uvicorn server...")
-        uvicorn.run(app, host=host, port=port, log_level="info", root_path=root_path)
+        uvicorn.run(app, host=host, port=port, log_level="info")
 
     except KeyboardInterrupt:
         log_mcp_message(mcp, "info", "Server stopped by user")
