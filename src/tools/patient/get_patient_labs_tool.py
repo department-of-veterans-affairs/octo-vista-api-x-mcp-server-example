@@ -86,7 +86,7 @@ def register_get_patient_labs_tool(mcp: FastMCP, vista_client: BaseVistaClient):
             if n_most_recent:
                 labs_by_type: dict[str, list[LabResult]] = {}
                 for lab in labs:
-                    lab_list = labs_by_type.setdefault(lab.type_name, [])
+                    lab_list = labs_by_type.setdefault(lab.type_code, [])
                     if len(lab_list) < n_most_recent:
                         lab_list.append(lab)
 
@@ -98,9 +98,9 @@ def register_get_patient_labs_tool(mcp: FastMCP, vista_client: BaseVistaClient):
             # Group by test type (for paginated results)
             lab_groups: dict[str, list[Any]] = {}
             for lab in labs_page:
-                if lab.type_name not in lab_groups:
-                    lab_groups[lab.type_name] = []
-                lab_groups[lab.type_name].append(lab.uid)
+                if lab.type_code not in lab_groups:
+                    lab_groups[lab.type_code] = []
+                lab_groups[lab.type_code].append(lab.uid)
 
             # Build typed metadata inline
             end_time = datetime.now(UTC)

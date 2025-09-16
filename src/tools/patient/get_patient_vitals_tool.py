@@ -85,7 +85,7 @@ def register_get_patient_vitals_tool(mcp: FastMCP, vista_client: BaseVistaClient
             if n_most_recent:
                 vitals_by_type: dict[str, list[VitalSign]] = {}
                 for vital_sign in vitals:
-                    vitals_list = vitals_by_type.setdefault(vital_sign.type_name, [])
+                    vitals_list = vitals_by_type.setdefault(vital_sign.type_code, [])
                     if len(vitals_list) < n_most_recent:
                         vitals_list.append(vital_sign)
 
