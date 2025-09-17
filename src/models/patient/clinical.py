@@ -8,7 +8,6 @@ from pydantic import Field, field_serializer, field_validator
 from ...services.parsers.patient.datetime_parser import parse_datetime
 from ...services.parsers.patient.value_parser import (
     parse_blood_pressure,
-    parse_numeric_result,
 )
 from ...utils import get_logger
 from ..utils import format_datetime_for_mcp_response, format_datetime_with_default
@@ -39,7 +38,6 @@ class VitalSign(BasePatientModel):
 
     # Results - handle various formats
     result: str  # Original string value (e.g., "135/100")
-    numeric_result: float | None = None  # Parsed numeric
     systolic: int | None = None  # For BP
     diastolic: int | None = None  # For BP
     units: str | None = None
@@ -91,10 +89,6 @@ class VitalSign(BasePatientModel):
         # Parse blood pressure if applicable
         if self.type_name == "BLOOD PRESSURE" and "/" in self.result:
             self.systolic, self.diastolic = parse_blood_pressure(self.result)
-
-        # Parse numeric result
-        if self.numeric_result is None:
-            self.numeric_result = parse_numeric_result(self.result)
 
     @property
     def is_abnormal(self) -> bool:
@@ -159,7 +153,6 @@ class LabResult(BasePatientModel):
 
     # Results - handle mixed types
     result: str | None = None  # Original value
-    numeric_result: float | None = None
     units: str | None = None
 
     # Reference ranges
@@ -186,7 +179,6 @@ class LabResult(BasePatientModel):
     # Location
     facility_code: str | int = Field(alias="facilityCode")
     facility_name: str = Field(alias="facilityName")
-    performing_lab: str | None = None
 
     # Sample info
     specimen: str | None = None
@@ -205,26 +197,15 @@ class LabResult(BasePatientModel):
         """Ensure these fields are strings"""
         return str(v) if v is not None else v
 
-    @field_validator("observed", "resulted", mode="before")
+    @field_validator("observed", "resulted", "verified", mode="before")
     @classmethod
     def parse_required_datetime(cls, v):
         """Parse required datetime fields"""
         return parse_datetime(v)
 
-    @field_validator("verified", mode="before")
-    @classmethod
-    def parse_optional_datetime(cls, v):
-        """Parse optional datetime field"""
-        return parse_datetime(v)
-
-    @field_serializer("observed", "resulted")
-    def serialize_required_datetime_fields(self, value: datetime) -> str:
+    @field_serializer("observed", "resulted", "verified")
+    def serialize_datetime_fields(self, value: datetime) -> str:
         """Serialize required datetime fields to ISO format"""
-        return format_datetime_with_default(value)
-
-    @field_serializer("verified")
-    def serialize_optional_datetime_field(self, value: datetime | None) -> str | None:
-        """Serialize optional datetime field to ISO format"""
         return format_datetime_with_default(value)
 
     @field_validator("result", mode="before")
@@ -232,14 +213,6 @@ class LabResult(BasePatientModel):
     def ensure_string_result(cls, v):
         """Ensure result is string"""
         return str(v) if v is not None else ""
-
-    def model_post_init(self, __context: Any) -> None:
-        """Post-init processing"""
-        super().model_post_init(__context)
-
-        # Parse numeric result if not already set
-        if self.numeric_result is None:
-            self.numeric_result = parse_numeric_result(self.result)
 
     @property
     def is_abnormal(self) -> bool:

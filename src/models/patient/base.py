@@ -1,7 +1,7 @@
 """Base models and common types for patient data"""
 
 from enum import Enum
-from typing import Optional, Protocol, runtime_checkable
+from typing import Optional
 
 from pydantic import ConfigDict, field_validator
 
@@ -21,16 +21,6 @@ class BasePatientModel(BaseVistaModel):
         # JSON schema serialization
         json_schema_serialization_defaults_required=True,
     )
-
-
-@runtime_checkable
-class StatusEnum(Protocol):
-    """Protocol for status enums that can be created from external values"""
-
-    @classmethod
-    def from_external_value(cls, value: str | None) -> "StatusEnum":
-        """Create enum from external string value"""
-        ...
 
 
 class Gender(str, Enum):
@@ -208,24 +198,6 @@ class VitalType(str, Enum):
     HEIGHT = "HEIGHT"
     PAIN = "PAIN"
     O2_SAT = "PULSE OXIMETRY"
-
-
-class StatusEnumFactory:
-    """Factory for creating status enums with type safety"""
-
-    @staticmethod
-    def create_consult_status(value: str | ConsultStatusInput | None) -> ConsultStatus:
-        """Create ConsultStatus with input validation"""
-        if isinstance(value, ConsultStatusInput):
-            return ConsultStatus.from_external_value(value.value)
-        return ConsultStatus.from_external_value(value)
-
-    @staticmethod
-    def create_urgency(value: str | UrgencyInput | None) -> Urgency:
-        """Create Urgency with input validation"""
-        if isinstance(value, UrgencyInput):
-            return Urgency.from_external_value(value.value)
-        return Urgency.from_external_value(value)
 
 
 class FacilityInfo(BasePatientModel):

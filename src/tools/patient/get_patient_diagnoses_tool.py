@@ -34,8 +34,6 @@ def register_get_patient_diagnoses_tool(mcp: FastMCP, vista_client: BaseVistaCli
     async def get_patient_diagnoses(
         patient_dfn: str,
         station: str | None = None,
-        body_system: str | None = None,
-        diagnosis_type: str | None = None,
         status_filter: str | None = None,
         icd_version: str | None = None,
         offset: Annotated[int, Field(default=0, ge=0)] = 0,
@@ -88,44 +86,10 @@ def register_get_patient_diagnoses_tool(mcp: FastMCP, vista_client: BaseVistaCli
                 vista_client, station, patient_dfn, caller_duz
             )
 
-            # Filter diagnoses by parameters
-            diagnoses = [
-                d
-                for d in patient_data.diagnoses
-                if (not body_system or d.body_system.lower() == body_system.lower())
-                and (
-                    not diagnosis_type
-                    or d.diagnosis_type.lower() == diagnosis_type.lower()
-                )
-                and (
-                    not status_filter
-                    or (
-                        d.is_chronic
-                        if status_filter.lower() == "chronic"
-                        else d.status.lower() == status_filter.lower()
-                    )
-                )
-                and (not icd_version or d.icd_version.upper() == icd_version.upper())
-            ]
-
             # Apply pagination
             filtered_diagnoses_page, total_filtered_diagnoses = paginate_list(
-                diagnoses, offset, limit
+                patient_data.diagnoses, offset, limit
             )
-
-            # Group diagnoses by body system
-            diagnosis_groups: dict[str, list[str]] = {}
-            for diagnosis in filtered_diagnoses_page:
-                group_key = diagnosis.body_system
-                if group_key not in diagnosis_groups:
-                    diagnosis_groups[group_key] = []
-                diagnosis_groups[group_key].append(diagnosis.uid)
-
-            # Identify primary diagnoses
-            primary_diagnoses = [d.uid for d in filtered_diagnoses_page if d.is_primary]
-
-            # Identify chronic conditions
-            chronic_diagnoses = [d.uid for d in filtered_diagnoses_page if d.is_chronic]
 
             # Get active diagnoses
             active_diagnoses = [
@@ -157,8 +121,6 @@ def register_get_patient_diagnoses_tool(mcp: FastMCP, vista_client: BaseVistaCli
                     patient_age=patient_data.demographics.calculate_age(),
                 ),
                 filters=DiagnosesFiltersMetadata(
-                    body_system=body_system,
-                    diagnosis_type=diagnosis_type,
                     status_filter=status_filter,
                     icd_version=icd_version,
                 ),
@@ -174,24 +136,7 @@ def register_get_patient_diagnoses_tool(mcp: FastMCP, vista_client: BaseVistaCli
 
             # Build response data
             data = DiagnosesResponseData(
-                summary={
-                    "primary_count": len(primary_diagnoses),
-                    "chronic_count": len(chronic_diagnoses),
-                    "active_count": len(active_diagnoses),
-                    "icd_9_count": len(
-                        [d for d in filtered_diagnoses_page if d.icd_version == "ICD-9"]
-                    ),
-                    "icd_10_count": len(
-                        [
-                            d
-                            for d in filtered_diagnoses_page
-                            if d.icd_version == "ICD-10"
-                        ]
-                    ),
-                },
-                by_body_system=diagnosis_groups,
-                primary_diagnoses=primary_diagnoses,
-                chronic_conditions=chronic_diagnoses,
+                active_count=len(active_diagnoses),
                 diagnoses=filtered_diagnoses_page,
             )
 

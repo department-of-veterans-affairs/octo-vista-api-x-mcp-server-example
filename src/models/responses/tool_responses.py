@@ -28,7 +28,6 @@ from ..patient import (
     VisitSummary,
     VitalSign,
 )
-from ..vista import PatientSearchResult
 from .metadata import ResponseMetadata
 
 T = TypeVar("T")
@@ -98,10 +97,6 @@ class DiagnosisTrend(BaseVistaModel):
 
 
 # Response Data Models (all data models grouped together)
-class PatientSearchResponseData(ResponseData):
-    patients: list[PatientSearchResult]
-
-
 class MedicationsResponseData(ResponseData):
     medications: list[Medication]
 
@@ -133,10 +128,7 @@ class ConsultsResponseData(ResponseData):
 
 
 class DiagnosesResponseData(ResponseData):
-    summary: dict[str, int] = Field(default_factory=dict)
-    by_body_system: dict[str, list[str]] = Field(default_factory=dict)
-    primary_diagnoses: list[str] = Field(default_factory=list)
-    chronic_conditions: list[str] = Field(default_factory=list)
+    active_count: int = 0
     diagnoses: list[Diagnosis] = Field(default_factory=list)
 
 
@@ -189,10 +181,6 @@ class AppointmentsResponseData(ResponseData):
 
 
 # Response Models (all response models grouped together)
-class PatientSearchResponse(ToolResponse[PatientSearchResponseData]):
-    """Patient search response"""
-
-    search_term: str | None = None
 
 
 class MedicationsResponse(ToolResponse[MedicationsResponseData]):
@@ -310,8 +298,6 @@ class TreatmentsResponseData(ResponseData):
     completed_treatments: list[str] = Field(default_factory=list)
     scheduled_treatments: list[str] = Field(default_factory=list)
     by_status: dict[str, int] = Field(default_factory=dict)
-    by_complexity: dict[str, int] = Field(default_factory=dict)
-    by_specialty: dict[str, int] = Field(default_factory=dict)
 
 
 class TreatmentsResponse(ToolResponse[TreatmentsResponseData]):

@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.models.patient import PatientDataCollection, PatientDemographics, Treatment
-from src.models.patient.treatment import TreatmentComplexity, TreatmentStatus
+from src.models.patient.treatment import TreatmentStatus
 from src.vista.base import BaseVistaClient
 
 
@@ -63,7 +63,6 @@ def sample_patient_data():
     treatments = [
         Treatment(
             uid="urn:va:treatment:84F0:100024:15759",
-            dfn="100024",
             name="HDL BLOOD TEST",
             treatment_type="LABORATORY",
             category="DIAGNOSTIC",
@@ -76,7 +75,6 @@ def sample_patient_data():
         ),
         Treatment(
             uid="urn:va:treatment:84F0:100024:15760",
-            dfn="100024",
             name="CARDIAC CATHETERIZATION",
             treatment_type="PROCEDURE",
             category="CARDIOLOGY",
@@ -91,7 +89,6 @@ def sample_patient_data():
         ),
         Treatment(
             uid="urn:va:treatment:84F0:100024:15761",
-            dfn="100024",
             name="PHYSICAL THERAPY EVALUATION",
             treatment_type="THERAPY",
             category="REHABILITATION",
@@ -107,13 +104,10 @@ def sample_patient_data():
             related_visit_uid=None,
             facility_code="84F0",
             facility_name="Station 84F0",
-            complexity=TreatmentComplexity.MODERATE,
-            specialty="PHYSICAL MEDICINE",
             duration_category="MEDIUM",
         ),
         Treatment(
             uid="urn:va:treatment:84F0:100024:15762",
-            dfn="100024",
             name="DIABETES EDUCATION",
             treatment_type="EDUCATION",
             category="PREVENTIVE",
@@ -129,8 +123,6 @@ def sample_patient_data():
             related_visit_uid=None,
             facility_code="84F0",
             facility_name="Station 84F0",
-            complexity=TreatmentComplexity.LOW,
-            specialty="ENDOCRINOLOGY",
             duration_category="MEDIUM",
         ),
     ]
@@ -197,26 +189,6 @@ class TestTreatmentTool:
                 # Verify we have treatments
                 assert len(patient_data.treatments) == 4
 
-                # Test filtering by status
-                active_treatments = patient_data.get_active_treatments()
-                completed_treatments = patient_data.get_completed_treatments()
-                scheduled_treatments = patient_data.get_scheduled_treatments()
-
-                assert (
-                    len(active_treatments) == 1
-                )  # Only IN_PROGRESS treatments are active
-                assert len(completed_treatments) == 2  # COMPLETED treatments
-                assert len(scheduled_treatments) == 1  # SCHEDULED treatment
-
-                # Test complexity filtering
-                high_complexity = [
-                    t
-                    for t in patient_data.treatments
-                    if t.complexity == TreatmentComplexity.HIGH
-                ]
-                assert len(high_complexity) == 1
-                assert "CARDIAC CATHETERIZATION" in high_complexity[0].name
-
     @pytest.mark.asyncio
     async def test_treatment_datetime_parsing(self, sample_patient_data):
         """Test that treatment datetime fields are parsed correctly"""
@@ -234,9 +206,6 @@ class TestTreatmentTool:
         assert hdl_test.date.hour == 0
         assert hdl_test.date.minute == 46
         assert hdl_test.date.second == 41
-
-        # Test that dfn field is present
-        assert hdl_test.dfn == "100024"
 
     @pytest.mark.asyncio
     async def test_treatment_status_filtering(self, sample_patient_data):
@@ -264,31 +233,6 @@ class TestTreatmentTool:
             t for t in active_treatments if "DIABETES EDUCATION" in t.name
         )
         assert diabetes_ed.status == TreatmentStatus.IN_PROGRESS
-
-    @pytest.mark.asyncio
-    async def test_treatment_complexity_and_specialty(self, sample_patient_data):
-        """Test treatment complexity and specialty classification"""
-        treatments = sample_patient_data.treatments
-
-        # Test complexity levels
-        high_complexity = [
-            t for t in treatments if t.complexity == TreatmentComplexity.HIGH
-        ]
-        moderate_complexity = [
-            t for t in treatments if t.complexity == TreatmentComplexity.MODERATE
-        ]
-        low_complexity = [
-            t for t in treatments if t.complexity == TreatmentComplexity.LOW
-        ]
-
-        assert len(high_complexity) == 1  # Cardiac catheterization
-        assert len(moderate_complexity) == 1  # Physical therapy
-        assert len(low_complexity) == 2  # HDL test and diabetes education
-
-        # Test specialty classification - check what specialties are actually assigned
-        specialties = [t.specialty for t in treatments if t.specialty]
-        # The specialty is determined by validators, so we'll check what's actually there
-        assert len(specialties) > 0  # At least some treatments should have specialties
 
     @pytest.mark.asyncio
     async def test_treatment_display_properties(self, sample_patient_data):
@@ -328,8 +272,6 @@ class TestTreatmentTool:
             assert "status" in summary
             assert "provider" in summary
             assert "location" in summary
-            assert "complexity" in summary
-            assert "specialty" in summary
             assert "has_outcome" in summary
 
             # Check data types
@@ -351,32 +293,12 @@ class TestTreatmentTool:
         assert by_status["in-progress"] == 1
         assert by_status["scheduled"] == 1
 
-        # Group by complexity - complexity is already a string, not an enum with .value
-        by_complexity = {}
-        for treatment in treatments:
-            complexity = treatment.complexity if treatment.complexity else "unknown"
-            by_complexity[complexity] = by_complexity.get(complexity, 0) + 1
-
-        # Check what complexities are actually assigned by the validators
-        assert len(by_complexity) > 0  # At least some treatments should have complexity
-
-        # Group by specialty
-        by_specialty = {}
-        for treatment in treatments:
-            specialty = treatment.specialty or "unknown"
-            by_specialty[specialty] = by_specialty.get(specialty, 0) + 1
-
-        assert (
-            len(by_specialty) == 3
-        )  # Three different specialties (based on actual validator output)
-
     @pytest.mark.asyncio
     async def test_treatment_model_validation(self):
         """Test that treatment model validates datetime parsing correctly"""
         # Test with integer datetime (the format that was causing issues)
         treatment_data = {
             "uid": "urn:va:treatment:84F0:100024:15759",
-            "dfn": "100024",
             "name": "HDL BLOOD TEST",
             "date": 20050317004641,  # Integer datetime like in the logs
             "entered": 20050317004641,  # Integer datetime like in the logs
@@ -396,9 +318,6 @@ class TestTreatmentTool:
         assert treatment.date.hour == 0
         assert treatment.date.minute == 46
         assert treatment.date.second == 41
-
-        # Verify dfn field is present
-        assert treatment.dfn == "100024"
 
         # Verify status defaults
         assert treatment.status == TreatmentStatus.PENDING
@@ -465,158 +384,6 @@ class TestTreatmentTool:
         assert all_uids == original_uids
 
     @pytest.mark.asyncio
-    async def test_treatment_summary_uids_and_filtering(
-        self, mock_vista_client, sample_patient_data
-    ):
-        """Test that summary fields return UIDs and respect filtering"""
-        with patch(
-            "src.tools.patient.get_patient_treatments_tool.get_patient_data"
-        ) as mock_get_data:
-            mock_get_data.return_value = sample_patient_data
-
-            from mcp.server.fastmcp import FastMCP
-
-            from src.tools.patient.get_patient_treatments_tool import (
-                register_get_patient_treatments_tool,
-            )
-
-            # Create server and register tools
-            mcp = FastMCP("test")
-            register_get_patient_treatments_tool(mcp, mock_vista_client)
-
-            # Mock the utility functions
-            with (
-                patch(
-                    "src.tools.patient.get_patient_treatments_tool.get_default_station",
-                    return_value="500",
-                ),
-                patch(
-                    "src.tools.patient.get_patient_treatments_tool.get_default_duz",
-                    return_value="12345",
-                ),
-                patch(
-                    "src.tools.patient.get_patient_treatments_tool.validate_dfn",
-                    return_value=True,
-                ),
-            ):
-                # Import and call the tool function directly
-                from src.tools.patient.get_patient_treatments_tool import (
-                    register_get_patient_treatments_tool,
-                )
-
-                # Create a test MCP server
-                test_mcp = FastMCP("test")
-
-                # Register the tool
-                register_get_patient_treatments_tool(test_mcp, mock_vista_client)
-
-                # Get the decorated function directly
-                # The tool is registered as a method on the server, we can call it through the server
-
-                # Create a simulated function call manually
-
-                from src.utils import paginate_list
-
-                # Manual simulation of the tool function
-                # Get patient data
-                patient_data = sample_patient_data
-
-                # Test without filters - should return all UIDs
-                treatments = patient_data.treatments
-
-                # Apply pagination
-                treatments_page, total_treatments_after_filtering = paginate_list(
-                    treatments, 0, 10
-                )
-
-                # Build summary data with same filtering as main treatments
-                filtered_active_treatments = patient_data.get_active_treatments()
-                filtered_completed_treatments = patient_data.get_completed_treatments()
-                filtered_scheduled_treatments = patient_data.get_scheduled_treatments()
-
-                # Use UIDs instead of names for the summary lists
-                active_treatments = [t.uid for t in filtered_active_treatments]
-                completed_treatments = [t.uid for t in filtered_completed_treatments]
-                scheduled_treatments = [t.uid for t in filtered_scheduled_treatments]
-
-                # Check that summary fields contain UIDs, not names
-                for uid in active_treatments:
-                    assert uid.startswith(
-                        "urn:va:treatment:"
-                    ), f"Expected UID, got: {uid}"
-
-                for uid in completed_treatments:
-                    assert uid.startswith(
-                        "urn:va:treatment:"
-                    ), f"Expected UID, got: {uid}"
-
-                for uid in scheduled_treatments:
-                    assert uid.startswith(
-                        "urn:va:treatment:"
-                    ), f"Expected UID, got: {uid}"
-
-                # Test with complexity filter - should filter summary too
-                complexity_filter = "high"
-
-                # Apply same filter to summary data
-                filtered_active_high = [
-                    t
-                    for t in filtered_active_treatments
-                    if t.complexity
-                    and t.complexity.value.lower() == complexity_filter.lower()
-                ]
-                filtered_completed_high = [
-                    t
-                    for t in filtered_completed_treatments
-                    if t.complexity
-                    and t.complexity.value.lower() == complexity_filter.lower()
-                ]
-                filtered_scheduled_high = [
-                    t
-                    for t in filtered_scheduled_treatments
-                    if t.complexity
-                    and t.complexity.value.lower() == complexity_filter.lower()
-                ]
-
-                # Use UIDs for filtered summary
-                active_treatments_high = [t.uid for t in filtered_active_high]
-                completed_treatments_high = [t.uid for t in filtered_completed_high]
-                scheduled_treatments_high = [t.uid for t in filtered_scheduled_high]
-
-                # Should have fewer treatments after filtering
-                total_filtered = (
-                    len(active_treatments_high)
-                    + len(completed_treatments_high)
-                    + len(scheduled_treatments_high)
-                )
-                total_unfiltered = (
-                    len(active_treatments)
-                    + len(completed_treatments)
-                    + len(scheduled_treatments)
-                )
-                assert total_filtered <= total_unfiltered
-
-                # Should still be UIDs
-                for uid in active_treatments_high:
-                    assert uid.startswith(
-                        "urn:va:treatment:"
-                    ), f"Expected UID, got: {uid}"
-
-                for uid in completed_treatments_high:
-                    assert uid.startswith(
-                        "urn:va:treatment:"
-                    ), f"Expected UID, got: {uid}"
-
-                for uid in scheduled_treatments_high:
-                    assert uid.startswith(
-                        "urn:va:treatment:"
-                    ), f"Expected UID, got: {uid}"
-
-                print(
-                    f"✓ UIDs test passed - unfiltered: {total_unfiltered}, filtered: {total_filtered}"
-                )
-
-    @pytest.mark.asyncio
     async def test_days_back_filter_functionality(
         self, mock_vista_client, sample_patient_data
     ):
@@ -679,13 +446,11 @@ class TestTreatmentTool:
 
                 # Apply the same filtering logic as the tool
                 treatments = patient_data.treatments
-                treatments_dfn_filtered = [t for t in treatments if t.dfn == "100024"]
                 treatments_date_filtered = [
-                    t for t in treatments_dfn_filtered if t.date >= cutoff_date
+                    t for t in treatments if t.date >= cutoff_date
                 ]
 
                 # Should exclude the 2005 HDL test (very old)
-                assert len(treatments_dfn_filtered) == 4  # All treatments
                 assert len(treatments_date_filtered) == 3  # Exclude 2005 treatment
 
                 # Verify the 2005 treatment is excluded
@@ -703,23 +468,14 @@ class TestTreatmentTool:
                     t for t in treatments_date_filtered if t.is_completed
                 ]
 
-                # What the buggy code would do (filter from original data)
-                treatments_status_filtered_buggy = [
-                    t
-                    for t in patient_data.treatments
-                    if t.is_completed and t.dfn == "100024"
-                ]
-
                 # The correct filtering should exclude the 2005 HDL test
                 correct_years = [
                     t.date.year for t in treatments_status_filtered_correct
                 ]
-                buggy_years = [t.date.year for t in treatments_status_filtered_buggy]
 
                 # With the fix, 2005 should not be in the results
                 assert 2005 not in correct_years
                 # The buggy version would include 2005
-                assert 2005 in buggy_years
 
                 print(
                     "✓ Test 2 passed - status filter now respects days_back filtering"
@@ -729,7 +485,7 @@ class TestTreatmentTool:
                 days_back_short = 30
                 cutoff_date_short = start_time - timedelta(days=days_back_short)
                 treatments_date_filtered_short = [
-                    t for t in treatments_dfn_filtered if t.date >= cutoff_date_short
+                    t for t in treatments if t.date >= cutoff_date_short
                 ]
 
                 # Should be fewer treatments with shorter time window
@@ -747,21 +503,6 @@ class TestTreatmentTool:
                     f"✓ Test 3 passed - days_back=30 filtered to {len(treatments_date_filtered_short)} treatments"
                 )
 
-                # Test 4: days_back with multiple filters
-                # Apply complexity filter after date and status filtering
-                complexity_filter = "moderate"
-                treatments_multi_filtered = [
-                    t
-                    for t in treatments_status_filtered_correct
-                    if t.complexity
-                    and t.complexity.value.lower() == complexity_filter.lower()
-                ]
-
-                # Should apply all filters in sequence
-                assert len(treatments_multi_filtered) <= len(
-                    treatments_status_filtered_correct
-                )
-
                 print(
                     "✓ Test 4 passed - multiple filters work with days_back filtering"
                 )
@@ -770,13 +511,11 @@ class TestTreatmentTool:
                 days_back_large = 7300  # 20 years
                 cutoff_date_large = start_time - timedelta(days=days_back_large)
                 treatments_date_filtered_large = [
-                    t for t in treatments_dfn_filtered if t.date >= cutoff_date_large
+                    t for t in treatments if t.date >= cutoff_date_large
                 ]
 
                 # Should include all treatments, including 2005
-                assert len(treatments_date_filtered_large) == len(
-                    treatments_dfn_filtered
-                )
+                assert len(treatments_date_filtered_large) == len(treatments)
                 treatment_years_large = [
                     t.date.year for t in treatments_date_filtered_large
                 ]
@@ -857,11 +596,9 @@ class TestTreatmentTool:
                 cutoff_date = start_time - timedelta(days=days_back)
 
                 treatments_1 = patient_data_1.treatments
-                treatments_dfn_filtered_1 = [
-                    t for t in treatments_1 if t.dfn == patient_dfn
-                ]
+
                 treatments_date_filtered_1 = [
-                    t for t in treatments_dfn_filtered_1 if t.date >= cutoff_date
+                    t for t in treatments_1 if t.date >= cutoff_date
                 ]
 
                 # Second call - should be identical
@@ -870,11 +607,8 @@ class TestTreatmentTool:
                 )
 
                 treatments_2 = patient_data_2.treatments
-                treatments_dfn_filtered_2 = [
-                    t for t in treatments_2 if t.dfn == patient_dfn
-                ]
                 treatments_date_filtered_2 = [
-                    t for t in treatments_dfn_filtered_2 if t.date >= cutoff_date
+                    t for t in treatments_2 if t.date >= cutoff_date
                 ]
 
                 # Verify both calls return identical results
@@ -899,53 +633,15 @@ class TestTreatmentTool:
                     assert t1.name == t2.name
                     assert t1.status == t2.status
                     assert t1.date == t2.date
-                    assert t1.complexity == t2.complexity
                     assert t1.provider_name == t2.provider_name
 
                 # Test summary data consistency
-                active_1 = patient_data_1.get_active_treatments()
-                active_2 = patient_data_2.get_active_treatments()
-
-                completed_1 = patient_data_1.get_completed_treatments()
-                completed_2 = patient_data_2.get_completed_treatments()
-
-                scheduled_1 = patient_data_1.get_scheduled_treatments()
-                scheduled_2 = patient_data_2.get_scheduled_treatments()
-
-                # Apply same date filtering to summary data
-                active_filtered_1 = [t for t in active_1 if t.date >= cutoff_date]
-                active_filtered_2 = [t for t in active_2 if t.date >= cutoff_date]
-
-                completed_filtered_1 = [t for t in completed_1 if t.date >= cutoff_date]
-                completed_filtered_2 = [t for t in completed_2 if t.date >= cutoff_date]
-
-                scheduled_filtered_1 = [t for t in scheduled_1 if t.date >= cutoff_date]
-                scheduled_filtered_2 = [t for t in scheduled_2 if t.date >= cutoff_date]
-
-                # Verify summary counts are consistent
-                assert len(active_filtered_1) == len(active_filtered_2)
-                assert len(completed_filtered_1) == len(completed_filtered_2)
-                assert len(scheduled_filtered_1) == len(scheduled_filtered_2)
-
-                # Verify UIDs in summary data are consistent
-                active_uids_1 = {t.uid for t in active_filtered_1}
-                active_uids_2 = {t.uid for t in active_filtered_2}
-                assert active_uids_1 == active_uids_2
-
-                completed_uids_1 = {t.uid for t in completed_filtered_1}
-                completed_uids_2 = {t.uid for t in completed_filtered_2}
-                assert completed_uids_1 == completed_uids_2
-
-                scheduled_uids_1 = {t.uid for t in scheduled_filtered_1}
-                scheduled_uids_2 = {t.uid for t in scheduled_filtered_2}
-                assert scheduled_uids_1 == scheduled_uids_2
 
                 # Verify the days_back=100 actually filters some data
                 all_treatments = patient_data_1.treatments
-                all_dfn_filtered = [t for t in all_treatments if t.dfn == patient_dfn]
 
                 # Should have fewer treatments after date filtering (excludes 2005 treatment)
-                assert len(treatments_date_filtered_1) < len(all_dfn_filtered)
+                assert len(treatments_date_filtered_1) < len(all_treatments)
 
                 # Verify 2005 treatment is excluded with 100 days filter
                 treatment_years_1 = [t.date.year for t in treatments_date_filtered_1]
@@ -960,12 +656,6 @@ class TestTreatmentTool:
 
                 print(
                     f"✓ Consistency test passed - both calls returned {len(treatments_date_filtered_1)} treatments"
-                )
-                print(
-                    f"✓ Days back filter (100 days) working correctly - excluded {len(all_dfn_filtered) - len(treatments_date_filtered_1)} older treatments"
-                )
-                print(
-                    f"✓ Summary data consistent: {len(active_filtered_1)} active, {len(completed_filtered_1)} completed, {len(scheduled_filtered_1)} scheduled"
                 )
 
     @pytest.mark.asyncio
@@ -1002,8 +692,6 @@ class TestTreatmentTool:
                 related_visit_uid=None,
                 facility_code="84F0",
                 facility_name="Station 84F0",
-                complexity=TreatmentComplexity.MODERATE,
-                specialty="TEST_SPECIALTY",
                 duration_category="MEDIUM",
             )
             treatments.append(treatment)
@@ -1077,8 +765,6 @@ class TestTreatmentTool:
                 related_visit_uid=None,
                 facility_code="84F0",
                 facility_name="Station 84F0",
-                complexity=TreatmentComplexity.LOW,
-                specialty="SUMMARY_SPECIALTY",
                 duration_category="SHORT",
             )
             treatments.append(treatment)

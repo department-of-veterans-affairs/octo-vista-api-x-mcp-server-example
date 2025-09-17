@@ -5,9 +5,6 @@ from datetime import UTC, datetime
 import pytest
 
 from src.models.patient.cpt_code import CPTCode
-from src.services.validators.cpt_validators import (
-    validate_cpt_code,
-)
 
 
 class TestCPTCodeModel:
@@ -49,24 +46,6 @@ class TestCPTCodeModel:
 
         cpt = CPTCode(**data)
         assert cpt.cpt_code == "99213"
-
-
-class TestCPTValidators:
-    """Test CPT validation functions"""
-
-    def test_validate_cpt_code(self):
-        """Test CPT code format validation"""
-        # Valid codes
-        assert validate_cpt_code("99213") is True
-        assert validate_cpt_code("12345") is True
-        assert validate_cpt_code("0001F") is True  # Category II
-
-        # Invalid codes
-        assert validate_cpt_code("") is False
-        assert validate_cpt_code("123") is False  # Too short
-        assert validate_cpt_code("123456") is False  # Too long
-        assert validate_cpt_code("ABCDE") is False  # All letters
-        assert validate_cpt_code(None) is False
 
 
 class TestCPTCodeIntegration:

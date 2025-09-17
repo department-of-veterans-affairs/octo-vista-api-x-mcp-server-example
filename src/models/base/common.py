@@ -25,14 +25,6 @@ class BaseVistaModel(BaseModel):
         return super().model_dump(**(kwargs | overrides))
 
 
-class Gender(str, Enum):
-    """Patient gender values"""
-
-    MALE = "M"
-    FEMALE = "F"
-    UNKNOWN = "U"
-
-
 class VprDomain(str, Enum):
     """VPR data domains"""
 
@@ -55,22 +47,3 @@ class VprDomain(str, Enum):
     EDUCATION = "education"
     EXAM = "exam"
     FACTOR = "factor"
-
-
-class AllergyType(str, Enum):
-    """Allergy types"""
-
-    DRUG = "DRUG"
-    FOOD = "FOOD"
-    OTHER = "OTHER"
-    ENVIRONMENTAL = "ENVIRONMENTAL"
-
-
-class LabResultFlag(str, Enum):
-    """Lab result flags"""
-
-    HIGH = "H"
-    LOW = "L"
-    CRITICAL = "C"
-    ABNORMAL = "A"
-    NORMAL = ""

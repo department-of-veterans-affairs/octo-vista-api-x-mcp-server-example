@@ -35,8 +35,6 @@ def register_get_patient_treatments_tool(mcp: FastMCP, vista_client: BaseVistaCl
         patient_dfn: str,
         station: str | None = None,
         status_filter: TreatmentStatusFilter | None = None,
-        complexity_filter: str | None = None,  # "low", "moderate", "high"
-        specialty_filter: str | None = None,
         days_back: Annotated[int, Field(default=30, ge=1, le=3650)] = 30,
         offset: Annotated[int, Field(default=0, ge=0)] = 0,
         limit: Annotated[int, Field(default=10, ge=1, le=200)] = 10,
@@ -73,9 +71,6 @@ def register_get_patient_treatments_tool(mcp: FastMCP, vista_client: BaseVistaCl
             # Get treatments from patient data
             treatments = patient_data.treatments
 
-            # Apply patient_dfn filter to ensure only treatments for the requested patient
-            treatments = [t for t in treatments if t.dfn == patient_dfn]
-
             # Apply days_back filter to scope treatments by date
             cutoff_date = start_time - timedelta(days=days_back)
             treatments = [t for t in treatments if t.date >= cutoff_date]
@@ -88,21 +83,6 @@ def register_get_patient_treatments_tool(mcp: FastMCP, vista_client: BaseVistaCl
                     treatments = [t for t in treatments if t.is_completed]
                 elif status_filter == TreatmentStatusFilter.PLANNED:
                     treatments = [t for t in treatments if t.is_scheduled]
-
-            if complexity_filter:
-                treatments = [
-                    t
-                    for t in treatments
-                    if t.complexity
-                    and str(t.complexity).lower() == complexity_filter.lower()
-                ]
-
-            if specialty_filter:
-                treatments = [
-                    t
-                    for t in treatments
-                    if t.specialty and specialty_filter.upper() in t.specialty.upper()
-                ]
 
             # Apply pagination
             treatments_page, total_treatments_after_filtering = paginate_list(
@@ -122,20 +102,6 @@ def register_get_patient_treatments_tool(mcp: FastMCP, vista_client: BaseVistaCl
             for treatment in treatments:
                 status = str(treatment.status) if treatment.status else "unknown"
                 by_status[status] = by_status.get(status, 0) + 1
-
-            # Group by complexity
-            by_complexity: dict[str, int] = {}
-            for treatment in treatments:
-                complexity = (
-                    str(treatment.complexity) if treatment.complexity else "unknown"
-                )
-                by_complexity[complexity] = by_complexity.get(complexity, 0) + 1
-
-            # Group by specialty
-            by_specialty: dict[str, int] = {}
-            for treatment in treatments:
-                specialty = treatment.specialty or "unknown"
-                by_specialty[specialty] = by_specialty.get(specialty, 0) + 1
 
             # Build typed metadata inline
             end_time = datetime.now(UTC)
@@ -177,8 +143,6 @@ def register_get_patient_treatments_tool(mcp: FastMCP, vista_client: BaseVistaCl
                 completed_treatments=sorted(completed_treatments_uids),
                 scheduled_treatments=sorted(scheduled_treatments_uids),
                 by_status=by_status,
-                by_complexity=by_complexity,
-                by_specialty=by_specialty,
             )
 
             return TreatmentsResponse(

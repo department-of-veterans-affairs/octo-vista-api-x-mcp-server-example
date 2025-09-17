@@ -9,7 +9,6 @@ from src.models.patient import CPTCode, PatientDataCollection, PatientDemographi
 from src.tools.patient.get_patient_procedures import (
     _apply_procedure_filters,
     _build_procedure_summary,
-    _group_procedures_by_encounter,
     get_patient_procedures_impl,
 )
 from src.vista.base import BaseVistaClient
@@ -197,30 +196,6 @@ class TestCPTFilteringFunctions:
         )
 
         assert len(filtered) == 0
-
-    def test_group_procedures_by_encounter(self, sample_cpt_codes):
-        """Test grouping procedures by encounter"""
-        grouped = _group_procedures_by_encounter(sample_cpt_codes)
-
-        assert "encounters" in grouped
-        encounters = grouped["encounters"]
-        assert len(encounters) == 2
-
-        # Check encounter structure
-        encounter = encounters[0]
-        required_fields = [
-            "encounter_uid",
-            "encounter_name",
-            "procedures",
-            "procedure_count",
-            "total_complexity_score",
-        ]
-
-        for field in required_fields:
-            assert field in encounter
-
-        assert encounter["procedure_count"] > 0
-        assert len(encounter["procedures"]) == encounter["procedure_count"]
 
     def test_build_procedure_summary(self, sample_cpt_codes):
         """Test building procedure summary statistics"""

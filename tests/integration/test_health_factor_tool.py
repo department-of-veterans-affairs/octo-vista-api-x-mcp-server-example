@@ -111,21 +111,6 @@ class TestGetPatientHealthFactorsIntegration:
         assert factor.facility_name == "CAMP MASTER"
         assert factor.status == "active"
 
-        # Test computed properties
-        assert factor.risk_category in [
-            "lifestyle",
-            "environmental",
-            "genetic",
-            "medical",
-            "screening",
-            "other",
-        ]
-        assert factor.severity_level in ["mild", "moderate", "severe", "unknown"]
-        assert isinstance(factor.risk_score, int)
-        assert 0 <= factor.risk_score <= 10
-        assert isinstance(factor.is_modifiable, bool)
-        assert isinstance(factor.requires_monitoring, bool)
-
     @pytest.mark.asyncio
     async def test_health_factors_categorization(self, sample_health_factors):
         """Test health factor categorization functionality"""
@@ -138,73 +123,3 @@ class TestGetPatientHealthFactorsIntegration:
             f for f in sample_health_factors if "SCREENING" in f.category
         ]
         assert len(screening_factors) == 1
-
-        # Test risk categorization
-        for factor in sample_health_factors:
-            risk_category = factor.risk_category
-            assert risk_category in [
-                "lifestyle",
-                "environmental",
-                "genetic",
-                "medical",
-                "screening",
-                "other",
-            ]
-
-    @pytest.mark.asyncio
-    async def test_health_factors_risk_scoring(self, sample_health_factors):
-        """Test health factor risk scoring functionality"""
-        for factor in sample_health_factors:
-            # Test risk score is within bounds
-            assert 0 <= factor.risk_score <= 10
-
-            # Test severity levels
-            assert factor.severity_level in ["mild", "moderate", "severe", "unknown"]
-
-            # Test computed properties
-            assert isinstance(factor.is_modifiable, bool)
-            assert isinstance(factor.requires_monitoring, bool)
-
-    @pytest.mark.asyncio
-    async def test_health_factors_filtering(self, sample_health_factors):
-        """Test health factor filtering functionality"""
-        # Filter by category
-        covid_factors = [
-            f for f in sample_health_factors if "COVID-19" in f.category.upper()
-        ]
-        assert len(covid_factors) == 2
-
-        # Filter by risk category
-        screening_factors = [
-            f for f in sample_health_factors if f.risk_category == "screening"
-        ]
-        # Should have at least the lung cancer screening factor
-        assert len(screening_factors) >= 0  # May vary based on categorization logic
-
-        # Filter by severity
-        severe_factors = [
-            f for f in sample_health_factors if f.severity_level == "severe"
-        ]
-        # Should have factors with severe severity
-        assert len(severe_factors) >= 0  # May vary based on severity logic
-
-    @pytest.mark.asyncio
-    async def test_health_factors_trending(self, sample_health_factors):
-        """Test health factor trending functionality"""
-        from src.services.validators.clinical_validators import get_health_factor_trends
-
-        # Test trending for COVID factors
-        covid_trends = get_health_factor_trends(sample_health_factors, "COVID-19")
-
-        assert covid_trends["count"] == 2
-        assert covid_trends["is_recurring"]
-        assert covid_trends["trend"] in ["stable", "improving", "worsening"]
-        assert "first_recorded" in covid_trends
-        assert "last_recorded" in covid_trends
-        assert "current_severity" in covid_trends
-        assert "current_risk_score" in covid_trends
-
-        # Test trending for non-existent factor
-        no_data_trends = get_health_factor_trends(sample_health_factors, "NONEXISTENT")
-        assert no_data_trends["trend"] == "no_data"
-        assert no_data_trends["count"] == 0

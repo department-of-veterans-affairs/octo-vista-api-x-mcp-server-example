@@ -110,13 +110,6 @@ def format_timestamp(dt: datetime | None = None) -> str:
     return dt.isoformat()
 
 
-def mask_ssn(ssn: str) -> str:
-    """Mask SSN for privacy"""
-    if not ssn or len(ssn) < 4:
-        return "***-**-****"
-    return f"***-**-{ssn[-4:]}"
-
-
 def build_metadata(
     station: str | None = None,
     rpc_name: str | None = None,
@@ -149,35 +142,6 @@ def build_rpc_url(station: str, caller_duz: str) -> str | None:
     if not base_url:
         return None
     return f"{base_url}/vista-api-x/vista-sites/{station}/users/{caller_duz}/rpc/invoke"
-
-
-def chunk_list(lst: list[Any], chunk_size: int) -> list[list[Any]]:
-    """Split list into chunks"""
-    return [lst[i : i + chunk_size] for i in range(0, len(lst), chunk_size)]
-
-
-def safe_get(data: dict[str, Any], path: str, default: Any = None) -> Any:
-    """
-    Safely get nested dictionary value
-
-    Args:
-        data: Dictionary to search
-        path: Dot-separated path (e.g., "patient.address.city")
-        default: Default value if path not found
-
-    Returns:
-        Value at path or default
-    """
-    keys = path.split(".")
-    value = data
-
-    for key in keys:
-        if isinstance(value, dict) and key in value:
-            value = value[key]
-        else:
-            return default
-
-    return value
 
 
 def create_rpc_parameter(

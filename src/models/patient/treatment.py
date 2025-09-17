@@ -9,16 +9,11 @@ from typing import TYPE_CHECKING
 from pydantic import Field, field_validator
 
 from ...services.parsers.patient.datetime_parser import parse_datetime
-from ...services.validators.treatment_validators import (
-    calculate_treatment_complexity,
-    get_treatment_duration_category,
-    get_treatment_specialty,
-)
 from ...utils import get_logger
 from .base import BasePatientModel
 
 if TYPE_CHECKING:
-    from .collection import PatientDataCollection
+    pass
 
 logger = get_logger()
 
@@ -125,20 +120,11 @@ class TreatmentStatus(str, Enum):
         return status == cls.LAPSED
 
 
-class TreatmentComplexity(str, Enum):
-    """Treatment complexity levels"""
-
-    LOW = "low"
-    MODERATE = "moderate"
-    HIGH = "high"
-
-
 class Treatment(BasePatientModel):
     """Treatment record model"""
 
     # Core identifiers
     uid: str = Field(..., description="Unique treatment identifier")
-    dfn: str = Field(..., description="Patient DFN")
 
     # Treatment details
     name: str = Field(..., description="Treatment name")
@@ -169,22 +155,11 @@ class Treatment(BasePatientModel):
     facility_code: str | None = Field(None, description="Facility code")
     facility_name: str | None = Field(None, description="Facility name")
 
-    # Computed fields
-    complexity: TreatmentComplexity | None = Field(
-        None, description="Treatment complexity"
-    )
-    specialty: str | None = Field(None, description="Medical specialty")
-    duration_category: str | None = Field(None, description="Duration category")
-
     @field_validator("date", "entered", mode="before")
     @classmethod
     def parse_dates(cls, v):
         """Parse VistA date strings"""
-        if v is None:
-            return None
-        if isinstance(v, str | int):
-            return parse_datetime(v)
-        return v
+        return parse_datetime(v)
 
     @field_validator("status", mode="before")
     @classmethod
@@ -193,20 +168,6 @@ class Treatment(BasePatientModel):
         if isinstance(v, TreatmentStatus):
             return v
         return TreatmentStatus.from_external_value(str(v))
-
-    def model_post_init(self, __context) -> None:
-        """Post-initialization processing"""
-        # Calculate computed fields using validators
-        complexity_str = calculate_treatment_complexity(
-            self.treatment_type, self.name, self.location_name
-        )
-        self.complexity = (
-            TreatmentComplexity(complexity_str) if complexity_str else None
-        )
-        self.specialty = get_treatment_specialty(self.treatment_type, self.name)
-        self.duration_category = get_treatment_duration_category(
-            self.treatment_type, self.name
-        )
 
     @property
     def is_active(self) -> bool:
@@ -265,30 +226,6 @@ class Treatment(BasePatientModel):
         """Get location display name"""
         return self.location_name or "Unknown Location"
 
-    def get_related_order(self, collection: PatientDataCollection) -> dict | None:
-        """Get related order information"""
-        if not self.related_order_uid:
-            return None
-
-        related_order = collection.get_related_order_for_treatment(self)
-        if related_order:
-            return {
-                "uid": related_order.uid,
-                "name": related_order.name,
-                "content": related_order.content,
-                "service": related_order.service,
-                "status": related_order.status,
-                "provider": related_order.provider_name,
-                "entered": (
-                    related_order.entered.isoformat() if related_order.entered else None
-                ),
-            }
-        return None
-
-    def get_encounter_context(self, collection: PatientDataCollection) -> dict:
-        """Get encounter context for this treatment"""
-        return collection.get_encounter_context_for_treatment(self)
-
     def to_summary(self) -> dict:
         """Convert to summary format"""
         return {
@@ -299,7 +236,5 @@ class Treatment(BasePatientModel):
             "status": self.status,
             "provider": self.provider_display,
             "location": self.location_display,
-            "complexity": self.complexity,
-            "specialty": self.specialty,
             "has_outcome": self.has_outcome,
         }

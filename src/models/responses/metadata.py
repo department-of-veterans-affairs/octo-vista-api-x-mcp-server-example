@@ -94,10 +94,6 @@ class DocumentsFiltersMetadata(FiltersMetadata):
 class DiagnosesFiltersMetadata(FiltersMetadata):
     """Filter metadata for diagnoses tool"""
 
-    body_system: str | None = Field(default=None, description="Filter by body system")
-    diagnosis_type: str | None = Field(
-        default=None, description="Filter by diagnosis type"
-    )
     status_filter: str | None = Field(
         default=None, description="Filter by diagnosis status"
     )

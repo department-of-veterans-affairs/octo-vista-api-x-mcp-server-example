@@ -5,24 +5,7 @@ from pydantic import Field
 from ..base import BaseVistaModel
 
 
-class Appointment(BaseVistaModel):
-    """Appointment information"""
-
-    appointment_ien: str
-    patient_ien: str
-    patient_name: str
-    date_time: str
-    clinic_ien: str
-    clinic_name: str
-    status: str
-    provider: dict[str, str] | None = None
-    check_in_time: str | None = None
-    check_out_time: str | None = None
-    type: str | None = None
-    length: int | None = None  # minutes
-
-
-class Provider(BaseVistaModel):
+class User(BaseVistaModel):
     """Provider/user information"""
 
     duz: str = Field(..., description="User DUZ")

@@ -42,13 +42,9 @@ class Diagnosis(BasePatientModel):
 
     # ICD Code information
     icd_code: str = Field(alias="icdCode")
-    icd_version: str = Field(default="ICD-10")  # ICD-9 or ICD-10
     description: str = Field(alias="icdName")
 
     # Diagnosis classification
-    diagnosis_type: str = Field(
-        default="secondary"
-    )  # primary, secondary, admitting, discharge, rule-out
     status: str = Field(default="active")  # active, resolved, chronic, rule-out
 
     # Dates and provider info
@@ -77,9 +73,6 @@ class Diagnosis(BasePatientModel):
     @field_validator("diagnosis_date", mode="before")
     @classmethod
     def parse_datetime_field(cls, v):
-        """Parse datetime format"""
-        if v is None or isinstance(v, datetime):
-            return v
         return parse_datetime(v)
 
     @field_serializer("diagnosis_date")
@@ -102,38 +95,8 @@ class Diagnosis(BasePatientModel):
         return str(v) if v is not None else ""
 
     @property
-    def body_system(self) -> str:
-        """Get body system classification for this diagnosis"""
-        from ...services.validators.clinical_validators import (
-            classify_diagnosis_body_system,
-        )
-
-        return classify_diagnosis_body_system(self.icd_code, self.description)
-
-    @property
-    def is_primary(self) -> bool:
-        """Check if this is a primary diagnosis"""
-        return self.diagnosis_type.lower() == "primary"
-
-    @property
-    def is_chronic(self) -> bool:
-        """Check if this is a chronic condition"""
-        from ...services.validators.clinical_validators import is_chronic_diagnosis
-
-        return is_chronic_diagnosis(self.icd_code, self.description)
-
-    @property
-    def severity_level(self) -> str:
-        """Get severity level for this diagnosis"""
-        from ...services.validators.clinical_validators import assess_diagnosis_severity
-
-        return assess_diagnosis_severity(
-            self.icd_code, self.description, self.diagnosis_type
-        )
-
-    @property
     def is_valid_icd(self) -> bool:
         """Validate ICD code format"""
         from ...services.validators.clinical_validators import validate_icd_code
 
-        return validate_icd_code(self.icd_code, self.icd_version)
+        return validate_icd_code(self.icd_code)

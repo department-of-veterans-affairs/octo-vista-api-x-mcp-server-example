@@ -3,8 +3,6 @@
 from datetime import datetime, timezone
 
 from src.services.parsers.patient.datetime_parser import (
-    format_date,
-    format_datetime,
     parse_date,
     parse_datetime,
 )
@@ -53,23 +51,3 @@ class TestDatetimeParser:
     def test_parse_date_none(self):
         """Test parsing None date returns None"""
         assert parse_date(None) is None
-
-    def test_format_datetime(self):
-        """Test formatting datetime"""
-        dt = datetime(2024, 1, 15, 14, 30, 45)
-        result = format_datetime(dt)
-        assert result == 20240115143045
-
-    def test_format_datetime_none(self):
-        """Test formatting None datetime"""
-        assert format_datetime(None) is None
-
-    def test_format_date(self):
-        """Test formatting date"""
-        dt = datetime(2024, 1, 15).date()
-        result = format_date(dt)
-        assert result == 20240115
-
-    def test_format_date_none(self):
-        """Test formatting None date"""
-        assert format_date(None) is None
