@@ -21,25 +21,25 @@ Use these prompts to quickly verify the MCP server is working correctly:
 
 ### Clinical Data Retrieval
 
-1. "Show me medications for patient 100022"
-2. "Get lab results for patient 100023 from the last 30 days"
-3. "Get vital signs for patient 100024"
-4. "List active problems for patient 100025"
+1. "Show me medications for patient with icn 1000220000V123456"
+2. "Get lab results for patient with icn 1000230000V123456 from the last 30 days"
+3. "Get vital signs for patient with icn 1000240000V123456"
+4. "List active problems for patient with icn 1000250000V123456"
 
 ## Test Data Reference
 
 ### Test Patients
 
-| Patient Name | DFN | Description | Key Conditions |
-|-------------|-----|-------------|----------------|
-| ANDERSON,JAMES ROBERT | 100022 | Vietnam Era Veteran | PTSD, Diabetes Type 2, Hypertension |
-| MARTINEZ,MARIA ELENA | 100023 | Female Gulf War Veteran | Fibromyalgia, Depression, MST |
-| THOMPSON,MICHAEL DAVID | 100024 | OEF/OIF Veteran | Polytrauma, TBI, Amputation |
-| WILLIAMS,ROBERT EARL | 100025 | Elderly Korean War Veteran | Dementia, Former POW, Long-term care |
-| JOHNSON,DAVID WAYNE | 100026 | Homeless Veteran | Substance abuse, Mental health |
-| DAVIS,JENNIFER LYNN | 100027 | Recent Female Veteran | Transition assistance, Women's health |
-| WILSON,GEORGE HENRY | 100028 | Rural Veteran | Telehealth, Travel eligible |
-| GARCIA,ANTONIO JOSE | 100029 | Complex Medical Needs | Dialysis, Transplant candidate |
+| Patient Name           | ICN               | Description                | Key Conditions                        |
+| ---------------------- | ----------------- | -------------------------- | ------------------------------------- |
+| ANDERSON,JAMES ROBERT  | 1000220000V123456 | Vietnam Era Veteran        | PTSD, Diabetes Type 2, Hypertension   |
+| MARTINEZ,MARIA ELENA   | 1000000219V596118 | Female Gulf War Veteran    | Fibromyalgia, Depression, MST         |
+| THOMPSON,MICHAEL DAVID | 1000240000V123456 | OEF/OIF Veteran            | Polytrauma, TBI, Amputation           |
+| WILLIAMS,ROBERT EARL   | 1000250000V123456 | Elderly Korean War Veteran | Dementia, Former POW, Long-term care  |
+| JOHNSON,DAVID WAYNE    | 1000260000V123456 | Homeless Veteran           | Substance abuse, Mental health        |
+| DAVIS,JENNIFER LYNN    | 1000270000V123456 | Recent Female Veteran      | Transition assistance, Women's health |
+| WILSON,GEORGE HENRY    | 1000280000V123456 | Rural Veteran              | Telehealth, Travel eligible           |
+| GARCIA,ANTONIO JOSE    | 1000290000V123456 | Complex Medical Needs      | Dialysis, Transplant candidate        |
 
 ### Test Credentials
 
@@ -104,7 +104,7 @@ Use these prompts to quickly verify the MCP server is working correctly:
   "success": true,
   "data": [
     {
-      "id": "100022",
+      "id": "1000220000V123456",
       "name": "ANDERSON,JAMES",
       "ssn": "***-**-1234",
       "dob": "03/15/1955",
@@ -183,24 +183,24 @@ import sys
 
 async def test_mcp_server():
     """Test basic MCP server functionality"""
-    
+
     # Connect to server
     server_params = StdioServerParameters(
         command=sys.executable,
         args=["server.py"]
     )
-    
+
     async with ClientSession(server_params) as session:
         # Initialize
         await session.initialize()
-        
+
         # Test medications
         result = await session.call_tool(
             "get_medications",
-            arguments={"patient_id": "100022"}
+            arguments={"patient_icn": "1000220000V123456"}
         )
         assert "METFORMIN" in result.content[0].text
-        
+
         print("All tests passed!")
 
 if __name__ == "__main__":
@@ -224,10 +224,10 @@ fi
 
 # Test with mcp-cli (if installed)
 echo "1. Testing medications..."
-echo '{"tool": "get_medications", "arguments": {"patient_id": "100022"}}' | mcp-cli
+echo '{"tool": "get_medications", "arguments": {"patient_icn": "1000220000V123456"}}' | mcp-cli
 
 echo "2. Testing demographics..."
-echo '{"tool": "get_patient_demographics", "arguments": {"patient_id": "100022"}}' | mcp-cli
+echo '{"tool": "get_patient_demographics", "arguments": {"patient_icn": "1000220000V123456"}}' | mcp-cli
 
 echo "Tests complete!"
 ```

@@ -7,7 +7,7 @@ from typing import Any
 # Test patients covering various veteran demographics and conditions
 TEST_PATIENTS: dict[str, dict[str, Any]] = {
     # Vietnam Era Veteran with PTSD and Agent Orange exposure
-    "100022": {
+    "1000220000V123456": {
         "name": "ANDERSON,JAMES ROBERT",
         "ssn": "***-**-6789",
         "dob": "19450315",
@@ -101,7 +101,7 @@ TEST_PATIENTS: dict[str, dict[str, Any]] = {
         "flags": ["MILITARY SEXUAL TRAUMA", "WOMEN'S HEALTH", "GULF WAR VETERAN"],
     },
     # OEF/OIF Veteran with Polytrauma
-    "100024": {
+    "1000240000V123456": {
         "name": "THOMPSON,MICHAEL DAVID",
         "ssn": "***-**-4567",
         "dob": "19850718",
@@ -150,7 +150,7 @@ TEST_PATIENTS: dict[str, dict[str, Any]] = {
         ],
     },
     # Elderly Korean War Veteran in Long-term Care
-    "100025": {
+    "1000250000V123456": {
         "name": "WILLIAMS,ROBERT EARL",
         "ssn": "***-**-3456",
         "dob": "19300825",
@@ -203,7 +203,7 @@ TEST_PATIENTS: dict[str, dict[str, Any]] = {
         ],
     },
     # Homeless Veteran with Substance Abuse
-    "100026": {
+    "1000260000V123456": {
         "name": "JOHNSON,DAVID WAYNE",
         "ssn": "***-**-2345",
         "dob": "19750412",
@@ -246,7 +246,7 @@ TEST_PATIENTS: dict[str, dict[str, Any]] = {
         "flags": ["HOMELESS", "SUBSTANCE ABUSE", "HIGH RISK", "CASE MANAGEMENT"],
     },
     # Recent Female Veteran with Mental Health Needs
-    "100027": {
+    "1000270000V123456": {
         "name": "DAVIS,JENNIFER LYNN",
         "ssn": "***-**-1234",
         "dob": "19950228",
@@ -298,7 +298,7 @@ TEST_PATIENTS: dict[str, dict[str, Any]] = {
         ],
     },
     # Rural Veteran with Telehealth Needs
-    "100028": {
+    "1000280000V123456": {
         "name": "WILSON,GEORGE HENRY",
         "ssn": "***-**-0123",
         "dob": "19550610",
@@ -350,7 +350,7 @@ TEST_PATIENTS: dict[str, dict[str, Any]] = {
         ],
     },
     # Veteran with Complex Medical Needs
-    "100029": {
+    "1000290000V123456": {
         "name": "GARCIA,ANTONIO JOSE",
         "ssn": "***-**-9012",
         "dob": "19600118",

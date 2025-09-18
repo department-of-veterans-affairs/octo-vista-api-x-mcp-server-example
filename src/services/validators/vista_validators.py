@@ -57,4 +57,4 @@ def validate_icn(icn: str) -> bool:
     Returns:
         True if valid, False otherwise
     """
-    return re.match(r"^\d{10}V\d{6}$", str(icn)) is not None
+    return re.match(r"^(\d{16}|\d{9,10})V(\d{12}|\d{6})$", str(icn)) is not None
