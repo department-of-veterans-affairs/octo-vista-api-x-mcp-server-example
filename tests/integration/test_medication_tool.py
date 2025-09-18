@@ -229,7 +229,7 @@ def sample_patient_data():
         lab_results=[],
         consults=[],
         source_station="500",
-        source_dfn="237",
+        source_icn="237",
     )
 
 
@@ -273,7 +273,7 @@ class TestMedicationTool:
                     return_value=caller_duz,
                 ),
                 patch(
-                    "src.tools.patient.get_patient_medications_tool.validate_dfn",
+                    "src.tools.patient.get_patient_medications_tool.validate_icn",
                     return_value=True,
                 ),
                 patch("time.time", return_value=start_time),

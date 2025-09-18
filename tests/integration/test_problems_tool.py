@@ -108,7 +108,7 @@ def mock_patient_data():
         demographics=demographics,
         problems_dict={problem.uid: problem for problem in problems},
         source_station="84F0",
-        source_dfn="237",
+        source_icn="237",
         total_items=3,
     )
 
@@ -139,7 +139,7 @@ class TestGetPatientProblemsToolIntegration:
 
         # Mock validation functions
         monkeypatch.setattr(
-            "src.tools.patient.get_patient_problems_tool.validate_dfn", lambda dfn: True
+            "src.tools.patient.get_patient_problems_tool.validate_icn", lambda dfn: True
         )
         monkeypatch.setattr(
             "src.tools.patient.get_patient_problems_tool.get_default_station",
@@ -171,7 +171,7 @@ class TestGetPatientProblemsToolIntegration:
 
         # Call the tool function
         result = await registered_func(
-            patient_dfn="237",
+            patient_icn="237",
             station="84F0",
             active_only=False,
             service_connected_only=False,
@@ -203,7 +203,7 @@ class TestGetPatientProblemsToolIntegration:
 
         # Mock validation functions
         monkeypatch.setattr(
-            "src.tools.patient.get_patient_problems_tool.validate_dfn", lambda dfn: True
+            "src.tools.patient.get_patient_problems_tool.validate_icn", lambda dfn: True
         )
         monkeypatch.setattr(
             "src.tools.patient.get_patient_problems_tool.get_default_station",
@@ -235,7 +235,7 @@ class TestGetPatientProblemsToolIntegration:
 
         # Call the tool with active_only filter
         result = await registered_func(
-            patient_dfn="237",
+            patient_icn="237",
             station="84F0",
             active_only=True,
             service_connected_only=False,
@@ -260,7 +260,7 @@ class TestGetPatientProblemsToolIntegration:
         """Test handling of invalid DFN."""
         # Mock validation functions
         monkeypatch.setattr(
-            "src.tools.patient.get_patient_problems_tool.validate_dfn",
+            "src.tools.patient.get_patient_problems_tool.validate_icn",
             lambda dfn: False,  # Invalid DFN
         )
         monkeypatch.setattr(
@@ -293,7 +293,7 @@ class TestGetPatientProblemsToolIntegration:
 
         # Call the tool with invalid DFN
         result = await registered_func(
-            patient_dfn="invalid",
+            patient_icn="invalid",
             station="84F0",
             active_only=False,
             service_connected_only=False,
@@ -306,5 +306,5 @@ class TestGetPatientProblemsToolIntegration:
         assert isinstance(result, ProblemsResponse)
         assert result.success is False
         assert result.error is not None
-        assert "Invalid patient DFN" in result.error
+        assert "Invalid patient ICN" in result.error
         assert result.data is None

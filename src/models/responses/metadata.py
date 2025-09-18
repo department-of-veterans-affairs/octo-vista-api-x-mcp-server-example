@@ -186,8 +186,8 @@ class PaginationMetadata(BaseVistaModel):
     tool_name: str | None = Field(
         default=None, exclude=True, description="Tool name for suggestions"
     )
-    patient_dfn: str | None = Field(
-        default=None, exclude=True, description="Patient DFN for suggestions"
+    patient_icn: str | None = Field(
+        default=None, exclude=True, description="Patient ICN for suggestions"
     )
 
     @model_validator(mode="after")
@@ -203,8 +203,8 @@ class PaginationMetadata(BaseVistaModel):
         self.next_offset = self.offset + self.limit if self.has_more else None
 
         # Build suggested next call if we have the required info
-        if self.has_more and self.tool_name and self.patient_dfn:
-            params = [f'patient_dfn="{self.patient_dfn}"']
+        if self.has_more and self.tool_name and self.patient_icn:
+            params = [f'patient_icn="{self.patient_icn}"']
             params.append(f"limit={self.limit}")
             if self.next_offset is not None:
                 params.append(f"offset={self.next_offset}")
@@ -238,9 +238,10 @@ class StationMetadata(BaseVistaModel):
 class DemographicsMetadata(BaseVistaModel):
     """Patient demographics information"""
 
-    patient_dfn: str | None = Field(default=None, description="Patient DFN identifier")
+    patient_icn: str | None = Field(default=None, description="Patient ICN identifier")
     patient_name: str | None = Field(default=None, description="Patient full name")
     patient_age: int | None = Field(default=None, description="Patient age in years")
+    patient_gender: str | None = Field(default=None, description="Patient gender")
 
 
 class PerformanceMetrics(BaseVistaModel):

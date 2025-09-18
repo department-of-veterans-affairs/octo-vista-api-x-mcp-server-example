@@ -33,7 +33,7 @@ async def _get_cache():
 async def get_patient_data(
     vista_client: BaseVistaClient,
     station: str,
-    patient_dfn: str,
+    patient_icn: str,
     caller_duz: str,
 ) -> PatientDataCollection:
     """Get patient data with transparent caching.
@@ -47,7 +47,7 @@ async def get_patient_data(
     Args:
         vista_client: The Vista API client
         station: Station ID
-        patient_dfn: Patient DFN
+        patient_icn: Patient ICN
         caller_duz: Caller DUZ
 
     Returns:
@@ -61,7 +61,7 @@ async def get_patient_data(
     cache = await _get_cache()
 
     # Check cache first
-    cached_data = await cache.get_patient_data(station, patient_dfn, caller_duz)
+    cached_data = await cache.get_patient_data(station, patient_icn, caller_duz)
 
     if cached_data:
         # Return cached data
@@ -71,8 +71,8 @@ async def get_patient_data(
     rpc_result = await execute_rpc(
         vista_client=vista_client,
         rpc_name="VPR GET PATIENT DATA JSON",
-        parameters=build_named_array_param({"patientId": patient_dfn}),
-        parser=lambda result: parse_vpr_patient_data(result, station, patient_dfn),
+        parameters=build_named_array_param({"patientId": f"; {patient_icn}"}),
+        parser=lambda result: parse_vpr_patient_data(result, station, patient_icn),
         station=station,
         caller_duz=caller_duz,
         context="LHS RPC CONTEXT",
@@ -96,7 +96,7 @@ async def get_patient_data(
 
     # Cache for next time
     await cache.set_patient_data(
-        station, patient_dfn, caller_duz, patient_data.model_dump()
+        station, patient_icn, caller_duz, patient_data.model_dump()
     )
 
     return patient_data

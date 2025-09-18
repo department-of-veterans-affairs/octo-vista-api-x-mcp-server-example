@@ -95,7 +95,7 @@ def sample_patient_data(sample_cpt_codes):
         demographics=demographics,
         cpt_codes_dict={code.uid: code for code in sample_cpt_codes},
         source_station="500",
-        source_dfn="123",
+        source_icn="123",
     )
 
 
@@ -115,13 +115,13 @@ class TestCPTProceduresImplementation:
 
             result = await get_patient_procedures_impl(
                 vista_client=mock_vista_client,
-                patient_dfn="123",
+                patient_icn="123",
                 station="500",
                 caller_duz="456",
             )
 
             assert result.success is True
-            assert result.metadata.demographics.patient_dfn == "123"
+            assert result.metadata.demographics.patient_icn == "123"
             assert len(result.data.procedures) == 3
             assert result.data.total_procedures == 3
 
@@ -143,7 +143,7 @@ class TestCPTProceduresImplementation:
 
             result = await get_patient_procedures_impl(
                 vista_client=mock_vista_client,
-                patient_dfn="123",
+                patient_icn="123",
             )
 
             assert result.success is True
@@ -219,7 +219,7 @@ class TestCPTErrorHandling:
     """Test error handling in CPT procedures tool"""
 
     @pytest.mark.asyncio
-    async def test_invalid_patient_dfn(self, mock_vista_client):
+    async def test_invalid_patient_icn(self, mock_vista_client):
         """Test handling of invalid patient DFN"""
         with patch(
             "src.tools.patient.get_patient_procedures.get_patient_data"
@@ -228,7 +228,7 @@ class TestCPTErrorHandling:
 
             result = await get_patient_procedures_impl(
                 vista_client=mock_vista_client,
-                patient_dfn="invalid",
+                patient_icn="invalid",
             )
 
             assert result.success is False
@@ -260,7 +260,7 @@ class TestCPTErrorHandling:
             demographics=demographics,
             cpt_codes_dict={},  # No CPT codes
             source_station="500",
-            source_dfn="123",
+            source_icn="123",
         )
 
         with patch(
@@ -270,7 +270,7 @@ class TestCPTErrorHandling:
 
             result = await get_patient_procedures_impl(
                 vista_client=mock_vista_client,
-                patient_dfn="123",
+                patient_icn="123",
             )
 
             assert result.success is True

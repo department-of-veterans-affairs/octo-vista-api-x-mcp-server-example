@@ -6,6 +6,8 @@ from typing import Annotated
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
+from src.services.validators.vista_validators import validate_icn
+
 from ...models.responses.metadata import (
     ConsultsFiltersMetadata,
     DemographicsMetadata,
@@ -20,7 +22,7 @@ from ...models.responses.tool_responses import (
     ConsultsResponseData,
 )
 from ...services.data import get_patient_data
-from ...services.validators import validate_dfn
+from ...services.rpc import build_icn_only_named_array_param
 from ...utils import get_default_duz, get_default_station, get_logger, paginate_list
 from ...vista.base import BaseVistaClient
 
@@ -32,7 +34,7 @@ def register_get_patient_consults_tool(mcp: FastMCP, vista_client: BaseVistaClie
 
     @mcp.tool()
     async def get_patient_consults(
-        patient_dfn: str,
+        patient_icn: str,
         station: str | None = None,
         active_only: bool = True,
         offset: Annotated[int, Field(default=0, ge=0)] = 0,
@@ -43,8 +45,8 @@ def register_get_patient_consults_tool(mcp: FastMCP, vista_client: BaseVistaClie
         station = station or get_default_station()
         caller_duz = get_default_duz()
 
-        # Validate DFN
-        if not validate_dfn(patient_dfn):
+        # Validate ICN
+        if not validate_icn(patient_icn):
             end_time = datetime.now(UTC)
             md = ResponseMetadata(
                 request_id=f"req_{int(start_time.timestamp())}",
@@ -57,14 +59,14 @@ def register_get_patient_consults_tool(mcp: FastMCP, vista_client: BaseVistaClie
             )
             return ConsultsResponse(
                 success=False,
-                error=f"Invalid patient DFN: {patient_dfn}",
+                error=f"Invalid patient ICN format: {patient_icn}",
                 metadata=md,
             )
 
         try:
             # Get patient data (handles caching internally)
             patient_data = await get_patient_data(
-                vista_client, station, patient_dfn, caller_duz
+                vista_client, station, patient_icn, caller_duz
             )
 
             # Filter consults
@@ -86,7 +88,7 @@ def register_get_patient_consults_tool(mcp: FastMCP, vista_client: BaseVistaClie
             rpc_details = RpcCallMetadata(
                 rpc="VPR GET PATIENT DATA JSON",
                 context="LHS RPC CONTEXT",
-                parameters=[{"namedArray": {"patientId": patient_dfn}}],
+                parameters=build_icn_only_named_array_param(patient_icn),
                 duz=caller_duz,
             )
             md = ResponseMetadata(
@@ -99,7 +101,7 @@ def register_get_patient_consults_tool(mcp: FastMCP, vista_client: BaseVistaClie
                 station=StationMetadata(station_number=station),
                 rpc=rpc_details,
                 demographics=DemographicsMetadata(
-                    patient_dfn=patient_dfn,
+                    patient_icn=patient_icn,
                     patient_name=patient_data.patient_name,
                     patient_age=patient_data.demographics.calculate_age(),
                 ),
@@ -112,7 +114,7 @@ def register_get_patient_consults_tool(mcp: FastMCP, vista_client: BaseVistaClie
                     offset=offset,
                     limit=limit,
                     tool_name="get_patient_consults",
-                    patient_dfn=patient_dfn,
+                    patient_icn=patient_icn,
                 ),
             )
 

@@ -53,7 +53,7 @@ class PatientDataCollection(BasePatientModel):
 
     # Metadata
     source_station: str
-    source_dfn: str
+    source_icn: str
     retrieved_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     cache_version: str = Field(default="1.0")
     total_items: int = 0
@@ -86,9 +86,9 @@ class PatientDataCollection(BasePatientModel):
         return self.demographics.full_name
 
     @property
-    def patient_dfn(self) -> str:
-        """Convenience property for patient DFN"""
-        return self.demographics.dfn or self.source_dfn
+    def patient_icn(self) -> str:
+        """Convenience property for patient ICN"""
+        return self.demographics.icn or self.source_icn
 
     @property
     def vital_signs(self) -> list[VitalSign]:
@@ -249,7 +249,7 @@ class PatientDataCollection(BasePatientModel):
         summary: dict[str, Any] = {
             "patient": {
                 "name": self.patient_name,
-                "dfn": self.patient_dfn,
+                "icn": self.patient_icn,
                 "age": self.demographics.calculate_age(),
                 "gender": self.demographics.gender_name,
                 "ssn": self.demographics.ssn,

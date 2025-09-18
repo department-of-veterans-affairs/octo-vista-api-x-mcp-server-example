@@ -46,16 +46,16 @@ logger = get_logger()
 class PatientDataParser:
     """Parser for VPR GET PATIENT DATA JSON response using JSONPath"""
 
-    def __init__(self, station: str, dfn: str):
+    def __init__(self, station: str, icn: str):
         """
         Initialize parser with patient identifiers.
 
         Args:
             station: Station number
-            dfn: Patient DFN
+            icn: Patient icn
         """
         self.station = station
-        self.dfn = dfn
+        self.icn = icn
 
         # Pre-compile JSONPath expressions for better performance
         self._jsonpath_expressions = {
@@ -147,7 +147,7 @@ class PatientDataParser:
             problems_dict=problems,
             appointments_dict=appointments,
             source_station=self.station,
-            source_dfn=self.dfn,
+            source_icn=self.icn,
             total_items=len(items),
             raw_data=vpr_data,  # Store for debugging
         )
@@ -273,8 +273,8 @@ class PatientDataParser:
             demographics_data.pop("veteran", None)
             demographics_data.pop("flags", None)
 
-            # Add DFN from parser context
-            demographics_data["dfn"] = self.dfn
+            # Add ICN from parser context
+            demographics_data["icn"] = self.icn
 
             demographics = PatientDemographics(
                 **demographics_data,
@@ -578,8 +578,8 @@ class PatientDataParser:
         """Preprocess treatment item for field normalization"""
         processed = item.copy()
 
-        # Add required dfn field from parser context
-        processed["dfn"] = self.dfn
+        # Add required icn field from parser context
+        processed["icn"] = self.icn
 
         # Ensure required fields have defaults
         if "name" not in processed:
@@ -1183,7 +1183,7 @@ class PatientDataParser:
 
 
 def parse_vpr_patient_data(
-    vpr_json: dict[str, Any], station: str, dfn: str
+    vpr_json: dict[str, Any], station: str, icn: str
 ) -> PatientDataCollection:
     """
     Convenience function to parse VPR patient data using JSONPath.
@@ -1191,10 +1191,10 @@ def parse_vpr_patient_data(
     Args:
         vpr_json: Raw VPR JSON response
         station: VistA station number
-        dfn: Patient DFN
+        icn: Patient icn
 
     Returns:
         Parsed PatientDataCollection
     """
-    parser = PatientDataParser(station, dfn)
+    parser = PatientDataParser(station, icn)
     return parser.parse(vpr_json)

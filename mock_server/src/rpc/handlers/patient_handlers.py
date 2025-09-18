@@ -4,11 +4,23 @@ Patient-related RPC handlers
 
 import copy
 import json
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
-from src.data.test_patients import get_patient_by_dfn, search_patients_by_name
+from src.data.test_patients import get_patient_by_dfn_or_icn, search_patients_by_name
 from src.rpc.models import Parameter
+
+
+def patient_id_from_dfn_or_icn_param_value(param_dict: dict[str, Any]) -> str | None:
+    """
+    Extract patient ID from parameters, handling both DFN and ICN formats.
+    """
+    patient_id = None
+    with suppress(Exception):
+        patient_id = param_dict["patientId"].lstrip(";").strip()
+
+    return patient_id
 
 
 class PatientHandlers:
@@ -29,7 +41,7 @@ class PatientHandlers:
         return cls._vpr_template
 
     @staticmethod
-    def _inject_patient_data(vpr_data: dict, dfn: str, patient: dict) -> dict:
+    def _inject_patient_data(vpr_data: dict, dfn_or_icn: str, patient: dict) -> dict:
         """
         Inject patient-specific data into VPR template.
         This modifies UIDs and patient demographics while preserving the rest of the structure.
@@ -53,7 +65,7 @@ class PatientHandlers:
             patient_item["genderName"] = (
                 "Male" if patient["gender"] == "M" else "Female"
             )
-            patient_item["localId"] = int(dfn)
+            patient_item["localId"] = int(dfn_or_icn[:10])
 
             # Update address
             # Parse address from single string format "street, city, state zip"
@@ -127,13 +139,13 @@ class PatientHandlers:
                 vs = patient["veteranStatus"]
                 patient_item["veteran"] = {
                     "isVet": 1,
-                    "lrdfn": int(dfn),  # Using DFN as lrdfn for simplicity
+                    "lrdfn": int(dfn_or_icn[:10]),  # Using DFN as lrdfn for simplicity
                     "serviceConnected": vs.get("serviceConnected", False),
                     "serviceConnectionPercent": vs.get("serviceConnectedPercent", 0),
                 }
 
             # Update patient UID
-            patient_item["uid"] = f"urn:va:patient:84F0:{dfn}:{dfn}"
+            patient_item["uid"] = f"urn:va:patient:84F0:{dfn_or_icn}:{dfn_or_icn}"
 
             # Update briefId (construct from name)
             name_parts = patient["name"].split(",")
@@ -195,15 +207,15 @@ class PatientHandlers:
         for item in result["data"]["items"][1:]:
             # Replace localId 237 with actual DFN in UIDs
             if "uid" in item and isinstance(item["uid"], str):
-                item["uid"] = item["uid"].replace(":237:", f":{dfn}:")
+                item["uid"] = item["uid"].replace(":237:", f":{dfn_or_icn}:")
 
             # Update any orderUid references
             if "orderUid" in item and isinstance(item["orderUid"], str):
-                item["orderUid"] = item["orderUid"].replace(":237:", f":{dfn}:")
+                item["orderUid"] = item["orderUid"].replace(":237:", f":{dfn_or_icn}:")
 
             # Update groupUid for lab results
             if "groupUid" in item and isinstance(item["groupUid"], str):
-                item["groupUid"] = item["groupUid"].replace(":237:", f":{dfn}:")
+                item["groupUid"] = item["groupUid"].replace(":237:", f":{dfn_or_icn}:")
 
         return result
 
@@ -247,7 +259,7 @@ class PatientHandlers:
                 dfn = param_value
 
         # Get patient data
-        patient = get_patient_by_dfn(dfn)
+        patient = get_patient_by_dfn_or_icn(dfn)
 
         if not patient or patient.get("name") == "TEST,PATIENT":
             return ""
@@ -297,7 +309,7 @@ class PatientHandlers:
         2. Named array format: [{"namedArray": {"patientId": "DFN"}}]
         """
         # Parse parameters
-        patient_id = ""
+        patient_id: str | None = None
         # domains = []  # Currently unused
 
         # Check if this is the new named array format
@@ -306,9 +318,8 @@ class PatientHandlers:
             param_value = first_param.get_value()
 
             # Check for named array format
-            if isinstance(param_value, dict) and "patientId" in param_value:
-                patient_id = str(param_value["patientId"])
-            else:
+            patient_id = patient_id_from_dfn_or_icn_param_value(param_value)
+            if not patient_id:
                 # Legacy parameter format
                 for i, param in enumerate(parameters):
                     param_value = param.get_value()
@@ -326,7 +337,7 @@ class PatientHandlers:
                         _ = param_value.split(";")  # domains variable not used
 
         # Get patient data
-        patient = get_patient_by_dfn(patient_id)
+        patient = get_patient_by_dfn_or_icn(patient_id)
 
         if not patient or patient.get("name") == "TEST,PATIENT":
             return {"error": "Patient not found"}
@@ -340,14 +351,13 @@ class PatientHandlers:
 
             # If domains were specified, we could filter items here
             # For now, return all data as the template includes comprehensive patient data
-
             return result
 
         except Exception as e:
             # Fall back to error response if template loading fails
             return {
                 "apiVersion": "1.0",
-                "error": f"Error loading VPR data: {e!s}",
+                "error": f"Error loading VPR data: {e}",
             }
 
     @staticmethod
@@ -364,7 +374,7 @@ class PatientHandlers:
                 dfn = param_value
 
         # Check if patient exists
-        patient = get_patient_by_dfn(dfn)
+        patient = get_patient_by_dfn_or_icn(dfn)
 
         if not patient or patient.get("name") == "TEST,PATIENT":
             return "0^Patient not found"

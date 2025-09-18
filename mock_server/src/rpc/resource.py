@@ -193,7 +193,7 @@ async def execute_rpc(rpc_request: RpcRequestX) -> Any:
 
     except Exception as e:
         raise RpcFaultException(
-            message=f"RPC execution error: {e!s}",
+            message=f"RPC execution error: {e}",
             rpc_name=rpc_request.rpc,
             fault_code="RPC_ERROR",
         )

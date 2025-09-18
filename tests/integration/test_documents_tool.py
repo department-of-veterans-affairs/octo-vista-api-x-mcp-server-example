@@ -165,7 +165,7 @@ def sample_patient_data():
         consults=[],
         documents_dict={doc.uid: doc for doc in documents},
         source_station="500",
-        source_dfn="237",
+        source_icn="237",
     )
 
 
@@ -211,7 +211,7 @@ class TestDocumentsTool:
                     return_value=caller_duz,
                 ),
                 patch(
-                    "src.tools.patient.get_patient_documents.validate_dfn",
+                    "src.tools.patient.get_patient_documents.validate_icn",
                     return_value=True,
                 ),
             ):
@@ -334,7 +334,7 @@ class TestDocumentsTool:
                     return_value=caller_duz,
                 ),
                 patch(
-                    "src.tools.patient.get_patient_documents.validate_dfn",
+                    "src.tools.patient.get_patient_documents.validate_icn",
                     return_value=True,
                 ),
             ):

@@ -17,7 +17,8 @@ from ...models.responses.metadata import (
 )
 from ...models.responses.tool_responses import DocumentsResponse, DocumentsResponseData
 from ...services.data import get_patient_data
-from ...services.validators import validate_dfn
+from ...services.rpc import build_icn_only_named_array_param
+from ...services.validators import validate_icn
 from ...utils import get_default_duz, get_default_station, get_logger, paginate_list
 from ...vista.base import BaseVistaClient
 
@@ -29,7 +30,7 @@ def register_get_patient_documents_tool(mcp: FastMCP, vista_client: BaseVistaCli
 
     @mcp.tool()
     async def get_patient_documents(
-        patient_dfn: str,
+        patient_icn: str,
         station: str = "",
         completed_only: bool = True,
         days_back: Annotated[int, Field(default=365, ge=1)] = 365,
@@ -42,8 +43,8 @@ def register_get_patient_documents_tool(mcp: FastMCP, vista_client: BaseVistaCli
         station = station or get_default_station()
         caller_duz = get_default_duz()
 
-        # Validate DFN
-        if not validate_dfn(patient_dfn):
+        # Validate ICN
+        if not validate_icn(patient_icn):
             md = ResponseMetadata(
                 request_id=f"req_{int(start_time.timestamp())}",
                 performance=PerformanceMetrics(
@@ -55,14 +56,14 @@ def register_get_patient_documents_tool(mcp: FastMCP, vista_client: BaseVistaCli
             )
             return DocumentsResponse(
                 success=False,
-                error=f"Invalid patient DFN: {patient_dfn}",
+                error=f"Invalid patient ICN: {patient_icn}",
                 metadata=md,
             )
 
         try:
             # Get patient data (handles caching internally)
             patient_data = await get_patient_data(
-                vista_client, station, patient_dfn, caller_duz
+                vista_client, station, patient_icn, caller_duz
             )
 
             # Filter documents with combined conditions
@@ -87,7 +88,7 @@ def register_get_patient_documents_tool(mcp: FastMCP, vista_client: BaseVistaCli
             rpc_details = RpcCallMetadata(
                 rpc="VPR GET PATIENT DATA JSON",
                 context="LHS RPC CONTEXT",
-                parameters=[{"namedArray": {"patientId": patient_dfn}}],
+                parameters=build_icn_only_named_array_param(patient_icn),
                 duz=caller_duz,
             )
             md = ResponseMetadata(
@@ -100,7 +101,7 @@ def register_get_patient_documents_tool(mcp: FastMCP, vista_client: BaseVistaCli
                 station=StationMetadata(station_number=station),
                 rpc=rpc_details,
                 demographics=DemographicsMetadata(
-                    patient_dfn=patient_dfn,
+                    patient_icn=patient_icn,
                     patient_name=patient_data.patient_name,
                     patient_age=patient_data.demographics.calculate_age(),
                 ),
@@ -115,7 +116,7 @@ def register_get_patient_documents_tool(mcp: FastMCP, vista_client: BaseVistaCli
                     offset=offset,
                     limit=limit,
                     tool_name="get_patient_documents",
-                    patient_dfn=patient_dfn,
+                    patient_icn=patient_icn,
                 ),
             )
 

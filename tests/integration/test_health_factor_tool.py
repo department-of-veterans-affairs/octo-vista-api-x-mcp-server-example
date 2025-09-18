@@ -88,7 +88,7 @@ def sample_patient_data(sample_health_factors):
         demographics=demographics,
         health_factors_dict={hf.uid: hf for hf in sample_health_factors},
         source_station="500",
-        source_dfn="237",
+        source_icn="237",
     )
 
 

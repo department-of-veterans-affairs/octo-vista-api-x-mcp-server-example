@@ -84,7 +84,7 @@ class TestGetPatientDiagnosesIntegration:
             demographics=demographics,
             diagnoses_dict={dx.uid: dx for dx in sample_diagnoses},
             source_station="500",
-            source_dfn="100022",
+            source_icn="100022",
             total_items=5,
         )
 

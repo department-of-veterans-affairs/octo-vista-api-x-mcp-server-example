@@ -54,7 +54,7 @@ TEST_PATIENTS: dict[str, dict[str, Any]] = {
         "flags": ["COMBAT VETERAN", "AGENT ORANGE EXPOSURE", "HIGH RISK FOR SUICIDE"],
     },
     # Female Gulf War Veteran with MST
-    "100023": {
+    "1000000219V596118": {
         "name": "MARTINEZ,MARIA ELENA",
         "ssn": "***-**-5678",
         "dob": "19700522",
@@ -404,10 +404,10 @@ TEST_PATIENTS: dict[str, dict[str, Any]] = {
 }
 
 
-def get_patient_by_dfn(dfn: str) -> dict[str, Any]:
+def get_patient_by_dfn_or_icn(dfn_or_icn: str) -> dict[str, Any]:
     """Get patient data by DFN"""
     return TEST_PATIENTS.get(
-        dfn,
+        dfn_or_icn,
         {
             "name": "TEST,PATIENT",
             "ssn": "***-**-0000",

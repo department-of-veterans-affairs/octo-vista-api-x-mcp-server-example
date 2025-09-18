@@ -20,7 +20,8 @@ from ...models.responses.tool_responses import (
     ProceduresResponseData,
 )
 from ...services.data.patient_data import get_patient_data
-from ...services.validators import validate_dfn
+from ...services.rpc import build_icn_only_named_array_param
+from ...services.validators import validate_icn
 from ...utils import get_default_duz, get_default_station, get_logger, paginate_list
 from ...vista.base import BaseVistaClient, VistaAPIError
 
@@ -29,7 +30,7 @@ logger = get_logger(__name__)
 
 async def get_patient_procedures_impl(
     vista_client: BaseVistaClient,
-    patient_dfn: str,
+    patient_icn: str,
     station: str | None = None,
     caller_duz: str | None = None,
     date_from: date | None = None,
@@ -42,7 +43,7 @@ async def get_patient_procedures_impl(
 
     Args:
         vista_client: Vista API client
-        patient_dfn: Patient DFN
+        patient_icn: Patient ICN
         station: Station number
         caller_duz: Caller DUZ
         date_from: Start date filter
@@ -61,7 +62,7 @@ async def get_patient_procedures_impl(
         patient_data = await get_patient_data(
             vista_client=vista_client,
             station=str(station),
-            patient_dfn=patient_dfn,
+            patient_icn=patient_icn,
             caller_duz=str(caller_duz),
         )
 
@@ -88,7 +89,7 @@ async def get_patient_procedures_impl(
         rpc_details = RpcCallMetadata(
             rpc="VPR GET PATIENT DATA JSON",
             context="LHS RPC CONTEXT",
-            parameters=[{"namedArray": {"patientId": patient_dfn}}],
+            parameters=build_icn_only_named_array_param(patient_icn),
             duz=caller_duz,
         )
 
@@ -103,7 +104,7 @@ async def get_patient_procedures_impl(
             station=StationMetadata(station_number=station),
             rpc=rpc_details,
             demographics=DemographicsMetadata(
-                patient_dfn=patient_dfn,
+                patient_icn=patient_icn,
                 patient_name=patient_data.patient_name,
                 patient_age=patient_data.demographics.calculate_age(),
             ),
@@ -117,7 +118,7 @@ async def get_patient_procedures_impl(
                 offset=offset,
                 limit=limit,
                 tool_name="get_patient_procedures",
-                patient_dfn=patient_dfn,
+                patient_icn=patient_icn,
             ),
         )
 
@@ -143,7 +144,7 @@ async def get_patient_procedures_impl(
 
     except VistaAPIError as e:
         logger.error(
-            f"Vista API error getting procedures for patient {patient_dfn}: {e}"
+            f"Vista API error getting procedures for patient {patient_icn}: {e}"
         )
         end_time = datetime.now(UTC)
         md = ResponseMetadata(
@@ -163,7 +164,7 @@ async def get_patient_procedures_impl(
         )
     except Exception as e:
         logger.exception(
-            f"Unexpected error getting procedures for patient {patient_dfn}"
+            f"Unexpected error getting procedures for patient {patient_icn}"
         )
         end_time = datetime.now(UTC)
         md = ResponseMetadata(
@@ -242,7 +243,7 @@ def register_get_patient_procedures_tool(mcp, vista_client: BaseVistaClient):
 
     @mcp.tool()
     async def get_patient_procedures(
-        patient_dfn: str,
+        patient_icn: str,
         station: str | None = None,
         date_from: Annotated[date | None, Field(default=None)] = None,
         date_to: Annotated[date | None, Field(default=None)] = None,
@@ -253,8 +254,8 @@ def register_get_patient_procedures_tool(mcp, vista_client: BaseVistaClient):
         start_time = datetime.now(UTC)
         station = station or get_default_station()
 
-        # Validate DFN
-        if not validate_dfn(patient_dfn):
+        # Validate ICN
+        if not validate_icn(patient_icn):
             end_time = datetime.now(UTC)
             md = ResponseMetadata(
                 request_id=f"req_{int(start_time.timestamp())}",
@@ -267,7 +268,7 @@ def register_get_patient_procedures_tool(mcp, vista_client: BaseVistaClient):
             )
             return ProceduresResponse(
                 success=False,
-                error="Invalid patient DFN format",
+                error="Invalid patient ICN format",
                 metadata=md,
             )
 
@@ -276,7 +277,7 @@ def register_get_patient_procedures_tool(mcp, vista_client: BaseVistaClient):
 
         return await get_patient_procedures_impl(
             vista_client=vista_client,
-            patient_dfn=patient_dfn,
+            patient_icn=patient_icn,
             station=str(station),
             caller_duz=str(caller_duz),
             date_from=date_from,

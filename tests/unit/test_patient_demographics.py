@@ -238,7 +238,7 @@ class TestPatientDemographicsParsing:
             }
         }
 
-        parser = PatientDataParser(station="500", dfn="100022")
+        parser = PatientDataParser(station="500", icn="100022")
         result = parser.parse(vpr_data)
 
         # Verify demographics were parsed
@@ -291,7 +291,7 @@ class TestPatientDemographicsParsing:
             }
         }
 
-        parser = PatientDataParser(station="500", dfn="100022")
+        parser = PatientDataParser(station="500", icn="100022")
         result = parser.parse(vpr_data)
 
         demographics = result.demographics
@@ -394,7 +394,7 @@ class TestPatientDemographicsParsing:
             }
         }
 
-        parser = PatientDataParser(station="500", dfn="100022")
+        parser = PatientDataParser(station="500", icn="100022")
         result = parser.parse(vpr_data)
 
         demographics = result.demographics

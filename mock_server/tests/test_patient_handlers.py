@@ -79,8 +79,8 @@ class TestVPRGetPatientDataJSON:
         """Test with numeric patient ID in named array"""
         # Create parameters with numeric patient ID
         parameters = [
-            Parameter(namedArray={"patientId": 100841})  # Numeric instead of string
-        ]
+            Parameter(namedArray={"patientId": 100841})
+        ]  # Numeric instead of string
 
         # Call handler
         result = PatientHandlers.handle_vpr_get_patient_data_json(parameters)

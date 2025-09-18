@@ -3,6 +3,7 @@
 from .executor import execute_rpc
 from .parameter_builder import (
     build_empty_params,
+    build_icn_only_named_array_param,
     build_multi_param,
     build_named_array_param,
     build_single_string_param,
@@ -17,4 +18,5 @@ __all__ = [
     "build_empty_params",
     "build_success_response",
     "build_error_response",
+    "build_icn_only_named_array_param",
 ]

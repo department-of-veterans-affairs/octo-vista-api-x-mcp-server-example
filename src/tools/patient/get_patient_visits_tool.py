@@ -19,7 +19,8 @@ from ...models.responses.metadata import (
 )
 from ...models.responses.tool_responses import VisitsResponse, VisitsResponseData
 from ...services.data import get_patient_data
-from ...services.validators import validate_dfn
+from ...services.rpc import build_icn_only_named_array_param
+from ...services.validators import validate_icn
 from ...utils import get_default_duz, get_default_station, get_logger, paginate_list
 from ...vista.base import BaseVistaClient
 
@@ -27,7 +28,7 @@ logger = get_logger(__name__)
 
 
 async def get_patient_visits_impl(
-    patient_dfn: str,
+    patient_icn: str,
     vista_client: BaseVistaClient,
     station: str | None = None,
     visit_type: str = "",
@@ -42,21 +43,19 @@ async def get_patient_visits_impl(
     caller_duz = get_default_duz()
 
     logger.info(
-        f"🏥 [DEBUG] get_patient_visits: patient_dfn={patient_dfn}, station={station}, visit_type={visit_type}, active_only={active_only}, days_back={days_back}, offset={offset}, limit={limit}"
+        f"🏥 [DEBUG] get_patient_visits: patient_icn={patient_icn}, station={station}, visit_type={visit_type}, active_only={active_only}, days_back={days_back}, offset={offset}, limit={limit}"
     )
 
-    # Validate DFN
-    if not validate_dfn(patient_dfn):
+    # Validate ICN
+    if not validate_icn(patient_icn):
         end_time = datetime.now(UTC)
         duration_ms = int((end_time - start_time).total_seconds() * 1000)
         return VisitsResponse(
             success=False,
-            error="Invalid patient DFN format. DFN must be numeric.",
-            data=VisitsResponseData(
-                patient_dfn=patient_dfn, summary=VisitSummary(total_visits=0)
-            ),
+            error="Invalid patient ICN format.",
+            data=VisitsResponseData(summary=VisitSummary(total_visits=0)),
             metadata=ResponseMetadata(
-                request_id=f"visits_{patient_dfn}_{int(start_time.timestamp())}",
+                request_id=f"visits_{patient_icn}_{int(start_time.timestamp())}",
                 station=StationMetadata(station_number=station),
                 performance=PerformanceMetrics(
                     duration_ms=duration_ms, start_time=start_time, end_time=end_time
@@ -71,11 +70,9 @@ async def get_patient_visits_impl(
         return VisitsResponse(
             success=False,
             error="Days back must be between 1 and 1095",
-            data=VisitsResponseData(
-                patient_dfn=patient_dfn, summary=VisitSummary(total_visits=0)
-            ),
+            data=VisitsResponseData(summary=VisitSummary(total_visits=0)),
             metadata=ResponseMetadata(
-                request_id=f"visits_{patient_dfn}_{int(start_time.timestamp())}",
+                request_id=f"visits_{patient_icn}_{int(start_time.timestamp())}",
                 station=StationMetadata(station_number=station),
                 performance=PerformanceMetrics(
                     duration_ms=duration_ms, start_time=start_time, end_time=end_time
@@ -88,7 +85,7 @@ async def get_patient_visits_impl(
         patient_data = await get_patient_data(
             vista_client,
             station,
-            patient_dfn,
+            patient_icn,
             caller_duz,
         )
 
@@ -156,18 +153,6 @@ async def get_patient_visits_impl(
 
         # Build response data
         response_data = VisitsResponseData(
-            patient_dfn=patient_dfn,
-            patient_name=patient_data.patient_name,
-            patient_age=(
-                patient_data.demographics.calculate_age()
-                if hasattr(patient_data.demographics, "calculate_age")
-                else None
-            ),
-            patient_gender=(
-                patient_data.demographics.gender_name
-                if hasattr(patient_data.demographics, "gender_name")
-                else None
-            ),
             summary=visits_summary,
             all_visits=visit_summaries,
             filters={
@@ -179,7 +164,7 @@ async def get_patient_visits_impl(
 
         # Build metadata
         metadata = ResponseMetadata(
-            request_id=f"visits_{patient_dfn}_{int(start_time.timestamp())}",
+            request_id=f"visits_{patient_icn}_{int(start_time.timestamp())}",
             station=StationMetadata(station_number=station),
             performance=PerformanceMetrics(
                 duration_ms=duration_ms, start_time=start_time, end_time=end_time
@@ -187,11 +172,11 @@ async def get_patient_visits_impl(
             rpc=RpcCallMetadata(
                 rpc="VPR GET PATIENT DATA JSON",
                 context="LHS RPC CONTEXT",
-                parameters=[{"namedArray": {"patientId": patient_dfn}}],
+                parameters=build_icn_only_named_array_param(patient_icn),
                 duz=caller_duz,
             ),
             demographics=DemographicsMetadata(
-                patient_dfn=patient_dfn,
+                patient_icn=patient_icn,
                 patient_name=patient_data.patient_name,
             ),
             filters=VisitsFiltersMetadata(
@@ -205,7 +190,7 @@ async def get_patient_visits_impl(
                 offset=offset,
                 limit=limit,
                 tool_name="get_patient_visits",
-                patient_dfn=patient_dfn,
+                patient_icn=patient_icn,
             ),
         )
 
@@ -220,11 +205,9 @@ async def get_patient_visits_impl(
         return VisitsResponse(
             success=False,
             error=f"Unexpected error: {str(e)}",
-            data=VisitsResponseData(
-                patient_dfn=patient_dfn, summary=VisitSummary(total_visits=0)
-            ),
+            data=VisitsResponseData(summary=VisitSummary(total_visits=0)),
             metadata=ResponseMetadata(
-                request_id=f"visits_{patient_dfn}_{int(start_time.timestamp())}",
+                request_id=f"visits_{patient_icn}_{int(start_time.timestamp())}",
                 station=StationMetadata(station_number=station),
                 performance=PerformanceMetrics(
                     duration_ms=duration_ms, start_time=start_time, end_time=end_time
@@ -238,7 +221,7 @@ def register_get_patient_visits_tool(mcp: FastMCP, vista_client: BaseVistaClient
 
     @mcp.tool()
     async def get_patient_visits(
-        patient_dfn: str,
+        patient_icn: str,
         station: str | None = None,
         visit_type: str = "",
         active_only: bool = False,
@@ -248,7 +231,7 @@ def register_get_patient_visits_tool(mcp: FastMCP, vista_client: BaseVistaClient
     ) -> VisitsResponse:
         """Get patient visit history with location and duration data."""
         return await get_patient_visits_impl(
-            patient_dfn=patient_dfn,
+            patient_icn=patient_icn,
             station=station,
             visit_type=visit_type,
             active_only=active_only,

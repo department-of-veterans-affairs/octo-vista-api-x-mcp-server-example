@@ -156,9 +156,6 @@ class ProceduresResponseData(ResponseData):
 class VisitsResponseData(ResponseData):
     """Response data for patient visits"""
 
-    patient_dfn: str
-    patient_name: str | None = None
-    patient_age: int | None = None
     patient_gender: str | None = None
     summary: VisitSummary
     all_visits: list[Visit] = Field(default_factory=list)

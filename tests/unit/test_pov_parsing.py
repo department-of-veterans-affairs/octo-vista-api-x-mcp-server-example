@@ -310,7 +310,7 @@ class TestPOVParsing:
 
     def test_preprocess_pov_item(self):
         """Test POV item preprocessing."""
-        parser = PatientDataParser(station="500", dfn="123456")
+        parser = PatientDataParser(station="500", icn="123456")
 
         raw_pov = {
             "uid": "urn:va:pov:9E7A:100022:1001",
@@ -334,7 +334,7 @@ class TestPOVParsing:
 
     def test_parse_povs_empty_list(self):
         """Test parsing empty POV list."""
-        parser = PatientDataParser(station="500", dfn="123456")
+        parser = PatientDataParser(station="500", icn="123456")
 
         povs = parser._parse_povs([])
 
@@ -342,7 +342,7 @@ class TestPOVParsing:
 
     def test_parse_povs_with_valid_data(self):
         """Test parsing POVs with valid data."""
-        parser = PatientDataParser(station="500", dfn="123456")
+        parser = PatientDataParser(station="500", icn="123456")
 
         raw_povs = [
             {
@@ -369,7 +369,7 @@ class TestPOVParsing:
 
     def test_parse_povs_with_invalid_data(self):
         """Test parsing POVs with invalid data (should skip invalid items)."""
-        parser = PatientDataParser(station="500", dfn="123456")
+        parser = PatientDataParser(station="500", icn="123456")
 
         raw_povs = [
             {

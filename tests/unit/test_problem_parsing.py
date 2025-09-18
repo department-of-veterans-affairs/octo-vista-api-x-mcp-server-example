@@ -311,7 +311,7 @@ class TestProblemParsing:
 
     def test_parse_problems_with_invalid_data(self):
         """Test parsing Problems with invalid data."""
-        parser = PatientDataParser(station="500", dfn="123456")
+        parser = PatientDataParser(station="500", icn="123456")
 
         raw_problems = [
             {
@@ -347,7 +347,7 @@ class TestProblemParsing:
 
     def test_parse_problems_with_comments(self):
         """Test parsing Problems with comments."""
-        parser = PatientDataParser(station="500", dfn="123456")
+        parser = PatientDataParser(station="500", icn="123456")
 
         raw_problems = [
             {

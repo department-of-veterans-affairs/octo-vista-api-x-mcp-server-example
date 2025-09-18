@@ -27,6 +27,18 @@ def build_named_array_param(params: dict[str, Any]) -> list[dict[str, Any]]:
     return [{"namedArray": params}]
 
 
+def build_icn_only_named_array_param(icn: str) -> list[dict[str, Any]]:
+    """Build parameters for a named array.
+
+    Args:
+        icn: Patient ICN
+
+    Returns:
+        List with named array parameter
+    """
+    return [{"namedArray": {"patientId": f"; {icn}"}}]
+
+
 def build_empty_params() -> list[dict[str, Any]]:
     """Build empty parameters list.
 

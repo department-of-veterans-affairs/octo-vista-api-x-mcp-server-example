@@ -20,7 +20,8 @@ from ...models.responses.tool_responses import (
     AllergiesResponseData,
 )
 from ...services.data import get_patient_data
-from ...services.validators import validate_dfn
+from ...services.rpc import build_icn_only_named_array_param
+from ...services.validators import validate_icn
 from ...utils import get_default_duz, get_default_station, get_logger, paginate_list
 from ...vista.base import BaseVistaClient
 
@@ -32,7 +33,7 @@ def register_get_patient_allergies_tool(mcp: FastMCP, vista_client: BaseVistaCli
 
     @mcp.tool()
     async def get_patient_allergies(
-        patient_dfn: str,
+        patient_icn: str,
         station: str | None = None,
         verified_only: bool = False,
         omit_historical: bool = True,
@@ -44,12 +45,12 @@ def register_get_patient_allergies_tool(mcp: FastMCP, vista_client: BaseVistaCli
         station = station or get_default_station()
         caller_duz = get_default_duz()
 
-        # Validate DFN
-        if not validate_dfn(patient_dfn):
+        # Validate ICN
+        if not validate_icn(patient_icn):
             return AllergiesResponse(
                 success=False,
-                error="Invalid patient DFN format",
-                error_code="INVALID_DFN",
+                error="Invalid patient ICN format",
+                error_code="INVALID_ICN",
                 metadata=ResponseMetadata(
                     request_id=f"req_{int(start_time.timestamp())}",
                     performance=PerformanceMetrics(
@@ -60,12 +61,12 @@ def register_get_patient_allergies_tool(mcp: FastMCP, vista_client: BaseVistaCli
                     rpc=RpcCallMetadata(
                         rpc="VPR GET PATIENT DATA JSON",
                         context="LHS RPC CONTEXT",
-                        parameters=[{"namedArray": {"patientId": patient_dfn}}],
+                        parameters=build_icn_only_named_array_param(patient_icn),
                         duz=caller_duz,
                     ),
                     station=StationMetadata(station_number=station),
                     demographics=DemographicsMetadata(
-                        patient_dfn=patient_dfn,
+                        patient_icn=patient_icn,
                         patient_name=None,
                         patient_age=None,
                     ),
@@ -75,7 +76,7 @@ def register_get_patient_allergies_tool(mcp: FastMCP, vista_client: BaseVistaCli
         try:
             # Get patient data
             patient_data = await get_patient_data(
-                vista_client, station, patient_dfn, caller_duz
+                vista_client, station, patient_icn, caller_duz
             )
 
             # Filter allergies based on parameters
@@ -114,12 +115,12 @@ def register_get_patient_allergies_tool(mcp: FastMCP, vista_client: BaseVistaCli
                     rpc=RpcCallMetadata(
                         rpc="VPR GET PATIENT DATA JSON",
                         context="LHS RPC CONTEXT",
-                        parameters=[{"namedArray": {"patientId": patient_dfn}}],
+                        parameters=build_icn_only_named_array_param(patient_icn),
                         duz=caller_duz,
                     ),
                     station=StationMetadata(station_number=station),
                     demographics=DemographicsMetadata(
-                        patient_dfn=patient_dfn,
+                        patient_icn=patient_icn,
                         patient_name=patient_data.patient_name,
                         patient_age=patient_data.demographics.calculate_age(),
                     ),
@@ -133,19 +134,19 @@ def register_get_patient_allergies_tool(mcp: FastMCP, vista_client: BaseVistaCli
                         offset=offset,
                         limit=limit,
                         tool_name="get_patient_allergies",
-                        patient_dfn=patient_dfn,
+                        patient_icn=patient_icn,
                     ),
                 ),
             )
 
         except Exception as e:
-            logger.error(f"Error retrieving allergies for patient {patient_dfn}: {e}")
+            logger.error(f"Error retrieving allergies for patient {patient_icn}: {e}")
             end_time = datetime.now(timezone.utc)
             duration_ms = int((end_time - start_time).total_seconds() * 1000)
 
             return AllergiesResponse(
                 success=False,
-                error=f"Failed to retrieve patient allergies: {str(e)}",
+                error=f"Failed to retrieve patient allergies: {e}",
                 error_code="RETRIEVAL_ERROR",
                 metadata=ResponseMetadata(
                     request_id=f"req_{int(start_time.timestamp())}",
@@ -157,12 +158,12 @@ def register_get_patient_allergies_tool(mcp: FastMCP, vista_client: BaseVistaCli
                     rpc=RpcCallMetadata(
                         rpc="VPR GET PATIENT DATA JSON",
                         context="LHS RPC CONTEXT",
-                        parameters=[{"namedArray": {"patientId": patient_dfn}}],
+                        parameters=build_icn_only_named_array_param(patient_icn),
                         duz=caller_duz,
                     ),
                     station=StationMetadata(station_number=station),
                     demographics=DemographicsMetadata(
-                        patient_dfn=patient_dfn,
+                        patient_icn=patient_icn,
                         patient_name=None,
                         patient_age=None,
                     ),

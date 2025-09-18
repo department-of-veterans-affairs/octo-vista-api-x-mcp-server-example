@@ -21,7 +21,8 @@ from ...models.responses.tool_responses import (
     AppointmentsResponseData,
 )
 from ...services.data import get_patient_data
-from ...services.validators import validate_dfn
+from ...services.rpc import build_icn_only_named_array_param
+from ...services.validators import validate_icn
 from ...utils import get_default_duz, get_default_station, get_logger, paginate_list
 from ...vista.base import BaseVistaClient
 
@@ -33,7 +34,7 @@ def register_get_patient_appointments_tool(mcp: FastMCP, vista_client: BaseVista
 
     @mcp.tool()
     async def get_patient_appointments(
-        patient_dfn: str,
+        patient_icn: str,
         station: str | None = None,
         days_back: Annotated[int, Field(default=30, ge=0, le=3650)] = 30,
         status_filter: str | None = None,
@@ -48,8 +49,8 @@ def register_get_patient_appointments_tool(mcp: FastMCP, vista_client: BaseVista
         station = station or get_default_station()
         caller_duz = get_default_duz()
 
-        # Validate DFN
-        if not validate_dfn(patient_dfn):
+        # Validate ICN
+        if not validate_icn(patient_icn):
             md = ResponseMetadata(
                 request_id=f"req_{int(start_time.timestamp())}",
                 performance=PerformanceMetrics(
@@ -58,18 +59,18 @@ def register_get_patient_appointments_tool(mcp: FastMCP, vista_client: BaseVista
                     end_time=start_time,
                 ),
                 station=StationMetadata(station_number=station),
-                demographics=DemographicsMetadata(patient_dfn=patient_dfn),
+                demographics=DemographicsMetadata(patient_icn=patient_icn),
             )
             return AppointmentsResponse(
                 success=False,
-                error="Invalid patient DFN format. DFN must be numeric.",
+                error="Invalid patient ICN format.",
                 metadata=md,
             )
 
         try:
             # Get patient data (handles caching internally)
             patient_data = await get_patient_data(
-                vista_client, station, patient_dfn, caller_duz
+                vista_client, station, patient_icn, caller_duz
             )
 
             # Filter appointments by all criteria in a single pass
@@ -140,7 +141,7 @@ def register_get_patient_appointments_tool(mcp: FastMCP, vista_client: BaseVista
             rpc_details = RpcCallMetadata(
                 rpc="VPR GET PATIENT DATA JSON",
                 context="LHS RPC CONTEXT",
-                parameters=[{"namedArray": {"patientId": patient_dfn}}],
+                parameters=build_icn_only_named_array_param(patient_icn),
                 duz=caller_duz,
             )
 
@@ -154,7 +155,7 @@ def register_get_patient_appointments_tool(mcp: FastMCP, vista_client: BaseVista
                 station=StationMetadata(station_number=station),
                 rpc=rpc_details,
                 demographics=DemographicsMetadata(
-                    patient_dfn=patient_dfn,
+                    patient_icn=patient_icn,
                     patient_name=patient_data.patient_name,
                     patient_age=patient_data.demographics.calculate_age(),
                 ),
@@ -173,7 +174,7 @@ def register_get_patient_appointments_tool(mcp: FastMCP, vista_client: BaseVista
                     offset=offset,
                     limit=limit,
                     tool_name="get_patient_appointments",
-                    patient_dfn=patient_dfn,
+                    patient_icn=patient_icn,
                 ),
             )
 

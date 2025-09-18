@@ -1,5 +1,7 @@
 """Validators for VistA-specific identifiers."""
 
+import re
+
 
 def validate_station(station: str) -> bool:
     """Validate station number format.
@@ -44,3 +46,15 @@ def validate_dfn(dfn: str) -> bool:
         return False
     # DFN should be numeric
     return dfn.isdigit()
+
+
+def validate_icn(icn: str) -> bool:
+    """Validate ICN (patient identifier) format.
+
+    Args:
+        icn: Patient identifier
+
+    Returns:
+        True if valid, False otherwise
+    """
+    return re.match(r"^\d{10}V\d{6}$", str(icn)) is not None

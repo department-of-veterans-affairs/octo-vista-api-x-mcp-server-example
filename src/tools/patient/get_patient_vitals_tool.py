@@ -21,7 +21,8 @@ from ...models.responses.tool_responses import (
     VitalSignsResponseData,
 )
 from ...services.data import get_patient_data
-from ...services.validators import validate_dfn
+from ...services.rpc import build_icn_only_named_array_param
+from ...services.validators import validate_icn
 from ...utils import get_default_duz, get_default_station, get_logger, paginate_list
 from ...vista.base import BaseVistaClient
 
@@ -33,7 +34,7 @@ def register_get_patient_vitals_tool(mcp: FastMCP, vista_client: BaseVistaClient
 
     @mcp.tool()
     async def get_patient_vitals(
-        patient_dfn: str,
+        patient_icn: str,
         station: str | None = None,
         vital_type: str | None = None,
         n_most_recent: Annotated[int | None, Field(default=3, ge=0)] = 3,
@@ -46,8 +47,8 @@ def register_get_patient_vitals_tool(mcp: FastMCP, vista_client: BaseVistaClient
         station = station or get_default_station()
         caller_duz = get_default_duz()
 
-        # Validate DFN
-        if not validate_dfn(patient_dfn):
+        # Validate ICN
+        if not validate_icn(patient_icn):
             md = ResponseMetadata(
                 request_id=f"req_{int(start_time.timestamp())}",
                 performance=PerformanceMetrics(
@@ -56,18 +57,18 @@ def register_get_patient_vitals_tool(mcp: FastMCP, vista_client: BaseVistaClient
                     end_time=start_time,
                 ),
                 station=StationMetadata(station_number=station),
-                demographics=DemographicsMetadata(patient_dfn=patient_dfn),
+                demographics=DemographicsMetadata(patient_icn=patient_icn),
             )
             return VitalSignsResponse(
                 success=False,
-                error=f"Invalid patient DFN: {patient_dfn}",
+                error=f"Invalid patient ICN: {patient_icn}",
                 metadata=md,
             )
 
         try:
             # Get patient data (handles caching internally)
             patient_data = await get_patient_data(
-                vista_client, station, patient_dfn, caller_duz
+                vista_client, station, patient_icn, caller_duz
             )
 
             # Filter vitals
@@ -106,7 +107,7 @@ def register_get_patient_vitals_tool(mcp: FastMCP, vista_client: BaseVistaClient
             rpc_details = RpcCallMetadata(
                 rpc="VPR GET PATIENT DATA JSON",
                 context="LHS RPC CONTEXT",
-                parameters=[{"namedArray": {"patientId": patient_dfn}}],
+                parameters=build_icn_only_named_array_param(patient_icn),
                 duz=caller_duz,
             )
             md = ResponseMetadata(
@@ -119,7 +120,7 @@ def register_get_patient_vitals_tool(mcp: FastMCP, vista_client: BaseVistaClient
                 station=StationMetadata(station_number=station),
                 rpc=rpc_details,
                 demographics=DemographicsMetadata(
-                    patient_dfn=patient_dfn,
+                    patient_icn=patient_icn,
                     patient_name=patient_data.patient_name,
                     patient_age=patient_data.demographics.calculate_age(),
                 ),
@@ -133,7 +134,7 @@ def register_get_patient_vitals_tool(mcp: FastMCP, vista_client: BaseVistaClient
                     offset=offset,
                     limit=limit,
                     tool_name="get_patient_vitals",
-                    patient_dfn=patient_dfn,
+                    patient_icn=patient_icn,
                 ),
             )
 

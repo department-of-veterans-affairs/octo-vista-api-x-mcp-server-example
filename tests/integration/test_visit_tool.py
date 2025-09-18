@@ -143,7 +143,7 @@ def sample_patient_data():
         demographics=demographics,
         visits_dict={v.uid: v for v in visits},
         source_station="500",
-        source_dfn="100022",
+        source_icn="100022",
     )
 
 
@@ -168,7 +168,7 @@ class TestVisitToolIntegration:
             # Test parameters
             station = "500"
             caller_duz = "12345"
-            patient_dfn = "100022"
+            patient_icn = "100022"
 
             # Mock the utility functions
             with (
@@ -181,20 +181,18 @@ class TestVisitToolIntegration:
                     return_value=caller_duz,
                 ),
                 patch(
-                    "src.tools.patient.get_patient_visits_tool.validate_dfn",
+                    "src.tools.patient.get_patient_visits_tool.validate_icn",
                     return_value=True,
                 ),
                 patch("time.time", return_value=time.time()),
             ):
                 result = await get_patient_visits_impl(
-                    patient_dfn=patient_dfn,
+                    patient_icn=patient_icn,
                     station=station,
                     vista_client=mock_vista_client,
                 )
 
                 assert result.success is True
-                assert result.data.patient_dfn == "100022"
-                assert result.data.patient_name is not None
                 assert result.data.summary is not None
                 assert result.data.all_visits is not None
 
@@ -226,13 +224,13 @@ class TestVisitToolIntegration:
                     return_value="12345",
                 ),
                 patch(
-                    "src.tools.patient.get_patient_visits_tool.validate_dfn",
+                    "src.tools.patient.get_patient_visits_tool.validate_icn",
                     return_value=True,
                 ),
                 patch("time.time", return_value=time.time()),
             ):
                 result = await get_patient_visits_impl(
-                    patient_dfn="100022",
+                    patient_icn="100022",
                     station="500",
                     visit_type="inpatient",
                     active_only=False,
@@ -278,13 +276,13 @@ class TestVisitToolIntegration:
                     return_value="12345",
                 ),
                 patch(
-                    "src.tools.patient.get_patient_visits_tool.validate_dfn",
+                    "src.tools.patient.get_patient_visits_tool.validate_icn",
                     return_value=True,
                 ),
                 patch("time.time", return_value=time.time()),
             ):
                 result = await get_patient_visits_impl(
-                    patient_dfn="999999",
+                    patient_icn="999999",
                     station="500",
                     vista_client=mock_vista_client,
                 )
@@ -317,13 +315,13 @@ class TestVisitToolIntegration:
                     return_value="12345",
                 ),
                 patch(
-                    "src.tools.patient.get_patient_visits_tool.validate_dfn",
+                    "src.tools.patient.get_patient_visits_tool.validate_icn",
                     return_value=True,
                 ),
                 patch("time.time", return_value=time.time()),
             ):
                 result = await get_patient_visits_impl(
-                    patient_dfn="100022",
+                    patient_icn="100022",
                     station="500",
                     days_back=0,  # Invalid
                     vista_client=mock_vista_client,
@@ -357,20 +355,20 @@ class TestVisitToolIntegration:
                     return_value="12345",
                 ),
                 patch(
-                    "src.tools.patient.get_patient_visits_tool.validate_dfn",
+                    "src.tools.patient.get_patient_visits_tool.validate_icn",
                     return_value=False,
                 ),
                 patch("time.time", return_value=time.time()),
             ):
                 result = await get_patient_visits_impl(
-                    patient_dfn="invalid-dfn",
+                    patient_icn="invalid-dfn",
                     station="500",
                     vista_client=mock_vista_client,
                 )
 
                 assert result.success is False
                 assert result.error is not None
-                assert "Invalid patient DFN format" in result.error
+                assert "Invalid patient ICN format" in result.error
 
     @pytest.mark.asyncio
     async def test_get_patient_visits_metadata(
@@ -396,13 +394,13 @@ class TestVisitToolIntegration:
                     return_value="12345",
                 ),
                 patch(
-                    "src.tools.patient.get_patient_visits_tool.validate_dfn",
+                    "src.tools.patient.get_patient_visits_tool.validate_icn",
                     return_value=True,
                 ),
                 patch("time.time", return_value=time.time()),
             ):
                 result = await get_patient_visits_impl(
-                    patient_dfn="100022",
+                    patient_icn="100022",
                     station="500",
                     vista_client=mock_vista_client,
                 )
@@ -453,13 +451,13 @@ class TestVisitToolIntegration:
                     return_value="12345",
                 ),
                 patch(
-                    "src.tools.patient.get_patient_visits_tool.validate_dfn",
+                    "src.tools.patient.get_patient_visits_tool.validate_icn",
                     return_value=True,
                 ),
                 patch("time.time", return_value=time.time()),
             ):
                 result = await get_patient_visits_impl(
-                    patient_dfn="100022",
+                    patient_icn="100022",
                     station="500",
                     vista_client=mock_vista_client,
                 )
@@ -468,10 +466,6 @@ class TestVisitToolIntegration:
 
                 # Check patient structure
                 patient = result.data
-                assert patient.patient_name is not None
-                assert patient.patient_dfn is not None
-                assert patient.patient_age is not None
-                assert patient.patient_gender is not None
 
                 # Check visits structure
                 assert patient.summary is not None
@@ -514,13 +508,13 @@ class TestVisitToolIntegration:
                     return_value="12345",
                 ),
                 patch(
-                    "src.tools.patient.get_patient_visits_tool.validate_dfn",
+                    "src.tools.patient.get_patient_visits_tool.validate_icn",
                     return_value=True,
                 ),
                 patch("time.time", return_value=time.time()),
             ):
                 result = await get_patient_visits_impl(
-                    patient_dfn="100022",
+                    patient_icn="100022",
                     station="500",
                     vista_client=mock_vista_client,
                 )
@@ -562,13 +556,13 @@ class TestVisitToolIntegration:
                         return_value="12345",
                     ),
                     patch(
-                        "src.tools.patient.get_patient_visits_tool.validate_dfn",
+                        "src.tools.patient.get_patient_visits_tool.validate_icn",
                         return_value=True,
                     ),
                     patch("time.time", return_value=time.time()),
                 ):
                     result = await get_patient_visits_impl(
-                        patient_dfn="100022",
+                        patient_icn="100022",
                         station="500",
                         days_back=days_back,
                         vista_client=mock_vista_client,
@@ -611,13 +605,13 @@ class TestVisitToolIntegration:
                         return_value="12345",
                     ),
                     patch(
-                        "src.tools.patient.get_patient_visits_tool.validate_dfn",
+                        "src.tools.patient.get_patient_visits_tool.validate_icn",
                         return_value=True,
                     ),
                     patch("time.time", return_value=time.time()),
                 ):
                     result = await get_patient_visits_impl(
-                        patient_dfn="100022",
+                        patient_icn="100022",
                         station="500",
                         visit_type=visit_type,
                         vista_client=mock_vista_client,
@@ -657,13 +651,13 @@ class TestVisitToolIntegration:
                     return_value="12345",
                 ),
                 patch(
-                    "src.tools.patient.get_patient_visits_tool.validate_dfn",
+                    "src.tools.patient.get_patient_visits_tool.validate_icn",
                     return_value=True,
                 ),
                 patch("time.time", return_value=time.time()),
             ):
                 result = await get_patient_visits_impl(
-                    patient_dfn="100022",
+                    patient_icn="100022",
                     station="500",
                     active_only=True,
                     vista_client=mock_vista_client,
@@ -689,13 +683,13 @@ class TestVisitToolIntegration:
                     return_value="12345",
                 ),
                 patch(
-                    "src.tools.patient.get_patient_visits_tool.validate_dfn",
+                    "src.tools.patient.get_patient_visits_tool.validate_icn",
                     return_value=True,
                 ),
                 patch("time.time", return_value=time.time()),
             ):
                 result = await get_patient_visits_impl(
-                    patient_dfn="100022",
+                    patient_icn="100022",
                     station="500",
                     active_only=False,
                     vista_client=mock_vista_client,

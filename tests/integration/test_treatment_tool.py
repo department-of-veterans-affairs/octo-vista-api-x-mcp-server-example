@@ -131,7 +131,7 @@ def sample_patient_data():
         demographics=demographics,
         treatments_dict={t.uid: t for t in treatments},
         source_station="500",
-        source_dfn="100024",
+        source_icn="100024",
     )
 
 
@@ -163,7 +163,7 @@ class TestTreatmentTool:
             start_time = time.time()
             station = "500"
             caller_duz = "12345"
-            patient_dfn = "100024"
+            patient_icn = "100024"
 
             # Mock the utility functions
             with (
@@ -176,14 +176,14 @@ class TestTreatmentTool:
                     return_value=caller_duz,
                 ),
                 patch(
-                    "src.tools.patient.get_patient_treatments_tool.validate_dfn",
+                    "src.tools.patient.get_patient_treatments_tool.validate_icn",
                     return_value=True,
                 ),
                 patch("time.time", return_value=start_time),
             ):
                 # Get patient data (handles caching internally)
                 patient_data = await mock_get_data(
-                    mock_vista_client, station, patient_dfn, caller_duz
+                    mock_vista_client, station, patient_icn, caller_duz
                 )
 
                 # Verify we have treatments
@@ -352,7 +352,7 @@ class TestTreatmentTool:
                     return_value="12345",
                 ),
                 patch(
-                    "src.tools.patient.get_patient_treatments_tool.validate_dfn",
+                    "src.tools.patient.get_patient_treatments_tool.validate_icn",
                     return_value=True,
                 ),
             ):
@@ -420,7 +420,7 @@ class TestTreatmentTool:
                     return_value="12345",
                 ),
                 patch(
-                    "src.tools.patient.get_patient_treatments_tool.validate_dfn",
+                    "src.tools.patient.get_patient_treatments_tool.validate_icn",
                     return_value=True,
                 ),
                 patch(
@@ -567,7 +567,7 @@ class TestTreatmentTool:
                     return_value="12345",
                 ),
                 patch(
-                    "src.tools.patient.get_patient_treatments_tool.validate_dfn",
+                    "src.tools.patient.get_patient_treatments_tool.validate_icn",
                     return_value=True,
                 ),
                 patch(
@@ -581,14 +581,14 @@ class TestTreatmentTool:
                 mock_time.return_value = 1725451200.0  # Fixed timestamp
 
                 # Simulate calling the tool function twice with days_back=100
-                patient_dfn = "100024"
+                patient_icn = "100024"
                 days_back = 100
                 station = "500"
                 caller_duz = "12345"
 
                 # First call - simulate the tool logic
                 patient_data_1 = await mock_get_data(
-                    mock_vista_client, station, patient_dfn, caller_duz
+                    mock_vista_client, station, patient_icn, caller_duz
                 )
 
                 # Apply days_back filtering (same logic as the actual tool)
@@ -603,7 +603,7 @@ class TestTreatmentTool:
 
                 # Second call - should be identical
                 patient_data_2 = await mock_get_data(
-                    mock_vista_client, station, patient_dfn, caller_duz
+                    mock_vista_client, station, patient_icn, caller_duz
                 )
 
                 treatments_2 = patient_data_2.treatments
