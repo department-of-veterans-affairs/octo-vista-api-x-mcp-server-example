@@ -81,14 +81,6 @@ def initialize_server():
     register_patient_tools(mcp, vista_client)
     register_system_tools(mcp, vista_client)
 
-    # # Register resources
-    # log_mcp_message(mcp, "info", "Registering resources...")
-    # register_resources(mcp)
-
-    # # Register prompts
-    # log_mcp_message(mcp, "info", "Registering prompts...")
-    # register_prompts(mcp)
-
     log_mcp_message(mcp, "info", "Vista API MCP Server initialized successfully")
 
 
