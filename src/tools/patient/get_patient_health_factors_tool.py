@@ -104,6 +104,7 @@ def register_get_patient_health_factors_tool(
                     patient_icn=patient_icn,
                     patient_name=patient_data.patient_name,
                     patient_age=patient_data.demographics.calculate_age(),
+                    patient_gender=patient_data.demographics.gender_name,
                 ),
                 filters=HealthFactorsFiltersMetadata(
                     category_filter=category_filter,

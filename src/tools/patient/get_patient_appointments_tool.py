@@ -158,6 +158,7 @@ def register_get_patient_appointments_tool(mcp: FastMCP, vista_client: BaseVista
                     patient_icn=patient_icn,
                     patient_name=patient_data.patient_name,
                     patient_age=patient_data.demographics.calculate_age(),
+                    patient_gender=patient_data.demographics.gender_name,
                 ),
                 filters=AppointmentsFiltersMetadata(
                     days_back=days_back,
