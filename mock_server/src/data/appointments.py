@@ -5,6 +5,8 @@ Appointment data for test patients
 from datetime import datetime, timedelta
 from typing import Any
 
+from src.data.test_patients import get_patient_by_dfn_or_icn
+
 
 # Generate realistic appointment data
 def generate_appointment_date(days_offset: int) -> str:
@@ -376,7 +378,6 @@ def get_appointments_for_clinic(
     clinic_ien: str, _start_date: str, _end_date: str
 ) -> list[dict[str, Any]]:
     """Get appointments for a clinic within date range"""
-    from src.data.test_patients import TEST_PATIENTS
 
     appointments = []
 
@@ -389,7 +390,7 @@ def get_appointments_for_clinic(
                 appt_copy["patientIEN"] = patient_dfn  # Use patientIEN for consistency
 
                 # Get patient name from test patients
-                patient = TEST_PATIENTS.get(patient_dfn, {})
+                patient = get_patient_by_dfn_or_icn(patient_dfn)
                 appt_copy["patientName"] = patient.get("name", "UNKNOWN,PATIENT")
 
                 appointments.append(appt_copy)

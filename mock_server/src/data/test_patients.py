@@ -2,12 +2,15 @@
 Comprehensive test patients with diverse veteran scenarios
 """
 
+import re
 from typing import Any
 
 # Test patients covering various veteran demographics and conditions
-TEST_PATIENTS: dict[str, dict[str, Any]] = {
+TEST_PATIENTS: list[dict[str, Any]] = [
     # Vietnam Era Veteran with PTSD and Agent Orange exposure
-    "1000220000V123456": {
+    {
+        "icn": "1000220000V123456",
+        "dfn": "100022",
         "name": "ANDERSON,JAMES ROBERT",
         "ssn": "***-**-6789",
         "dob": "19450315",
@@ -54,7 +57,9 @@ TEST_PATIENTS: dict[str, dict[str, Any]] = {
         "flags": ["COMBAT VETERAN", "AGENT ORANGE EXPOSURE", "HIGH RISK FOR SUICIDE"],
     },
     # Female Gulf War Veteran with MST
-    "1000000219V596118": {
+    {
+        "icn": "1000000219V596118",
+        "dfn": "100023",
         "name": "MARTINEZ,MARIA ELENA",
         "ssn": "***-**-5678",
         "dob": "19700522",
@@ -101,7 +106,9 @@ TEST_PATIENTS: dict[str, dict[str, Any]] = {
         "flags": ["MILITARY SEXUAL TRAUMA", "WOMEN'S HEALTH", "GULF WAR VETERAN"],
     },
     # OEF/OIF Veteran with Polytrauma
-    "1000240000V123456": {
+    {
+        "icn": "1000240000V123456",
+        "dfn": "100024",
         "name": "THOMPSON,MICHAEL DAVID",
         "ssn": "***-**-4567",
         "dob": "19850718",
@@ -150,7 +157,9 @@ TEST_PATIENTS: dict[str, dict[str, Any]] = {
         ],
     },
     # Elderly Korean War Veteran in Long-term Care
-    "1000250000V123456": {
+    {
+        "icn": "1000250000V123456",
+        "dfn": "100025",
         "name": "WILLIAMS,ROBERT EARL",
         "ssn": "***-**-3456",
         "dob": "19300825",
@@ -203,7 +212,9 @@ TEST_PATIENTS: dict[str, dict[str, Any]] = {
         ],
     },
     # Homeless Veteran with Substance Abuse
-    "1000260000V123456": {
+    {
+        "icn": "1000260000V123456",
+        "dfn": "100026",
         "name": "JOHNSON,DAVID WAYNE",
         "ssn": "***-**-2345",
         "dob": "19750412",
@@ -246,7 +257,9 @@ TEST_PATIENTS: dict[str, dict[str, Any]] = {
         "flags": ["HOMELESS", "SUBSTANCE ABUSE", "HIGH RISK", "CASE MANAGEMENT"],
     },
     # Recent Female Veteran with Mental Health Needs
-    "1000270000V123456": {
+    {
+        "icn": "1000270000V123456",
+        "dfn": "100027",
         "name": "DAVIS,JENNIFER LYNN",
         "ssn": "***-**-1234",
         "dob": "19950228",
@@ -298,7 +311,9 @@ TEST_PATIENTS: dict[str, dict[str, Any]] = {
         ],
     },
     # Rural Veteran with Telehealth Needs
-    "1000280000V123456": {
+    {
+        "icn": "1000280000V123456",
+        "dfn": "100028",
         "name": "WILSON,GEORGE HENRY",
         "ssn": "***-**-0123",
         "dob": "19550610",
@@ -350,7 +365,9 @@ TEST_PATIENTS: dict[str, dict[str, Any]] = {
         ],
     },
     # Veteran with Complex Medical Needs
-    "1000290000V123456": {
+    {
+        "icn": "1000290000V123456",
+        "dfn": "100029",
         "name": "GARCIA,ANTONIO JOSE",
         "ssn": "***-**-9012",
         "dob": "19600118",
@@ -401,13 +418,19 @@ TEST_PATIENTS: dict[str, dict[str, Any]] = {
             "HIGH UTILIZER",
         ],
     },
-}
+]
 
 
 def get_patient_by_dfn_or_icn(dfn_or_icn: str) -> dict[str, Any]:
-    """Get patient data by DFN"""
-    return TEST_PATIENTS.get(
-        dfn_or_icn,
+    """Get patient data by DFN or ICN"""
+    compare_key = (
+        "icn"
+        if re.match(r"^(\d{16}|\d{9,10})V(\d{12}|\d{6})$", str(dfn_or_icn)) is not None
+        else "dfn"
+    )
+
+    return next(
+        (patient for patient in TEST_PATIENTS if patient[compare_key] == dfn_or_icn),
         {
             "name": "TEST,PATIENT",
             "ssn": "***-**-0000",
@@ -430,11 +453,12 @@ def search_patients_by_name(prefix: str) -> list[dict[str, Any]]:
     prefix_upper = prefix.upper()
     results = []
 
-    for dfn, patient in TEST_PATIENTS.items():
+    for patient in TEST_PATIENTS:
         if patient["name"].upper().startswith(prefix_upper):
             results.append(
                 {
-                    "dfn": dfn,
+                    "dfn": patient["dfn"],
+                    "icn": patient["icn"],
                     "name": patient["name"],
                     "ssn": patient["ssn"],
                     "dob": patient["dob"],

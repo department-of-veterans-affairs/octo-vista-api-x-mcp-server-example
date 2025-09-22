@@ -150,11 +150,8 @@ def register_get_patient_povs_tool(mcp: FastMCP, vista_client: BaseVistaClient):
                     parameters=build_icn_only_named_array_param(patient_icn),
                     duz=caller_duz,
                 ),
-                demographics=DemographicsMetadata(
-                    patient_icn=patient_icn,
-                    patient_name=patient_data.patient_name,
-                    patient_age=patient_data.demographics.calculate_age(),
-                    patient_gender=patient_data.demographics.gender_name,
+                demographics=DemographicsMetadata.from_patient_demographics(
+                    patient_data.demographics,
                 ),
                 pagination=PaginationMetadata(
                     total_available_items=total_filtered_povs,

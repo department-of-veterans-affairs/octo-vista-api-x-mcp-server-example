@@ -41,7 +41,7 @@ class PatientHandlers:
         return cls._vpr_template
 
     @staticmethod
-    def _inject_patient_data(vpr_data: dict, dfn_or_icn: str, patient: dict) -> dict:
+    def _inject_patient_data(vpr_data: dict, patient: dict) -> dict:
         """
         Inject patient-specific data into VPR template.
         This modifies UIDs and patient demographics while preserving the rest of the structure.
@@ -65,7 +65,10 @@ class PatientHandlers:
             patient_item["genderName"] = (
                 "Male" if patient["gender"] == "M" else "Female"
             )
-            patient_item["localId"] = int(dfn_or_icn[:10])
+
+            patient_item["dfn"] = patient["dfn"]
+            patient_item["icn"] = patient["icn"]
+            patient_item["localId"] = int(patient["dfn"])
 
             # Update address
             # Parse address from single string format "street, city, state zip"
@@ -139,13 +142,15 @@ class PatientHandlers:
                 vs = patient["veteranStatus"]
                 patient_item["veteran"] = {
                     "isVet": 1,
-                    "lrdfn": int(dfn_or_icn[:10]),  # Using DFN as lrdfn for simplicity
+                    "lrdfn": int(patient["dfn"]),  # Using DFN as lrdfn for simplicity
                     "serviceConnected": vs.get("serviceConnected", False),
                     "serviceConnectionPercent": vs.get("serviceConnectedPercent", 0),
                 }
 
             # Update patient UID
-            patient_item["uid"] = f"urn:va:patient:84F0:{dfn_or_icn}:{dfn_or_icn}"
+            patient_item["uid"] = (
+                f"urn:va:patient:84F0:{patient['dfn']}:{patient['dfn']}"
+            )
 
             # Update briefId (construct from name)
             name_parts = patient["name"].split(",")
@@ -207,15 +212,19 @@ class PatientHandlers:
         for item in result["data"]["items"][1:]:
             # Replace localId 237 with actual DFN in UIDs
             if "uid" in item and isinstance(item["uid"], str):
-                item["uid"] = item["uid"].replace(":237:", f":{dfn_or_icn}:")
+                item["uid"] = item["uid"].replace(":237:", f":{patient['dfn']}:")
 
             # Update any orderUid references
             if "orderUid" in item and isinstance(item["orderUid"], str):
-                item["orderUid"] = item["orderUid"].replace(":237:", f":{dfn_or_icn}:")
+                item["orderUid"] = item["orderUid"].replace(
+                    ":237:", f":{patient['dfn']}:"
+                )
 
             # Update groupUid for lab results
             if "groupUid" in item and isinstance(item["groupUid"], str):
-                item["groupUid"] = item["groupUid"].replace(":237:", f":{dfn_or_icn}:")
+                item["groupUid"] = item["groupUid"].replace(
+                    ":237:", f":{patient['dfn']}:"
+                )
 
         return result
 
@@ -336,6 +345,9 @@ class PatientHandlers:
                         # Domains are semicolon-separated
                         _ = param_value.split(";")  # domains variable not used
 
+        if not patient_id:
+            return {"error": "Patient ID not found"}
+
         # Get patient data
         patient = get_patient_by_dfn_or_icn(patient_id)
 
@@ -347,7 +359,7 @@ class PatientHandlers:
             template = cls._load_vpr_template()
 
             # Inject patient-specific data
-            result = cls._inject_patient_data(template, patient_id, patient)
+            result = cls._inject_patient_data(template, patient)
 
             # If domains were specified, we could filter items here
             # For now, return all data as the template includes comprehensive patient data

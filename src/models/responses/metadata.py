@@ -14,6 +14,7 @@ from pydantic import (
 
 from ...utils import get_logger
 from ..base import BaseVistaModel
+from ..patient.demographics import PatientDemographics
 from ..utils import format_datetime_for_mcp_response
 
 logger = get_logger()
@@ -239,9 +240,21 @@ class DemographicsMetadata(BaseVistaModel):
     """Patient demographics information"""
 
     patient_icn: str | None = Field(default=None, description="Patient ICN identifier")
+    patient_dfn: str | None = Field(default=None, description="Patient DFN identifier")
     patient_name: str | None = Field(default=None, description="Patient full name")
     patient_age: int | None = Field(default=None, description="Patient age in years")
     patient_gender: str | None = Field(default=None, description="Patient gender")
+
+    @classmethod
+    def from_patient_demographics(cls, demographics: PatientDemographics):
+        """Create demographics from patient data"""
+        return cls(
+            patient_name=demographics.full_name,
+            patient_age=demographics.age,
+            patient_gender=demographics.gender,
+            patient_icn=demographics.icn,
+            patient_dfn=demographics.dfn,
+        )
 
 
 class PerformanceMetrics(BaseVistaModel):

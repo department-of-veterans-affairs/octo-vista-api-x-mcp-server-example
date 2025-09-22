@@ -103,11 +103,8 @@ async def get_patient_procedures_impl(
             ),
             station=StationMetadata(station_number=station),
             rpc=rpc_details,
-            demographics=DemographicsMetadata(
-                patient_icn=patient_icn,
-                patient_name=patient_data.patient_name,
-                patient_age=patient_data.demographics.calculate_age(),
-                patient_gender=patient_data.demographics.gender_name,
+            demographics=DemographicsMetadata.from_patient_demographics(
+                patient_data.demographics,
             ),
             filters=ProceduresFiltersMetadata(
                 date_from=date_from,

@@ -250,7 +250,7 @@ class PatientDataCollection(BasePatientModel):
             "patient": {
                 "name": self.patient_name,
                 "icn": self.patient_icn,
-                "age": self.demographics.calculate_age(),
+                "age": self.demographics.age,
                 "gender": self.demographics.gender_name,
                 "ssn": self.demographics.ssn,
                 "phone": self.demographics.primary_phone,

@@ -30,16 +30,16 @@ Use these prompts to quickly verify the MCP server is working correctly:
 
 ### Test Patients
 
-| Patient Name           | ICN               | Description                | Key Conditions                        |
-| ---------------------- | ----------------- | -------------------------- | ------------------------------------- |
-| ANDERSON,JAMES ROBERT  | 1000220000V123456 | Vietnam Era Veteran        | PTSD, Diabetes Type 2, Hypertension   |
-| MARTINEZ,MARIA ELENA   | 1000000219V596118 | Female Gulf War Veteran    | Fibromyalgia, Depression, MST         |
-| THOMPSON,MICHAEL DAVID | 1000240000V123456 | OEF/OIF Veteran            | Polytrauma, TBI, Amputation           |
-| WILLIAMS,ROBERT EARL   | 1000250000V123456 | Elderly Korean War Veteran | Dementia, Former POW, Long-term care  |
-| JOHNSON,DAVID WAYNE    | 1000260000V123456 | Homeless Veteran           | Substance abuse, Mental health        |
-| DAVIS,JENNIFER LYNN    | 1000270000V123456 | Recent Female Veteran      | Transition assistance, Women's health |
-| WILSON,GEORGE HENRY    | 1000280000V123456 | Rural Veteran              | Telehealth, Travel eligible           |
-| GARCIA,ANTONIO JOSE    | 1000290000V123456 | Complex Medical Needs      | Dialysis, Transplant candidate        |
+| Patient Name           | ICN               | DFN | Description                | Key Conditions                        |
+| ---------------------- | ----------------- | --- | -------------------------- | ------------------------------------- |
+| ANDERSON,JAMES ROBERT  | 1000220000V123456 | 100022 | Vietnam Era Veteran        | PTSD, Diabetes Type 2, Hypertension   |
+| MARTINEZ,MARIA ELENA   | 1000000219V596118 | 100023 | Female Gulf War Veteran    | Fibromyalgia, Depression, MST         |
+| THOMPSON,MICHAEL DAVID | 1000240000V123456 | 100024 | OEF/OIF Veteran            | Polytrauma, TBI, Amputation           |
+| WILLIAMS,ROBERT EARL   | 1000250000V123456 | 100025 | Elderly Korean War Veteran | Dementia, Former POW, Long-term care  |
+| JOHNSON,DAVID WAYNE    | 1000260000V123456 | 100026 | Homeless Veteran           | Substance abuse, Mental health        |
+| DAVIS,JENNIFER LYNN    | 1000270000V123456 | 100027 | Recent Female Veteran      | Transition assistance, Women's health |
+| WILSON,GEORGE HENRY    | 1000280000V123456 | 100028 | Rural Veteran              | Telehealth, Travel eligible           |
+| GARCIA,ANTONIO JOSE    | 1000290000V123456 | 100029 | Complex Medical Needs      | Dialysis, Transplant candidate        |
 
 ### Test Credentials
 

@@ -148,7 +148,6 @@ class PatientDemographics(BasePatientModel):
 
     # Basic demographics
     date_of_birth: date = Field(alias="dateOfBirth")
-    age: int | None = None
     gender_code: str = Field(alias="genderCode")
     gender_name: str = Field(alias="genderName")
 
@@ -185,6 +184,18 @@ class PatientDemographics(BasePatientModel):
     facilities: list[dict] = Field(default_factory=list)
     pc_team_members: list[dict] = Field(default_factory=list, alias="pcTeamMembers")
     eligibility: list[dict] = Field(default_factory=list)
+
+    @property
+    def age(self) -> int:
+        """Calculate age"""
+        now = datetime.now(UTC)
+        birthday = self.date_of_birth
+
+        return (
+            now.year
+            - birthday.year
+            - ((now.month, now.day) < (birthday.month, birthday.day))
+        )
 
     @field_validator("gender_code", mode="before")
     @classmethod
@@ -340,19 +351,3 @@ class PatientDemographics(BasePatientModel):
     def has_high_risk_flags(self) -> bool:
         """Check if patient has any high-risk flags"""
         return any(flag.is_high_risk for flag in self.flags)
-
-    def calculate_age(self, as_of: datetime | None = None) -> int:
-        """Calculate patient age"""
-        if as_of is None:
-            as_of = datetime.now(UTC)
-
-        age = as_of.year - self.date_of_birth.year
-
-        # Adjust if birthday hasn't occurred this year
-        if (as_of.month, as_of.day) < (
-            self.date_of_birth.month,
-            self.date_of_birth.day,
-        ):
-            age -= 1
-
-        return age

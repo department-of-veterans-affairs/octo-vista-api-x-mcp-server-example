@@ -66,7 +66,7 @@ RPC_HANDLERS = {
 @rpc_router.post("/{stationNo}/users/{duz}/rpc/invoke", response_model=RpcResponseX)
 async def invoke_rpc(
     stationNo: str, duz: str, request: Request, rpc_request: RpcRequestX
-) -> RpcResponseX:
+) -> RpcResponseX | None:
     """
     Execute VistA RPC.
     Matches Vista API X /vista-sites/{stationNo}/users/{duz}/rpc/invoke endpoint.

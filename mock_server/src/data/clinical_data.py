@@ -402,7 +402,7 @@ PATIENT_MEDICATIONS: dict[str, list[dict[str, Any]]] = {
 }
 
 # Vital Signs by patient
-PATIENT_VITALS: dict[str, list[dict[str, any]]] = {
+PATIENT_VITALS: dict[str, list[dict[str, Any]]] = {
     "100022": [
         {
             "date": "20240115T0800",
