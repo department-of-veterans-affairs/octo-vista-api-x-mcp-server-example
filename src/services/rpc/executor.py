@@ -56,6 +56,10 @@ async def execute_rpc(
         if json_result:
             rpc_kwargs["json_result"] = json_result
 
+        logger.debug(
+            f"RPC Request - Name: {rpc_name}, Station: {station}, DUZ: {caller_duz}"
+        )
+        logger.debug(f"RPC kwargs: {rpc_kwargs}")
         # Invoke RPC
         result = await vista_client.invoke_rpc(**rpc_kwargs)
 
