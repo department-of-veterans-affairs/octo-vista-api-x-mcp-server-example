@@ -534,6 +534,47 @@ def run_lint():
     print("✅ Linting complete")
 
 
+def run_setup():
+    """Run full setup using scripts/setup.py"""
+    setup_script = Path(__file__).parent / "scripts" / "setup.py"
+    if not setup_script.exists():
+        print("❌ setup.py script not found")
+        sys.exit(1)
+
+    print("🔧 Running setup script...")
+    run_command([sys.executable, str(setup_script)])
+    print("✅ Setup complete")
+
+
+def run_check():
+    """Run lint/format/type/test checks without modifying files"""
+    print("🧪 Running full check suite (ruff, black --check, mypy, pytest)...")
+
+    use_uv = shutil.which("uv") is not None
+    python_exe = get_python_exe()
+
+    if use_uv:
+        commands = [
+            ("Ruff", ["uv", "run", "ruff", "check"]),
+            ("Black --check", ["uv", "run", "black", "--check", "."]),
+            ("Mypy", ["uv", "run", "mypy"]),
+            ("Pytest", ["uv", "run", "pytest"]),
+        ]
+    else:
+        commands = [
+            ("Ruff", [python_exe, "-m", "ruff", "check"]),
+            ("Black --check", [python_exe, "-m", "black", "--check", "."]),
+            ("Mypy", [python_exe, "-m", "mypy"]),
+            ("Pytest", [python_exe, "-m", "pytest"]),
+        ]
+
+    for label, cmd in commands:
+        print(f"  Running {label}...")
+        run_command(cmd)
+
+    print("✅ All checks passed")
+
+
 def stop_mock():
     """Stop mock server containers"""
     print("🛑 Stopping mock server...")
@@ -797,6 +838,7 @@ Usage: python run.py <command>
 
 Commands:
   setup           - Setup virtual environment and install dependencies
+  check           - Run lint/format/type/test checks (no auto-fixes)
   dev             - Run MCP server (stdio + HTTP, with inspector)
   dev-with-mock   - Same as dev but with mock Vista API
   test            - Run tests with pytest
@@ -832,7 +874,8 @@ def main():
     command = sys.argv[1].lower()
 
     commands = {
-        "setup": setup_venv,
+        "setup": run_setup,
+        "check": run_check,
         "dev": run_dev,
         "dev-with-mock": run_dev_with_mock,
         "test": run_test,
