@@ -1,4 +1,4 @@
-"""System domain tools"""
+"""System domain tools."""
 
 from .system import register_system_tools
 

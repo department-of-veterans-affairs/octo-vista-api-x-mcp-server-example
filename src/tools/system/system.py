@@ -1,9 +1,11 @@
 """System-level MCP tools"""
 
 import logging
+import os
+import subprocess
 from typing import Any
 
-from mcp.server.fastmcp import FastMCP
+from fastmcp import Context, FastMCP
 
 from src.services.validators.vista_validators import validate_duz
 
@@ -20,6 +22,7 @@ from ...utils import (
     build_metadata,
     get_default_duz,
     get_default_station,
+    resolve_vista_context,
 )
 from ...vista.base import BaseVistaClient
 
@@ -30,13 +33,136 @@ def register_system_tools(mcp: FastMCP, vista_client: BaseVistaClient):
     """Register system tools with the MCP server"""
 
     @mcp.tool()
+    async def get_system_info(ctx: Context | None = None) -> dict[str, Any]:
+        """Return high-level server diagnostics."""
+        try:
+            cache_status: dict[str, Any] = {}
+            try:
+                from src.services.cache.local_cache_manager import (
+                    get_local_cache_status,
+                )
+
+                cache_status = get_local_cache_status()
+            except ImportError:
+                cache_status = {"error": "Local cache manager not available"}
+
+            info: dict[str, Any] = {
+                "status": "healthy",
+                "server": "Vista API MCP Server",
+                "cache": cache_status,
+                "vista_client": {
+                    "configured": bool(getattr(vista_client, "base_url", "")),
+                    "base_url": getattr(vista_client, "base_url", "not configured"),
+                    "auth_url": getattr(vista_client, "auth_url", "not configured"),
+                },
+            }
+
+            if ctx is not None:
+                vista_meta = info["vista_client"]
+                await ctx.info(
+                    "System info requested",
+                    extra={"vista_configured": vista_meta["configured"]},
+                )
+
+            return info
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.error("Error getting system info", exc_info=exc)
+            return {"status": "error", "error": str(exc)}
+
+    @mcp.tool()
+    async def get_cache_status(ctx: Context | None = None) -> dict[str, Any]:
+        """Provide cache configuration details."""
+        try:
+            from src.config import get_cache_config
+            from src.services.cache.local_cache_manager import get_local_cache_status
+
+            cache_config = get_cache_config()
+            local_status = get_local_cache_status()
+
+            payload = {
+                "cache_config": cache_config,
+                "local_status": local_status,
+                "environment": {
+                    "CACHE_BACKEND": os.getenv("CACHE_BACKEND", "not-set"),
+                    "LOCAL_CACHE_MONITORING": os.getenv(
+                        "LOCAL_CACHE_MONITORING", "false"
+                    ),
+                },
+            }
+
+            if ctx is not None:
+                await ctx.debug(
+                    "Provided cache status",
+                    extra={"backend": payload["environment"]["CACHE_BACKEND"]},
+                )
+
+            return payload
+        except ImportError:
+            return {
+                "error": "Cache services not available",
+                "message": "Local cache manager or config not available",
+            }
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.error("Error getting cache status", exc_info=exc)
+            return {"error": str(exc)}
+
+    @mcp.tool()
+    async def restart_local_cache(ctx: Context | None = None) -> dict[str, Any]:
+        """Restart local cache infrastructure if present."""
+        try:
+            from src.services.cache.local_cache_manager import local_cache_manager
+
+            compose_file = local_cache_manager.compose_file
+
+            if compose_file.exists():
+                result = subprocess.run(
+                    f"docker-compose -f {compose_file} down",
+                    shell=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+
+                if result.returncode == 0:
+                    logger.info("Stopped existing local cache containers")
+                else:
+                    logger.warning("Failed to stop cache containers: %s", result.stderr)
+
+            success = local_cache_manager.initialize_local_cache()
+            status = local_cache_manager.get_cache_status()
+
+            message = (
+                "Local cache restarted" if success else "Failed to restart local cache"
+            )
+
+            if ctx is not None:
+                await ctx.info(message)
+
+            return {
+                "success": success,
+                "message": message,
+                "status": status,
+            }
+
+        except ImportError:
+            return {"error": "Local cache manager not available"}
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.error("Error restarting local cache", exc_info=exc)
+            return {"error": str(exc)}
+
+    @mcp.tool()
     async def get_user_profile(
         user_duz: str | None = None,
         station: str | None = None,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Get Vista user profile information."""
-        station = station or get_default_station()
-        caller_duz = get_default_duz()
+        station, caller_duz = resolve_vista_context(
+            ctx,
+            station_arg=station,
+            default_station=get_default_station,
+            default_duz=get_default_duz,
+        )
         target_duz = user_duz or caller_duz
 
         # Validate DUZ
@@ -118,10 +244,15 @@ def register_system_tools(mcp: FastMCP, vista_client: BaseVistaClient):
     @mcp.tool()
     async def heartbeat(
         station: str | None = None,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Check Vista connection status."""
-        station = station or get_default_station()
-        caller_duz = get_default_duz()
+        station, caller_duz = resolve_vista_context(
+            ctx,
+            station_arg=station,
+            default_station=get_default_station,
+            default_duz=get_default_duz,
+        )
 
         # Execute RPC with standardized error handling
         rpc_result = await execute_rpc(
@@ -163,10 +294,15 @@ def register_system_tools(mcp: FastMCP, vista_client: BaseVistaClient):
     async def get_server_time(
         station: str | None = None,
         format: str = "NOW",
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Get Vista server date and time."""
-        station = station or get_default_station()
-        caller_duz = get_default_duz()
+        station, caller_duz = resolve_vista_context(
+            ctx,
+            station_arg=station,
+            default_station=get_default_station,
+            default_duz=get_default_duz,
+        )
 
         # Parser function that returns both parsed and raw values
         def parse_server_time(result: str) -> dict[str, Any]:
@@ -211,10 +347,15 @@ def register_system_tools(mcp: FastMCP, vista_client: BaseVistaClient):
     @mcp.tool()
     async def get_intro_message(
         station: str | None = None,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Get Vista system introduction message."""
-        station = station or get_default_station()
-        caller_duz = get_default_duz()
+        station, caller_duz = resolve_vista_context(
+            ctx,
+            station_arg=station,
+            default_station=get_default_station,
+            default_duz=get_default_duz,
+        )
 
         # Parser function for intro message
         def parse_intro_message(result: str) -> dict[str, Any]:
@@ -258,10 +399,15 @@ def register_system_tools(mcp: FastMCP, vista_client: BaseVistaClient):
     @mcp.tool()
     async def get_server_version(
         station: str | None = None,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Get Vista server version information."""
-        station = station or get_default_station()
-        caller_duz = get_default_duz()
+        station, caller_duz = resolve_vista_context(
+            ctx,
+            station_arg=station,
+            default_station=get_default_station,
+            default_duz=get_default_duz,
+        )
 
         # Execute RPC with standardized error handling
         rpc_result = await execute_rpc(

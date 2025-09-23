@@ -1,12 +1,21 @@
 """Utility functions for Vista API MCP Server"""
 
 import os
+from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any, TypeVar
+
+from fastmcp import Context
 
 from src.logging_config import get_logger
 
 logger = get_logger()
+
+
+VISTA_CONTEXT_STATE_KEY = "vista_request_context"
+VISTA_CONTEXT_STATION_KEY = "station"
+VISTA_CONTEXT_DUZ_KEY = "duz"
+VISTA_CONTEXT_AUTH_HEADER_KEY = "authorization_header"
 
 
 # Default configurations
@@ -192,6 +201,53 @@ def paginate_list(
     total_items = len(items)
     paginated_items = items[offset : offset + limit]
     return paginated_items, total_items
+
+
+def resolve_vista_context(
+    ctx: Context | None,
+    station_arg: str | None = None,
+    duz_arg: str | None = None,
+    default_station: Callable[[], str] | None = None,
+    default_duz: Callable[[], str] | None = None,
+) -> tuple[str, str]:
+    """Resolve VistA station and DUZ using context state or fallbacks."""
+
+    station = station_arg.strip() if isinstance(station_arg, str) else ""
+    duz = duz_arg.strip() if isinstance(duz_arg, str) else ""
+
+    fallback_station = default_station or get_default_station
+    fallback_duz = default_duz or get_default_duz
+
+    if ctx is not None:
+        try:
+            state = ctx.get_state(VISTA_CONTEXT_STATE_KEY)
+        except Exception:
+            state = None
+
+        if isinstance(state, dict):
+            if not station:
+                candidate_station = state.get(VISTA_CONTEXT_STATION_KEY)
+                if isinstance(candidate_station, str) and candidate_station.strip():
+                    station = candidate_station.strip()
+            if not duz:
+                candidate_duz = state.get(VISTA_CONTEXT_DUZ_KEY)
+                if isinstance(candidate_duz, str) and candidate_duz.strip():
+                    duz = candidate_duz.strip()
+
+    if not station:
+        station = fallback_station()
+    if not duz:
+        duz = fallback_duz()
+
+    logger.debug(
+        "Resolved Vista context",
+        extra={
+            "station": station,
+            "duz": duz,
+        },
+    )
+
+    return station, duz
 
 
 def log_rpc_call(

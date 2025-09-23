@@ -3,7 +3,7 @@
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
-from mcp.server.fastmcp import FastMCP
+from fastmcp import Context, FastMCP
 from pydantic import Field
 
 from ...models.responses.metadata import (
@@ -22,7 +22,13 @@ from ...models.responses.tool_responses import (
 from ...services.data import get_patient_data
 from ...services.rpc import build_icn_only_named_array_param
 from ...services.validators import validate_icn
-from ...utils import get_default_duz, get_default_station, get_logger, paginate_list
+from ...utils import (
+    get_default_duz,
+    get_default_station,
+    get_logger,
+    paginate_list,
+    resolve_vista_context,
+)
 from ...vista.base import BaseVistaClient
 
 logger = get_logger(__name__)
@@ -40,11 +46,16 @@ def register_get_patient_medications_tool(mcp: FastMCP, vista_client: BaseVistaC
         days_back: Annotated[int, Field(default=183, ge=1, le=36500)] = 183,  # 6 months
         offset: Annotated[int, Field(default=0, ge=0)] = 0,
         limit: Annotated[int, Field(default=100, ge=1, le=1000)] = 100,
+        ctx: Context | None = None,
     ) -> MedicationsResponse:
         """Get patient medications with dosing and refill information."""
         start_time = datetime.now(UTC)
-        station = station or get_default_station()
-        caller_duz = get_default_duz()
+        station, caller_duz = resolve_vista_context(
+            ctx,
+            station_arg=station,
+            default_station=get_default_station,
+            default_duz=get_default_duz,
+        )
 
         # Validate ICN
         if not validate_icn(patient_icn):

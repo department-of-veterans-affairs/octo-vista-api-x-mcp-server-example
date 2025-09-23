@@ -71,6 +71,10 @@ VISTA_MCP_HTTP_PORT=8000
 
 # Production Settings
 VISTA_MCP_DEBUG=false
+# Logging
+ENABLE_CONSOLE_LOGGING=true
+DISABLE_FILE_LOGGING=true
+LOG_LEVEL=INFO
 ```
 
 ### Building for Production

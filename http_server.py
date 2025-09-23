@@ -55,8 +55,8 @@ if __name__ == "__main__":
             mcp, "info", "Using Streamable HTTP transport and getting app..."
         )
 
-        # Get the MCP Streamable HTTP app
-        app = mcp.streamable_http_app()
+        # Build the Streamable HTTP app using the modern FastMCP API
+        app = mcp.http_app(transport="streamable-http", stateless_http=True)
 
         # Add health routes directly to the MCP app's router
         async def health_check(request):

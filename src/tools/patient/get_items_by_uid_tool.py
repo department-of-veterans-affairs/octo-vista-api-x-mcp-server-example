@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from typing import Annotated
 
-from mcp.server.fastmcp import FastMCP
+from fastmcp import Context, FastMCP
 from pydantic import Field, SerializeAsAny
 
 from ...models.patient import BasePatientModel, PatientDataCollection
@@ -18,7 +18,12 @@ from ...models.responses.tool_responses import ResponseData, ToolResponse
 from ...services.data import get_patient_data
 from ...services.rpc import build_icn_only_named_array_param
 from ...services.validators import validate_icn
-from ...utils import get_default_duz, get_default_station, get_logger
+from ...utils import (
+    get_default_duz,
+    get_default_station,
+    get_logger,
+    resolve_vista_context,
+)
 from ...vista.base import BaseVistaClient
 
 logger = get_logger(__name__)
@@ -49,11 +54,16 @@ def register_get_items_by_uid_tool(mcp: FastMCP, vista_client: BaseVistaClient):
             Field(description="List of UIDs/URNs to fetch", max_length=100),
         ],
         station: str | None = None,
+        ctx: Context | None = None,
     ) -> GetItemsByUidResponse:
         """Return one or more patient items by UID/URN for the requested patient ICN. Maximum of 100 items at a time"""
         start_time = datetime.now(UTC)
-        station = station or get_default_station()
-        caller_duz = get_default_duz()
+        station, caller_duz = resolve_vista_context(
+            ctx,
+            station_arg=station,
+            default_station=get_default_station,
+            default_duz=get_default_duz,
+        )
 
         # Validate ICN
         if not validate_icn(patient_icn):

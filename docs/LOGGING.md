@@ -16,9 +16,9 @@ This project implements a comprehensive logging system that is **MCP-compliant**
 
 ✅ **COMPLETED** - All logging improvements have been implemented:
 
-- ✅ Console logging disabled by default to prevent MCP protocol interference
+- ✅ Console logging disabled by default to prevent MCP protocol interference (automatically enabled for local `mise dev*` tasks via Rich console output)
 - ✅ MCP-native logging implemented with fallback to file logging
-- ✅ Structured JSON logging with HIPAA compliance
+- ✅ Structured JSON logging with HIPAA compliance (file handler optional via `DISABLE_FILE_LOGGING`)
 - ✅ Server updated to use MCP-native logging for initialization
 - ✅ All existing logging calls updated to use new configuration
 - ✅ Debug mode implemented (disables data redaction for development)
@@ -90,7 +90,8 @@ export VISTA_MCP_DEBUG=false
 | `LOG_LEVEL` | `INFO` | Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL) |
 | `LOG_FORMAT` | `json` | Log format (`json` or `text`) |
 | `LOG_FILE` | `logs/octo-vista.log` | Path to log file |
-| `ENABLE_CONSOLE_LOGGING` | `false` | Enable console logging (not recommended for MCP) |
+| `DISABLE_FILE_LOGGING` | `false` | Set to `true` to skip the rotating file handler (useful for sandboxed environments) |
+| `ENABLE_CONSOLE_LOGGING` | `false` | Enable console logging (stderr). Automatically enabled for local mise `dev*` tasks. |
 | `VISTA_MCP_DEBUG` | `false` | Enable debug mode (disables data redaction for development) |
 
 ### MCP-Specific Settings
@@ -275,9 +276,9 @@ python test_mcp_logging.py | grep -v "timestamp"
 
 ### Common Issues
 
-1. **Console Logging Interference**
-   - Ensure `ENABLE_CONSOLE_LOGGING=false` for MCP servers
-   - Check that logs go to stderr, not stdout
+1. **Missing Console Output**
+   - Set `ENABLE_CONSOLE_LOGGING=true` (and optionally `DISABLE_FILE_LOGGING=true` in read-only containers)
+   - Logs are emitted on stderr; confirm your runtime captures stderr in CloudWatch/Datadog
 
 2. **Missing Log Files**
    - Verify `logs/` directory exists

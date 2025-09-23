@@ -4,10 +4,11 @@ import os
 import sys
 
 from dotenv import load_dotenv
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 
 from src.config import get_vista_config
 from src.logging_config import get_logger, log_mcp_message
+from src.middleware import register_middleware
 from src.tools.patient import register_patient_tools
 from src.tools.system import register_system_tools
 
@@ -75,6 +76,10 @@ def initialize_server():
     except Exception as e:
         logger.error(f"Failed to create Vista client: {e}")
         raise
+
+    # Register middleware
+    register_middleware(mcp)
+    print("Middleware registered")
 
     # Register all tools
     log_mcp_message(mcp, "info", "Registering tools...")

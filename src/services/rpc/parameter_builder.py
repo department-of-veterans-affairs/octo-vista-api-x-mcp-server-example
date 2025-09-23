@@ -36,7 +36,7 @@ def build_icn_only_named_array_param(icn: str) -> list[dict[str, Any]]:
     Returns:
         List with named array parameter
     """
-    return [{"namedArray": {"patientId": f"; {icn}"}}]
+    return [{"namedArray": {"patientId": f";{icn}"}}]
 
 
 def build_empty_params() -> list[dict[str, Any]]:

@@ -1,6 +1,6 @@
 """Patient-related MCP tools coordinator"""
 
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 
 from ...vista.base import BaseVistaClient
 from .get_items_by_uid_tool import register_get_items_by_uid_tool

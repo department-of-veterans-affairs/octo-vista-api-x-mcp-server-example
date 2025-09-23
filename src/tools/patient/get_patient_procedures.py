@@ -3,6 +3,7 @@
 from datetime import UTC, date, datetime
 from typing import Annotated, Any
 
+from fastmcp import Context
 from pydantic import Field
 
 from ...models.patient.cpt_code import CPTCode
@@ -22,7 +23,13 @@ from ...models.responses.tool_responses import (
 from ...services.data.patient_data import get_patient_data
 from ...services.rpc import build_icn_only_named_array_param
 from ...services.validators import validate_icn
-from ...utils import get_default_duz, get_default_station, get_logger, paginate_list
+from ...utils import (
+    get_default_duz,
+    get_default_station,
+    get_logger,
+    paginate_list,
+    resolve_vista_context,
+)
 from ...vista.base import BaseVistaClient, VistaAPIError
 
 logger = get_logger(__name__)
@@ -54,8 +61,15 @@ async def get_patient_procedures_impl(
         ProceduresResponse containing procedures data and metadata
     """
     start_time = datetime.now(UTC)
-    station = station or get_default_station()
-    caller_duz = caller_duz or get_default_duz()
+    resolved_station, resolved_duz = resolve_vista_context(
+        None,
+        station_arg=station,
+        duz_arg=caller_duz,
+        default_station=get_default_station,
+        default_duz=get_default_duz,
+    )
+    station = resolved_station
+    caller_duz = resolved_duz
 
     try:
         # Get patient data
@@ -247,10 +261,16 @@ def register_get_patient_procedures_tool(mcp, vista_client: BaseVistaClient):
         date_to: Annotated[date | None, Field(default=None)] = None,
         offset: Annotated[int, Field(default=0, ge=0)] = 0,
         limit: Annotated[int, Field(default=10, ge=1, le=200)] = 10,
+        ctx: Context | None = None,
     ) -> ProceduresResponse:
         """Get patient CPT procedure codes and billing information."""
         start_time = datetime.now(UTC)
-        station = station or get_default_station()
+        station, caller_duz = resolve_vista_context(
+            ctx,
+            station_arg=station,
+            default_station=get_default_station,
+            default_duz=get_default_duz,
+        )
 
         # Validate ICN
         if not validate_icn(patient_icn):
@@ -269,9 +289,6 @@ def register_get_patient_procedures_tool(mcp, vista_client: BaseVistaClient):
                 error="Invalid patient ICN format",
                 metadata=md,
             )
-
-        # Use default DUZ
-        caller_duz = get_default_duz()
 
         return await get_patient_procedures_impl(
             vista_client=vista_client,

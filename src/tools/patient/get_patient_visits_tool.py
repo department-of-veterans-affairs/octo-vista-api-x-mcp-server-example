@@ -3,7 +3,7 @@
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
-from mcp.server.fastmcp import FastMCP
+from fastmcp import Context, FastMCP
 from pydantic import Field
 
 from ...models.patient.base import FacilityInfo
@@ -21,7 +21,13 @@ from ...models.responses.tool_responses import VisitsResponse, VisitsResponseDat
 from ...services.data import get_patient_data
 from ...services.rpc import build_icn_only_named_array_param
 from ...services.validators import validate_icn
-from ...utils import get_default_duz, get_default_station, get_logger, paginate_list
+from ...utils import (
+    get_default_duz,
+    get_default_station,
+    get_logger,
+    paginate_list,
+    resolve_vista_context,
+)
 from ...vista.base import BaseVistaClient
 
 logger = get_logger(__name__)
@@ -36,11 +42,16 @@ async def get_patient_visits_impl(
     days_back: int = 365,
     offset: int = 0,
     limit: int = 10,
+    ctx: Context | None = None,
 ) -> VisitsResponse:
     """Get patient visit history with location and duration data."""
     start_time = datetime.now(UTC)
-    station = station or get_default_station()
-    caller_duz = get_default_duz()
+    station, caller_duz = resolve_vista_context(
+        ctx,
+        station_arg=station,
+        default_station=get_default_station,
+        default_duz=get_default_duz,
+    )
 
     logger.info(
         f"🏥 [DEBUG] get_patient_visits: patient_icn={patient_icn}, station={station}, visit_type={visit_type}, active_only={active_only}, days_back={days_back}, offset={offset}, limit={limit}"
@@ -227,6 +238,7 @@ def register_get_patient_visits_tool(mcp: FastMCP, vista_client: BaseVistaClient
         days_back: Annotated[int, Field(default=365, ge=1)] = 365,
         offset: Annotated[int, Field(default=0, ge=0)] = 0,
         limit: Annotated[int, Field(default=200, ge=1, le=200)] = 200,
+        ctx: Context | None = None,
     ) -> VisitsResponse:
         """Get patient visit history with location and duration data."""
         return await get_patient_visits_impl(
@@ -238,4 +250,5 @@ def register_get_patient_visits_tool(mcp: FastMCP, vista_client: BaseVistaClient
             offset=offset,
             limit=limit,
             vista_client=vista_client,
+            ctx=ctx,
         )

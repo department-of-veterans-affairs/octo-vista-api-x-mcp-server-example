@@ -71,7 +71,7 @@ async def get_patient_data(
     rpc_result = await execute_rpc(
         vista_client=vista_client,
         rpc_name="VPR GET PATIENT DATA JSON",
-        parameters=build_named_array_param({"patientId": f"; {patient_icn}"}),
+        parameters=build_named_array_param({"patientId": f";{patient_icn}"}),
         parser=lambda result: parse_vpr_patient_data(result, station, patient_icn),
         station=station,
         caller_duz=caller_duz,

@@ -5,10 +5,18 @@ import logging
 import logging.handlers
 import os
 import re
-import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+from fastmcp.utilities.logging import (
+    Console,
+    RichHandler,
+    get_logger as fastmcp_get_logger,
+)
+
+
+_CONFIGURED_LOGGERS: set[str] = set()
 
 # Ensure logs directory exists
 Path("logs").mkdir(exist_ok=True)
@@ -117,34 +125,45 @@ class HIPAAFormatter(logging.Formatter):
         return json.dumps(log_entry)
 
 
+def _create_formatter() -> HIPAAFormatter:
+    debug_mode = os.getenv("VISTA_MCP_DEBUG", "false").lower() in [
+        "true",
+        "1",
+        "yes",
+    ]
+    return HIPAAFormatter(debug_mode=debug_mode)
+
+
 def get_logger(name: str = "mcp-server") -> logging.Logger:
     """Get a logger configured for MCP compliance"""
-    logger = logging.getLogger(name)
+    logger = fastmcp_get_logger(name)
 
-    # Avoid duplicate handlers
-    if logger.handlers:
+    if name in _CONFIGURED_LOGGERS:
         return logger
 
     # Set log level
     log_level = os.getenv("LOG_LEVEL", "INFO").upper()
     logger.setLevel(getattr(logging, log_level, logging.INFO))
 
-    # Check debug mode
-    debug_mode = os.getenv("VISTA_MCP_DEBUG", "false").lower() in ["true", "1", "yes"]
-
     # Create formatter
-    formatter = HIPAAFormatter(debug_mode=debug_mode)
+    formatter = _create_formatter()
 
-    # File handler (always enabled)
-    log_file = os.getenv("LOG_FILE", "logs/octo-vista.log")
-    file_handler = logging.handlers.RotatingFileHandler(
-        log_file,
-        maxBytes=10 * 1024 * 1024,  # 10MB
-        backupCount=5,
-        encoding="utf-8",
-    )
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
+    disable_file_logging = os.getenv("DISABLE_FILE_LOGGING", "false").lower() in [
+        "true",
+        "1",
+        "yes",
+    ]
+
+    if not disable_file_logging:
+        log_file = os.getenv("LOG_FILE", "logs/octo-vista.log")
+        file_handler = logging.handlers.RotatingFileHandler(
+            log_file,
+            maxBytes=10 * 1024 * 1024,  # 10MB
+            backupCount=5,
+            encoding="utf-8",
+        )
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
 
     # Console handler (disabled by default for MCP compliance)
     enable_console = os.getenv("ENABLE_CONSOLE_LOGGING", "false").lower() in [
@@ -153,9 +172,17 @@ def get_logger(name: str = "mcp-server") -> logging.Logger:
         "yes",
     ]
     if enable_console:
-        console_handler = logging.StreamHandler(sys.stderr)  # Use stderr, not stdout
+        console_handler = RichHandler(
+            console=Console(stderr=True),
+            rich_tracebacks=True,
+            markup=False,
+            enable_link_path=False,
+        )
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
+
+    logger.propagate = False
+    _CONFIGURED_LOGGERS.add(name)
 
     return logger
 

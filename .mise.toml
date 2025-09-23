@@ -25,6 +25,7 @@ run = ["docker-compose down", "echo '✅ Mock server stopped'"]
 
 [tasks.dev-with-mock]
 description = "Start both transports with mock server (stdio + HTTP) - comprehensive testing"
+env = { ENABLE_CONSOLE_LOGGING = "true" }
 run = [
     # Auto-setup if needed
     "python scripts/silent_setup.py",
@@ -39,29 +40,34 @@ run = [
     "echo '🎯 Starting servers in background...'",
     # Start HTTP server in background
     "mkdir -p logs",
-    "VISTA_MCP_HTTP_PORT=8000 uv run python http_server.py > logs/http.log 2>&1 &",
+    "VISTA_MCP_HTTP_HOST=127.0.0.1 VISTA_MCP_HTTP_PORT=8000 uv run python http_server.py > logs/http.log 2>&1 &",
     # Wait for servers to start
     "sleep 3",
     "echo '✅ Background HTTP server started (logs in logs/http.log)'",
     "echo '🏃 Starting stdio MCP dev server (main)...'",
     "echo '   Use Ctrl+C to stop all servers'",
     # Run stdio server in foreground (this one you can Ctrl+C to stop all)
-    "uv run mcp dev server.py:server",
+    "uv run fastmcp dev server.py:server",
 ]
 
 [tasks.dev]
 description = "Start development server (stdio only)"
+env = { ENABLE_CONSOLE_LOGGING = "true" }
 run = [
     # Auto-setup if needed
     "python scripts/silent_setup.py",
-    # Run MCP server
-    "echo '🏃 Starting MCP server (stdio transport)...'",
-    "echo '📡 Connect via Claude Desktop or MCP dev tools'", 
-    "uv run mcp dev server.py:server",
+    "echo '🚀 Starting Streamable HTTP server (no mock)...'",
+    "mkdir -p logs",
+    "VISTA_MCP_HTTP_HOST=127.0.0.1 VISTA_MCP_HTTP_PORT=8000 uv run python http_server.py > logs/http.log 2>&1 &",
+    "sleep 3",
+    "echo '✅ Background HTTP server ready (http://localhost:8000/mcp)'",
+    "echo '🏃 Starting stdio MCP dev server...'",
+    "uv run fastmcp dev server.py:server",
 ]
 
 [tasks.dev-stdio-only-with-mock]
 description = "Start stdio server only with mock (simple setup)"
+env = { ENABLE_CONSOLE_LOGGING = "true" }
 run = [
     # Auto-setup if needed
     "python scripts/silent_setup.py",
@@ -69,7 +75,7 @@ run = [
     "python scripts/start_mock_if_needed.py",
     "echo '🏃 Starting MCP server (stdio transport only)...'",
     "echo '📡 Connect via Claude Desktop or MCP dev tools'",
-    "uv run mcp dev server.py:server",
+    "uv run fastmcp dev server.py:server",
 ]
 
 # Utility tasks (optional)
@@ -94,6 +100,7 @@ run = "python scripts/setup_claude_desktop.py"
 # === NEW STREAMABLE HTTP TASKS ===
 [tasks.dev-http]
 description = "Start Streamable HTTP server for development (RECOMMENDED)"
+env = { ENABLE_CONSOLE_LOGGING = "true" }
 run = [
     # Auto-setup if needed
     "python scripts/silent_setup.py",
@@ -115,6 +122,7 @@ run = [
 
 [tasks.dev-http-with-mock]
 description = "Start Streamable HTTP server with mock Vista API (RECOMMENDED)"
+env = { ENABLE_CONSOLE_LOGGING = "true" }
 run = [
     # Auto-setup if needed
     "python scripts/silent_setup.py",
@@ -140,6 +148,7 @@ run = [
 # Raw server tasks (without inspector)
 [tasks.dev-http-server]
 description = "Start Streamable HTTP server only (no inspector)"
+env = { ENABLE_CONSOLE_LOGGING = "true" }
 run = [
     "python scripts/silent_setup.py",
     "echo '🚀 Starting Streamable HTTP server...'",
@@ -153,6 +162,7 @@ run = [
 
 [tasks.dev-http-server-with-mock]
 description = "Start Streamable HTTP server with mock (no inspector)" 
+env = { ENABLE_CONSOLE_LOGGING = "true" }
 run = [
     "python scripts/silent_setup.py",
     "python scripts/start_mock_if_needed.py",
@@ -168,6 +178,7 @@ run = [
 # === MULTI-TRANSPORT TASKS ===
 [tasks.dev-stdio-http-with-mock] 
 description = "Start stdio + HTTP transports with mock (recommended for testing)"
+env = { ENABLE_CONSOLE_LOGGING = "true" }
 run = [
     # Auto-setup if needed
     "python scripts/silent_setup.py",
@@ -182,13 +193,13 @@ run = [
     "echo '🎯 Starting HTTP server in background...'",
     # Start HTTP server in background
     "mkdir -p logs",
-    "VISTA_MCP_HTTP_PORT=8000 uv run python http_server.py > logs/http.log 2>&1 &",
+    "VISTA_MCP_HTTP_HOST=127.0.0.1 VISTA_MCP_HTTP_PORT=8000 uv run python http_server.py > logs/http.log 2>&1 &",
     # Wait for server to start
     "sleep 3",
     "echo '✅ HTTP server started (log in logs/http.log)'",
     "echo '🏃 Starting stdio MCP dev server...'",
     # Run stdio server in foreground
-    "uv run mcp dev server.py:server",
+    "uv run fastmcp dev server.py:server",
 ]
 
 # === UTILITY TASKS ===
