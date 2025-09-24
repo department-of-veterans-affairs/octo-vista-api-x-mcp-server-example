@@ -72,8 +72,38 @@ services:
     networks:
       - vista-network
 
+  redis:
+    image: redis:7-alpine
+    container_name: vista-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - vista-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: vista-redis-commander
+    ports:
+      - "8002:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    networks:
+      - vista-network
+    depends_on:
+      - redis
+
 volumes:
   localstack-data:
+  redis-data:
+  redis-insight-data:
 
 networks:
   vista-network:
