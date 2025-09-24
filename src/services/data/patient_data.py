@@ -94,9 +94,9 @@ async def get_patient_data(
     # Get parsed data
     patient_data = rpc_result["parsed_data"]
 
-    # Cache for next time
+    # Cache for next time - use mode='json' to ensure JSON-serializable output
     await cache.set_patient_data(
-        station, patient_icn, caller_duz, patient_data.model_dump()
+        station, patient_icn, caller_duz, patient_data.model_dump(mode="json")
     )
 
     return patient_data
