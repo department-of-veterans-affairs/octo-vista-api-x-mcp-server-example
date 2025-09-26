@@ -4,7 +4,7 @@ This repository contains documentation about a Model Context Protocol (MCP) serv
 
 ## Overview
 
-The Vista API MCP Server enables Large Language Models (LLMs) to securely access VistA by acting as a bridge that safely connects LLMs to patient medical records and clinical documentation. The server can be consumed by multiple AI applications, like [AI Assist](https://github.com/department-of-veterans-affairs/ai-assist), to perform summarization or other LLM-enabled tasks.
+The Vista API MCP Server enables Large Language Models (LLMs) to securely access VistA by acting as a bridge that safely connects LLMs to patient medical records and clinical documentation. The server can be consumed by multiple AI applications, like [AI Assist](https://github.com/department-of-veterans-affairs/ai-assist-example), to perform summarization or other LLM-enabled tasks.
 
 ### What is an MCP server?
 
