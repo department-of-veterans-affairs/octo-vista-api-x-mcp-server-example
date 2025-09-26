@@ -304,10 +304,10 @@ Features:
 docker exec vista-redis redis-cli KEYS "*"
 
 # View specific cached data
-docker exec vista-redis redis-cli GET "mcp:patient:v1:500:1000220000V123456:10000000219"
+docker exec vista-redis redis-cli GET "mcp:patient:v1:[test station]:[test-icn]:[test-duz]"
 
 # Check TTL for a key
-docker exec vista-redis redis-cli TTL "mcp:patient:v1:500:1000220000V123456:10000000219"
+docker exec vista-redis redis-cli TTL "mcp:patient:v1:[test station]:[test-icn]:[test-duz]"
 
 # Monitor Redis commands in real-time
 docker exec -it vista-redis redis-cli MONITOR
@@ -328,8 +328,8 @@ async def test():
     cache = await CacheFactory.create_patient_cache()
     print(f'Cache backend: {type(cache).__name__}')
     # Test set and get
-    await cache.set_patient_data('500', 'test-icn', 'test-duz', {'test': 'data'})
-    data = await cache.get_patient_data('500', 'test-icn', 'test-duz')
+    await cache.set_patient_data('test-station', 'test-icn', 'test-duz', {'test': 'data'})
+    data = await cache.get_patient_data('test-station', 'test-icn', 'test-duz')
     print(f'Cache working: {data is not None}')
 
 asyncio.run(test())
