@@ -34,7 +34,7 @@ run = [
     "echo '🚀 Starting MCP transports for comprehensive testing...'",
     "echo ''",
     "echo '📍 Available endpoints:'",
-    "echo '  📡 stdio: mcp dev server (for Claude Desktop)'", 
+    "echo '  📡 stdio: mcp dev server (for Claude Desktop)'",
     "echo '  🌐 HTTP: http://localhost:8000/mcp'",
     "echo ''",
     "echo '🎯 Starting servers in background...'",
@@ -44,6 +44,34 @@ run = [
     # Wait for servers to start
     "sleep 3",
     "echo '✅ Background HTTP server started (logs in logs/http.log)'",
+    "echo '🏃 Starting stdio MCP dev server (main)...'",
+    "echo '   Use Ctrl+C to stop all servers'",
+    # Run stdio server in foreground (this one you can Ctrl+C to stop all)
+    "uv run fastmcp dev server.py:server",
+]
+
+[tasks.dev-with-mock-and-redis]
+description = "Start both transports with mock server and Redis caching"
+env = { ENABLE_CONSOLE_LOGGING = "true", CACHE_BACKEND = "local-dev-redis", LOCAL_CACHE_BACKEND_TYPE = "elasticache", LOCAL_REDIS_URL = "redis://localhost:6379", LOCAL_REDIS_FALLBACK = "true" }
+run = [
+    # Auto-setup if needed
+    "python scripts/silent_setup.py",
+    # Start mock server if needed (or check if it's running on host)
+    "python scripts/start_mock_if_needed.py",
+    "echo '🚀 Starting MCP transports with Redis caching...'",
+    "echo ''",
+    "echo '📍 Available endpoints:'",
+    "echo '  📡 stdio: mcp dev server (for Claude Desktop)'",
+    "echo '  🌐 HTTP: http://localhost:8000/mcp'",
+    "echo '  🔴 Redis: redis://localhost:6379'",
+    "echo ''",
+    "echo '🎯 Starting servers in background...'",
+    # Start HTTP server in background with Redis caching
+    "mkdir -p logs",
+    "VISTA_MCP_HTTP_HOST=127.0.0.1 VISTA_MCP_HTTP_PORT=8000 uv run python http_server.py > logs/http.log 2>&1 &",
+    # Wait for servers to start
+    "sleep 3",
+    "echo '✅ Background HTTP server started with Redis caching (logs in logs/http.log)'",
     "echo '🏃 Starting stdio MCP dev server (main)...'",
     "echo '   Use Ctrl+C to stop all servers'",
     # Run stdio server in foreground (this one you can Ctrl+C to stop all)
@@ -211,3 +239,15 @@ run = [
     "pkill -f 'server.py:server' || echo '   (no mcp dev processes found)'", 
     "echo '✅ Background servers stopped'",
 ]
+[tasks.check]
+description = "Run linting, formatting, types, and tests"
+run = [
+    "uv run ruff check",
+    "uv run black --check .",
+    "uv run mypy",
+    "uv run pytest",
+]
+
+[tasks.setup]
+description = "Create virtualenv, install dependencies, and prepare local assets"
+run = "python scripts/setup.py"

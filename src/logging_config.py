@@ -12,9 +12,10 @@ from typing import Any
 from fastmcp.utilities.logging import (
     Console,
     RichHandler,
+)
+from fastmcp.utilities.logging import (
     get_logger as fastmcp_get_logger,
 )
-
 
 _CONFIGURED_LOGGERS: set[str] = set()
 

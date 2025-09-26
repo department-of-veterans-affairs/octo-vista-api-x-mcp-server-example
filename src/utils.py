@@ -214,6 +214,8 @@ def resolve_vista_context(
 
     station = station_arg.strip() if isinstance(station_arg, str) else ""
     duz = duz_arg.strip() if isinstance(duz_arg, str) else ""
+    station_source = "argument" if station else ""
+    duz_source = "argument" if duz else ""
 
     fallback_station = default_station or get_default_station
     fallback_duz = default_duz or get_default_duz
@@ -229,21 +231,27 @@ def resolve_vista_context(
                 candidate_station = state.get(VISTA_CONTEXT_STATION_KEY)
                 if isinstance(candidate_station, str) and candidate_station.strip():
                     station = candidate_station.strip()
+                    station_source = "request_state"
             if not duz:
                 candidate_duz = state.get(VISTA_CONTEXT_DUZ_KEY)
                 if isinstance(candidate_duz, str) and candidate_duz.strip():
                     duz = candidate_duz.strip()
+                    duz_source = "request_state"
 
     if not station:
         station = fallback_station()
+        station_source = station_source or "default"
     if not duz:
         duz = fallback_duz()
+        duz_source = duz_source or "default"
 
     logger.debug(
         "Resolved Vista context",
         extra={
             "station": station,
             "duz": duz,
+            "station_source": station_source,
+            "duz_source": duz_source,
         },
     )
 

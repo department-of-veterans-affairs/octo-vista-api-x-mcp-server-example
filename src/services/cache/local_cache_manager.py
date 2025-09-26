@@ -92,6 +92,19 @@ class LocalCacheManager:
 
     def start_redis(self) -> bool:
         """Start Redis container."""
+        # First check if Redis is already running on port 6379
+        try:
+            import redis
+
+            r = redis.Redis(host="localhost", port=6379, socket_connect_timeout=1)
+            r.ping()
+            logger.info(
+                "Redis is already running on port 6379, skipping local cache start"
+            )
+            return True
+        except Exception:
+            pass  # Redis not available, continue with startup
+
         if not self.compose_file.exists():
             logger.warning(f"Docker compose file not found: {self.compose_file}")
             return False
@@ -107,6 +120,28 @@ class LocalCacheManager:
             )
 
             if result.returncode != 0:
+                # Check if it's a port conflict error and Redis is actually available
+                if "port is already allocated" in result.stderr:
+                    logger.info(
+                        "Port 6379 already in use, checking if Redis is accessible..."
+                    )
+                    try:
+                        import redis
+
+                        r = redis.Redis(
+                            host="localhost", port=6379, socket_connect_timeout=1
+                        )
+                        r.ping()
+                        logger.info(
+                            "Redis is accessible on port 6379, using existing instance"
+                        )
+                        return True
+                    except Exception:
+                        logger.error(
+                            f"Port 6379 is in use but Redis is not accessible: {result.stderr}"
+                        )
+                        return False
+
                 logger.error(f"Failed to start Redis: {result.stderr}")
                 return False
 

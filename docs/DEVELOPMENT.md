@@ -125,16 +125,18 @@ mise run lint
 python run.py help       # Show all commands
 
 # Key commands:
-python run.py setup          # Setup environment
-python run.py dev            # Run MCP server (stdio + HTTP, with inspector)
-python run.py dev-with-mock  # Same as dev but with mock Vista API
-python run.py test           # Run tests
-python run.py lint           # Run linting and formatting
-python run.py stop-mock      # Stop mock server
-python run.py stop-servers   # Stop any background MCP servers
-python run.py logs           # View mock server logs
-python run.py http           # Run HTTP server only (no stdio)
-python run.py http-with-mock # Run HTTP server with mock Vista API
+python run.py setup                    # Setup environment
+python run.py dev                      # Run MCP server (stdio + HTTP, with inspector)
+python run.py dev-with-mock            # Same as dev but with mock Vista API
+python run.py dev-with-mock-and-redis  # Same as dev-with-mock but with Redis caching
+python run.py test                     # Run tests
+python run.py lint                     # Run linting and formatting
+python run.py check                    # Run all quality checks (lint, format, type, test)
+python run.py stop-mock                # Stop mock server
+python run.py stop-servers             # Stop any background MCP servers
+python run.py logs                     # View mock server logs
+python run.py http                     # Run HTTP server only (no stdio)
+python run.py http-with-mock           # Run HTTP server with mock Vista API
 ```
 
 #### mise Commands (Mac/Linux)
@@ -143,11 +145,13 @@ python run.py http-with-mock # Run HTTP server with mock Vista API
 mise tasks  # List all available commands
 
 # Key commands:
-mise run dev              # Run MCP server in stdio mode
-mise run dev-http         # Run MCP server in HTTP mode
-mise run dev-with-mock    # Run with mock Vista API
-mise run test            # Run tests
-mise run lint            # Run linting and formatting
+mise run dev                      # Run MCP server in stdio mode
+mise run dev-http                 # Run MCP server in HTTP mode
+mise run dev-with-mock            # Run with mock Vista API
+mise run dev-with-mock-and-redis  # Run with mock Vista API and Redis caching
+mise run test                     # Run tests
+mise run lint                     # Run linting and formatting
+mise run check                    # Run all quality checks
 ```
 
 ## 4. Client Setup
@@ -220,17 +224,96 @@ Example configuration files are included in the repository:
 
 ### Redis Configuration
 
+For comprehensive local cache setup documentation, see [LOCAL_DEVELOPMENT_CACHE.md](LOCAL_DEVELOPMENT_CACHE.md).
+
 #### Local Development
 
-Redis caching is optional but recommended for better performance:
+Redis caching improves performance by caching patient data and JWT tokens. The mock server includes Redis automatically.
+
+##### Using Mock Server with Redis (Recommended)
+
+The easiest way to use Redis caching is with the mock server, which includes Redis and a web UI:
+
+```bash
+# Start with Redis caching enabled
+python run.py dev-with-mock-and-redis
+# or
+mise run dev-with-mock-and-redis
+```
+
+This automatically:
+- Starts Redis container on port 6379
+- Configures caching with 20-minute TTL for patient data
+- Starts Redis Commander UI at http://localhost:8002
+- Sets proper environment variables
+
+##### Manual Redis Setup
+
+If you want to run Redis separately:
 
 ```bash
 # Start Redis with Docker
-docker run -d -p 6379:6379 redis:alpine
+docker run -d -p 6379:6379 --name my-redis redis:alpine
 
 # Configure in .env
-CACHE_BACKEND=redis
-REDIS_URL=redis://localhost:6379
+CACHE_BACKEND=local-dev-redis
+LOCAL_CACHE_BACKEND_TYPE=elasticache
+LOCAL_REDIS_URL=redis://localhost:6379
+LOCAL_REDIS_FALLBACK=true
+```
+
+##### Cache Configuration Options
+
+Add these to your `.env` file:
+
+```bash
+# Cache Backend Selection
+CACHE_BACKEND=memory              # Default: in-memory cache
+# CACHE_BACKEND=local-dev-redis   # Use local Redis
+
+# Cache TTL Settings (in minutes)
+PATIENT_CACHE_TTL_MINUTES=20      # Patient data cache duration
+TOKEN_CACHE_TTL_MINUTES=55        # JWT token cache duration
+RESPONSE_CACHE_TTL_MINUTES=10     # Other responses cache duration
+
+# Cache Key Prefix
+CACHE_KEY_PREFIX=mcp:             # Prefix for all cache keys
+
+# Local Cache Settings (for in-memory cache)
+LOCAL_CACHE_MAX_SIZE=1000         # Max items in memory cache
+LOCAL_CACHE_PERSISTENCE=false     # Persist cache to disk
+```
+
+#### Monitoring Redis Cache
+
+##### Redis Commander UI
+
+When using `dev-with-mock-and-redis`, Redis Commander is available at http://localhost:8002
+
+Features:
+- Browse all cached keys
+- View cached patient data in formatted JSON
+- Monitor TTL (time-to-live) for keys
+- Search and filter keys
+- Manual cache management
+
+##### Command-Line Monitoring
+
+```bash
+# List all cached keys
+docker exec vista-redis redis-cli KEYS "*"
+
+# View specific cached data
+docker exec vista-redis redis-cli GET "mcp:patient:v1:[test station]:[test-icn]:[test-duz]"
+
+# Check TTL for a key
+docker exec vista-redis redis-cli TTL "mcp:patient:v1:[test station]:[test-icn]:[test-duz]"
+
+# Monitor Redis commands in real-time
+docker exec -it vista-redis redis-cli MONITOR
+
+# Clear all cache (careful!)
+docker exec vista-redis redis-cli FLUSHDB
 ```
 
 #### Testing Redis Connection
@@ -244,7 +327,11 @@ import asyncio
 async def test():
     cache = await CacheFactory.create_patient_cache()
     print(f'Cache backend: {type(cache).__name__}')
-    
+    # Test set and get
+    await cache.set_patient_data('test-station', 'test-icn', 'test-duz', {'test': 'data'})
+    data = await cache.get_patient_data('test-station', 'test-icn', 'test-duz')
+    print(f'Cache working: {data is not None}')
+
 asyncio.run(test())
 "
 ```
@@ -524,6 +611,21 @@ python run.py http
 4. **Token expiration errors:**
    - Check `VISTA_TOKEN_REFRESH_BUFFER_SECONDS` in .env
    - Default is 30 seconds before expiry
+
+5. **Redis port conflict error:**
+   If you see "Bind for 0.0.0.0:6379 failed: port is already allocated":
+   - This is normal if Redis is already running from the mock server
+   - The system will automatically use the existing Redis instance
+   - No action needed - the error is handled gracefully
+
+6. **Viewing cached data:**
+   ```bash
+   # Check if data is being cached
+   docker exec vista-redis redis-cli KEYS "*"
+
+   # Open Redis Commander UI
+   # Navigate to http://localhost:8002
+   ```
 
 ### Debug Logging
 

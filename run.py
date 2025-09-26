@@ -472,6 +472,91 @@ def run_dev_with_mock():
     run_dev()
 
 
+def run_dev_with_mock_and_redis():
+    """Run MCP server with mock Vista API and Redis caching"""
+    # Ensure Podman machine is running on Windows
+    runtime = detect_container_runtime()
+    if (
+        runtime == "podman"
+        and platform.system() == "Windows"
+        and not ensure_podman_machine()
+    ):
+        print("⚠️  Podman machine setup failed, continuing anyway...")
+
+    # Start mock server if needed (which includes Redis in docker-compose)
+    python_exe = get_python_exe()
+    try:
+        run_command([python_exe, "scripts/start_mock_if_needed.py"])
+    except subprocess.CalledProcessError:
+        print("⚠️  Failed to start mock server, continuing anyway...")
+
+    # Set Redis cache environment variables
+    env = os.environ.copy()
+    env["CACHE_BACKEND"] = "local-dev-redis"
+    env["LOCAL_CACHE_BACKEND_TYPE"] = "elasticache"
+    env["LOCAL_REDIS_URL"] = "redis://localhost:6379"
+    env["LOCAL_REDIS_FALLBACK"] = "true"
+    env["VISTA_MCP_HTTP_PORT"] = "8000"
+    env["ENABLE_CONSOLE_LOGGING"] = "true"
+
+    print("🚀 Starting MCP transports with Redis caching...")
+    print("")
+    print("📍 Available endpoints:")
+    print("  📡 stdio: mcp dev server (for Claude Desktop)")
+    print("  🌐 HTTP: http://localhost:8000/mcp")
+    print("  🔴 Redis: redis://localhost:6379")
+    print("")
+    print("🎯 Starting servers in background...")
+
+    # Create logs directory
+    Path("logs").mkdir(exist_ok=True)
+
+    # Start HTTP server in background with Redis environment
+    log_path = Path("logs") / "http.log"
+    with open(log_path, "w") as log_file:
+        if platform.system() == "Windows":
+            # Windows-specific background process
+            popen_args = [get_python_exe(), "http_server.py"]
+            start_windows_background_process(popen_args, env, log_file)
+        else:
+            # Unix-like systems
+            if shutil.which("uv"):
+                popen_args = ["uv", "run", "python", "http_server.py"]
+            else:
+                popen_args = [get_python_exe(), "http_server.py"]
+            subprocess.Popen(
+                popen_args,
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                env=env,
+            )
+
+    # Wait for servers to start
+    time.sleep(3)
+
+    print(
+        "✅ Background HTTP server started with Redis caching (logs in logs/http.log)"
+    )
+    print("🏃 Starting stdio MCP dev server (main)...")
+    print("   Use Ctrl+C to stop all servers")
+
+    # Run stdio server in foreground with Redis environment
+    if shutil.which("uv"):
+        run_command(["uv", "run", "mcp", "dev", "server.py:server"], env=env)
+    else:
+        venv_path = Path(".venv")
+        if platform.system() == "Windows":
+            mcp_exe = venv_path / "Scripts" / "mcp.exe"
+        else:
+            mcp_exe = venv_path / "bin" / "mcp"
+
+        if not mcp_exe.exists():
+            print("❌ MCP not installed. Run 'python run.py setup' first")
+            sys.exit(1)
+
+        run_command([str(mcp_exe), "dev", "server.py:server"], env=env)
+
+
 def run_test():
     """Run tests with pytest"""
     print("🧪 Running tests...")
@@ -532,6 +617,47 @@ def run_lint():
             print("  ⚠️  Mypy check failed or not installed")
 
     print("✅ Linting complete")
+
+
+def run_setup():
+    """Run full setup using scripts/setup.py"""
+    setup_script = Path(__file__).parent / "scripts" / "setup.py"
+    if not setup_script.exists():
+        print("❌ setup.py script not found")
+        sys.exit(1)
+
+    print("🔧 Running setup script...")
+    run_command([sys.executable, str(setup_script)])
+    print("✅ Setup complete")
+
+
+def run_check():
+    """Run lint/format/type/test checks without modifying files"""
+    print("🧪 Running full check suite (ruff, black --check, mypy, pytest)...")
+
+    use_uv = shutil.which("uv") is not None
+    python_exe = get_python_exe()
+
+    if use_uv:
+        commands = [
+            ("Ruff", ["uv", "run", "ruff", "check"]),
+            ("Black --check", ["uv", "run", "black", "--check", "."]),
+            ("Mypy", ["uv", "run", "mypy"]),
+            ("Pytest", ["uv", "run", "pytest"]),
+        ]
+    else:
+        commands = [
+            ("Ruff", [python_exe, "-m", "ruff", "check"]),
+            ("Black --check", [python_exe, "-m", "black", "--check", "."]),
+            ("Mypy", [python_exe, "-m", "mypy"]),
+            ("Pytest", [python_exe, "-m", "pytest"]),
+        ]
+
+    for label, cmd in commands:
+        print(f"  Running {label}...")
+        run_command(cmd)
+
+    print("✅ All checks passed")
 
 
 def stop_mock():
@@ -796,18 +922,20 @@ Vista API MCP Server - Universal Runner
 Usage: python run.py <command>
 
 Commands:
-  setup           - Setup virtual environment and install dependencies
-  dev             - Run MCP server (stdio + HTTP, with inspector)
-  dev-with-mock   - Same as dev but with mock Vista API
-  test            - Run tests with pytest
-  lint            - Run code quality checks (black, ruff, mypy)
-  stop-mock       - Stop mock server containers
-  stop-servers    - Stop any background MCP servers
-  logs            - View mock server logs
-  http            - Run HTTP server only (no stdio)
-  http-with-mock  - Run HTTP server with mock Vista API
-  check-windows   - Check Windows development requirements
-  help            - Show this help message
+  setup                    - Setup virtual environment and install dependencies
+  check                    - Run lint/format/type/test checks (no auto-fixes)
+  dev                      - Run MCP server (stdio + HTTP, with inspector)
+  dev-with-mock            - Same as dev but with mock Vista API
+  dev-with-mock-and-redis  - Same as dev-with-mock but with Redis caching
+  test                     - Run tests with pytest
+  lint                     - Run code quality checks (black, ruff, mypy)
+  stop-mock                - Stop mock server containers
+  stop-servers             - Stop any background MCP servers
+  logs                     - View mock server logs
+  http                     - Run HTTP server only (no stdio)
+  http-with-mock           - Run HTTP server with mock Vista API
+  check-windows            - Check Windows development requirements
+  help                     - Show this help message
 
 Examples:
   python run.py setup          # First time setup
@@ -832,9 +960,11 @@ def main():
     command = sys.argv[1].lower()
 
     commands = {
-        "setup": setup_venv,
+        "setup": run_setup,
+        "check": run_check,
         "dev": run_dev,
         "dev-with-mock": run_dev_with_mock,
+        "dev-with-mock-and-redis": run_dev_with_mock_and_redis,
         "test": run_test,
         "lint": run_lint,
         "stop-mock": stop_mock,

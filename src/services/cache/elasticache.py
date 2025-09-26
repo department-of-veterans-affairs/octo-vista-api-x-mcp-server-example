@@ -17,6 +17,7 @@ except ImportError:
     Redis = None  # type: ignore[assignment, misc]
 
 from .base import CacheBackend
+from .json_encoder import DateTimeJSONEncoder
 
 logger = logging.getLogger(__name__)
 
@@ -163,9 +164,9 @@ class ElastiCacheBackend(CacheBackend):
             redis_client = await self._get_redis()
             prefixed_key = self._make_key(key)
 
-            # Encode to JSON
+            # Encode to JSON using custom encoder for date/datetime objects
             try:
-                json_value = json.dumps(value)
+                json_value = json.dumps(value, cls=DateTimeJSONEncoder)
             except (TypeError, ValueError) as e:
                 logger.error(f"Failed to encode value for key {key}: {e}")
                 return False
