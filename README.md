@@ -38,6 +38,8 @@ Review our roadmap in [VA Mural](https://app.mural.co/t/departmentofveteransaffa
 - [Deployment guide](docs/DEPLOYMENT.md) - Production deployment instructions
 - [Test data guide](docs/TEST_DATA.md) - Test patient IDs and sample data
 - [Logging guide](docs/LOGGING.md) - Logging configuration and best practices
+- [Troubleshooting guide](docs/TROUBLESHOOTING.md) - Common issues and solutions
+- [Data models reference](docs/DATA_MODELS.md) - Complete data structure documentation
 
 ## Connect with us
 
