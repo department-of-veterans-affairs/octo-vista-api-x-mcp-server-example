@@ -64,8 +64,18 @@ async def get_patient_data(
     cached_data = await cache.get_patient_data(station, patient_icn, caller_duz)
 
     if cached_data:
-        # Return cached data - use model_validate to handle datetime conversion
-        return PatientDataCollection.model_validate(cached_data)
+        # Return cached data - handle JSON serialized datetime strings
+        # The cache stores data with mode="json" which converts datetimes to strings
+        import json
+
+        if isinstance(cached_data, dict):
+            # If it's a dict with datetime strings, we need to use model_validate_json
+            # to properly parse the datetime strings
+            json_str = json.dumps(cached_data)
+            return PatientDataCollection.model_validate_json(json_str)
+        else:
+            # Fallback for other data types
+            return PatientDataCollection.model_validate(cached_data)
 
     # Fetch from VistA using RPC executor
     rpc_result = await execute_rpc(

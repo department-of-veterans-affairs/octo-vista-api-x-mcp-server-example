@@ -1,9 +1,11 @@
+import json
 from collections.abc import Mapping
 from typing import Any
 
 from fastmcp.server.dependencies import get_http_headers
 from fastmcp.server.middleware import Middleware, MiddlewareContext
 
+from src.config import USE_CLIENT_JWT
 from src.logging_config import get_logger
 from src.utils import (
     VISTA_CONTEXT_AUTH_HEADER_KEY,
@@ -11,6 +13,7 @@ from src.utils import (
     VISTA_CONTEXT_STATE_KEY,
     VISTA_CONTEXT_STATION_KEY,
 )
+from src.vista.context_aware_client import set_context_jwt
 
 
 def _sanitize_headers(headers: Mapping[str, str]) -> dict[str, str]:
@@ -33,6 +36,45 @@ class AuthMiddleware(Middleware):
         headers = get_http_headers() or {}
         await self._log_headers(context, headers)
         await self._store_headers_in_state(context, headers)
+
+        # Debug logging for USE_CLIENT_JWT mode
+        if USE_CLIENT_JWT:
+            auth_header = headers.get("authorization") or headers.get("Authorization")
+            station = (
+                headers.get("x-vista-station")
+                or headers.get("X-Vista-Station")
+                or headers.get("x_vista_station")
+            )
+            duz = (
+                headers.get("x-vista-duz")
+                or headers.get("X-Vista-Duz")
+                or headers.get("x_vista_duz")
+            )
+
+            debug_data = {
+                "USE_CLIENT_JWT": USE_CLIENT_JWT,
+                "auth_header_present": bool(auth_header),
+                "auth_header_starts_with_bearer": (
+                    auth_header.lower().startswith("bearer ") if auth_header else False
+                ),
+                "station": station,
+                "duz": duz,
+                "headers_keys": list(headers.keys()),
+            }
+            self._logger.info(f"AUTH_MIDDLEWARE_DEBUG: {json.dumps(debug_data)}")
+
+            if auth_header and auth_header.lower().startswith("bearer "):
+                jwt_token = auth_header[7:].strip()
+                set_context_jwt(jwt_token)
+                self._logger.info(
+                    f"JWT_SET_IN_CONTEXT: {json.dumps({'jwt_set': True, 'jwt_length': len(jwt_token)})}"
+                )
+            else:
+                set_context_jwt(None)
+                self._logger.info(
+                    f"JWT_SET_IN_CONTEXT: {json.dumps({'jwt_set': False, 'reason': 'no_bearer_token'})}"
+                )
+
         return await call_next(context)
 
     async def on_message(self, context: MiddlewareContext, call_next):

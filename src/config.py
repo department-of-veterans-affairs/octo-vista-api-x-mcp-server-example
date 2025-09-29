@@ -19,6 +19,9 @@ DEFAULT_DUZ = os.getenv("DEFAULT_DUZ", "10000000219")
 # Debug mode
 DEBUG = os.getenv("VISTA_MCP_DEBUG", "false").lower() == "true"
 
+# Client JWT mode - when true, use JWT from client headers.
+USE_CLIENT_JWT = os.getenv("USE_CLIENT_JWT", "false").lower() == "true"
+
 # AWS Caching Configuration
 AWS_CACHE_BACKEND = os.getenv("AWS_CACHE_BACKEND", "elasticache").lower()
 CACHE_BACKEND = os.getenv("CACHE_BACKEND", "elasticache").lower()

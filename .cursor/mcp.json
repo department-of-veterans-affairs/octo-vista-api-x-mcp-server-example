@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "vista-api-sse": {
+    "vista-mcp": {
       "url": "http://localhost:8000/sse"
     }
   }
