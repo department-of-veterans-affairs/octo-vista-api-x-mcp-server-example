@@ -49,9 +49,35 @@ class PatientHandlers:
         # Deep copy to avoid modifying the template
         result = copy.deepcopy(vpr_data)
 
+        # Handle both wrapped (payload.data) and unwrapped (data) formats
+        # Check if this is wrapped format
+        data_obj = (
+            result["payload"]
+            if "payload" in result and isinstance(result["payload"], dict)
+            else result
+        )
+
+        # Dynamically detect the original patient ID from the VPR data
+        original_patient_id = None
+
         # Update the patient demographics (first item in items array)
-        if result.get("data", {}).get("items") and len(result["data"]["items"]) > 0:
-            patient_item = result["data"]["items"][0]
+        if data_obj.get("data", {}).get("items") and len(data_obj["data"]["items"]) > 0:
+            patient_item = data_obj["data"]["items"][0]
+
+            # Extract the original patient ID from the VPR data
+            if patient_item.get("localId"):
+                original_patient_id = str(patient_item["localId"])
+            elif patient_item.get("uid"):
+                # Extract from UID like "urn:va:patient:84F0:237:237"
+                uid_parts = patient_item["uid"].split(":")
+                if len(uid_parts) >= 5:
+                    original_patient_id = uid_parts[4]
+
+            # If we couldn't detect the original patient ID, we can't proceed safely
+            if not original_patient_id:
+                raise ValueError(
+                    "Could not determine original patient ID from VPR data"
+                )
 
             # Update basic demographics
             patient_item["fullName"] = patient["name"]
@@ -208,23 +234,26 @@ class PatientHandlers:
                 ]
                 patient_item["eligibilityStatus"] = "VERIFIED"
 
-        # Update all UIDs in the rest of the items to use the correct DFN
-        for item in result["data"]["items"][1:]:
-            # Replace localId 237 with actual DFN in UIDs
-            if "uid" in item and isinstance(item["uid"], str):
-                item["uid"] = item["uid"].replace(":237:", f":{patient['dfn']}:")
+            # Update all UIDs in the rest of the items to use the correct DFN
+            # Replace the original patient ID with the requested patient's DFN
+            for item in data_obj["data"]["items"][1:]:
+                # Replace original patient ID with actual DFN in UIDs
+                if "uid" in item and isinstance(item["uid"], str):
+                    item["uid"] = item["uid"].replace(
+                        f":{original_patient_id}:", f":{patient['dfn']}:"
+                    )
 
-            # Update any orderUid references
-            if "orderUid" in item and isinstance(item["orderUid"], str):
-                item["orderUid"] = item["orderUid"].replace(
-                    ":237:", f":{patient['dfn']}:"
-                )
+                # Update any orderUid references
+                if "orderUid" in item and isinstance(item["orderUid"], str):
+                    item["orderUid"] = item["orderUid"].replace(
+                        f":{original_patient_id}:", f":{patient['dfn']}:"
+                    )
 
-            # Update groupUid for lab results
-            if "groupUid" in item and isinstance(item["groupUid"], str):
-                item["groupUid"] = item["groupUid"].replace(
-                    ":237:", f":{patient['dfn']}:"
-                )
+                # Update groupUid for lab results
+                if "groupUid" in item and isinstance(item["groupUid"], str):
+                    item["groupUid"] = item["groupUid"].replace(
+                        f":{original_patient_id}:", f":{patient['dfn']}:"
+                    )
 
         return result
 
@@ -360,6 +389,10 @@ class PatientHandlers:
 
             # Inject patient-specific data
             result = cls._inject_patient_data(template, patient)
+
+            # If the template was wrapped format, extract just the payload
+            if "payload" in result and isinstance(result["payload"], dict):
+                return result["payload"]
 
             # If domains were specified, we could filter items here
             # For now, return all data as the template includes comprehensive patient data

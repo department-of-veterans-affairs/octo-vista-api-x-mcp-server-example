@@ -258,6 +258,31 @@ def resolve_vista_context(
     return station, duz
 
 
+def extract_jwt_from_context(ctx: Context | None) -> str | None:
+    """Extract JWT token from context state authorization header."""
+    if ctx is None:
+        return None
+
+    try:
+        state = ctx.get_state(VISTA_CONTEXT_STATE_KEY)
+        if not isinstance(state, dict):
+            return None
+
+        auth_header = state.get(VISTA_CONTEXT_AUTH_HEADER_KEY)
+        if not auth_header or not isinstance(auth_header, str):
+            return None
+
+        # Parse "Bearer <token>" format
+        parts = auth_header.strip().split(maxsplit=1)
+        if len(parts) == 2 and parts[0].lower() == "bearer":
+            return parts[1]
+
+        return None
+    except Exception:
+        logger.debug("Failed to extract JWT from context", exc_info=True)
+        return None
+
+
 def log_rpc_call(
     rpc_name: str,
     station: str,

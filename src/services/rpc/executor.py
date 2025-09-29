@@ -1,5 +1,6 @@
 """RPC execution service with standardized error handling and logging."""
 
+import json
 import logging
 import time
 from collections.abc import Callable
@@ -59,9 +60,16 @@ async def execute_rpc(
         logger.debug(
             f"RPC Request - Name: {rpc_name}, Station: {station}, DUZ: {caller_duz}"
         )
-        logger.debug(f"RPC kwargs: {rpc_kwargs}")
-        # Invoke RPC
+        logger.debug(f"RPC kwargs: {json.dumps(rpc_kwargs, default=str, indent=2)}")
+
         result = await vista_client.invoke_rpc(**rpc_kwargs)
+
+        try:
+            result_json = json.dumps(result, default=str, indent=2)
+            logger.debug(f"Raw RPC response (JSON): {result_json}")
+        except (TypeError, ValueError) as e:
+            logger.debug(f"Raw RPC response (string): {str(result)}")
+            logger.debug(f"JSON serialization failed: {e}")
 
         # Parse result
         parsed_data = parser(result)
@@ -103,6 +111,18 @@ async def execute_rpc(
         }
 
     except VistaAPIError as e:
+        logger.error(
+            f"VISTA_API_ERROR: {json.dumps({
+            'error_type': e.error_type,
+            'error_code': e.error_code,
+            'message': e.message,
+            'status_code': e.status_code,
+            'rpc_name': rpc_name,
+            'station': station,
+            'duz': caller_duz
+        })}"
+        )
+
         # Log failed call
         log_rpc_call(
             rpc_name=rpc_name,
@@ -132,6 +152,15 @@ async def execute_rpc(
         )
 
     except Exception as e:
+        logger.error(
+            f"UNEXPECTED_ERROR: {json.dumps({
+            'error': str(e),
+            'error_type': type(e).__name__,
+            'rpc_name': rpc_name,
+            'station': station,
+            'duz': caller_duz
+        })}"
+        )
         logger.exception(f"Unexpected error in {rpc_name}")
 
         # Build RPC details for error metadata

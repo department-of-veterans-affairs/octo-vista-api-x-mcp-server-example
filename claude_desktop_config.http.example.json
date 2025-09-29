@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "vista-api-http": {
+      "transport": "http",
+      "url": "http://localhost:8000/mcp",
+      "description": "Vista API MCP Server using modern Streamable HTTP transport"
+    }
+  }
+}

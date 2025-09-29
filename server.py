@@ -67,12 +67,17 @@ def initialize_server():
             f"API endpoint: {config['base_url']}",
         )
 
-        vista_client = VistaAPIClient(
+        base_client = VistaAPIClient(
             base_url=config["base_url"],
             api_key=config["api_key"],
             auth_url=config["auth_url"],
             timeout=30.0,
         )
+
+        # Wrap with context-aware client for JWT handling
+        from src.vista.context_aware_client import ContextAwareVistaClient
+
+        vista_client = ContextAwareVistaClient(base_client)
     except Exception as e:
         logger.error(f"Failed to create Vista client: {e}")
         raise

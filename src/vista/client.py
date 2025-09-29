@@ -172,6 +172,7 @@ class VistaAPIClient(BaseVistaClient):
         parameters: list[dict[str, Any]] | None = None,
         json_result: bool = False,
         use_cache: bool = True,
+        client_jwt: str | None = None,
     ) -> Any:
         """
         Invoke a Vista RPC
@@ -184,6 +185,7 @@ class VistaAPIClient(BaseVistaClient):
             parameters: RPC parameters
             json_result: Whether to request JSON response
             use_cache: Whether to use response cache
+            client_jwt: JWT token from client (when USE_CLIENT_JWT=true)
 
         Returns:
             RPC response (string or dict depending on RPC and json_result)
@@ -208,8 +210,19 @@ class VistaAPIClient(BaseVistaClient):
                 logger.debug(f"Using cached response for {rpc_name}")
                 return cached_response
 
-        # Ensure we have a valid JWT token
-        token = await self._ensure_valid_token()
+        # Determine which JWT to use based on configuration
+        if client_jwt:
+            # USE_CLIENT_JWT mode: use client-provided JWT
+            token = client_jwt
+            logger.info(
+                f"CLIENT_JWT_MODE: {json.dumps({'using_client_jwt': True, 'jwt_length': len(token)})}"
+            )
+        else:
+            # Service-to-service auth: fetch JWT using API key
+            token = await self._ensure_valid_token()
+            logger.info(
+                f"SERVICE_AUTH_MODE: {json.dumps({'using_client_jwt': False, 'fetching_jwt': True})}"
+            )
 
         # Build request payload
         payload: dict[str, Any] = {
@@ -226,11 +239,20 @@ class VistaAPIClient(BaseVistaClient):
         # Build URL
         url = f"{self.base_url}/vista-api-x/vista-sites/{station}/users/{caller_duz}/rpc/invoke"
 
-        # Build headers
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-        }
+        # Build headers based on JWT mode
+        if client_jwt:
+            # USE_CLIENT_JWT mode: JWT in Authorization, API key in X-OCTO-VISTA-API
+            headers = {
+                "Authorization": f"Bearer {token}",
+                "X-OCTO-VISTA-API": self.api_key,
+                "Content-Type": "application/json",
+            }
+        else:
+            # Service-to-service auth: JWT in Authorization only
+            headers = {
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            }
 
         logger.debug(f"Invoking RPC: {rpc_name} at station {station}")
 
@@ -240,6 +262,9 @@ class VistaAPIClient(BaseVistaClient):
 
             # Extract result
             data = response.json()
+            logger.debug(
+                f"RPC_RESPONSE_DATA: {json.dumps({'has_payload': 'payload' in data, 'data_keys': list(data.keys()) if isinstance(data, dict) else 'not_dict'})}"
+            )
 
             # Vista API X returns the result in different formats
             if "payload" in data:
